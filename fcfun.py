@@ -13,6 +13,20 @@ VX = FreeCAD.Vector(1,0,0)
 VY = FreeCAD.Vector(0,1,0)
 VZ = FreeCAD.Vector(0,0,1)
 
+# color constants
+WHITE  = (1.0, 1.0, 1.0)
+BLACK  = (0.0, 0.0, 0.0)
+
+RED    = (1.0, 0.0, 0.0)
+GREEN  = (0.0, 1.0, 0.0)
+BLUE   = (0.0, 1.0, 1.0)
+
+YELLOW = (1.0, 1.0, 0.0)
+MAGENT = (1.0, 0.0, 1.0)
+CIAN   = (0.0, 1.0, 1.0)
+
+ORANGE = (1.0, 0.5, 0.0)
+
 # no rotation vector
 V0ROT = FreeCAD.Rotation(VZ,0)
 
@@ -42,6 +56,93 @@ def addCyl (r, h, name):
     cyl.Radius = r
     cyl.Height = h
     return cyl
+
+# Add cylinder in a position. So it is in a certain position, with its
+# Placement and Rotation at zero. So it can be referenced absolutely from
+# its given position
+#     r: radius,
+#     h: height 
+#     name 
+#     axis: 'x', 'y' or 'z'
+#           'x' will along the x axis
+#           'y' will along the y axis
+#           'z' will be vertical
+#     h_disp: displacement on the height. 
+#             if 0, the base of the cylinder will be on the plane
+#             if -h/2: the plane will be cutting h/2
+def addCyl_pos (r, h, name, axis = 'z', h_disp = 0):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    cir =  doc.addObject("Part::Circle", name + "_circ")
+    cir.Radius = r
+
+    if axis == 'x':
+        rot = FreeCAD.Rotation (VY, 90)
+        cir.Placement.Base = (h_disp, 0, 0)
+        extdir = (h,0,0) # direction for the extrusion
+    elif axis == 'y':
+        rot = FreeCAD.Rotation (VX, -90)
+        cir.Placement.Base = (0, h_disp, 0)
+        extdir = (0,h,0)
+    else: # 'z' or any other 
+        rot = FreeCAD.Rotation (VZ, 0)
+        cir.Placement.Base = (0, 0, h_disp)
+        extdir = (0,0,h)
+
+    cir.Placement.Rotation = rot
+
+    # to hide the circle
+    if cir.ViewObject != None:
+      cir.ViewObject.Visibility=False
+
+    cyl = doc.addObject ("Part::Extrusion", name)
+    cyl.Base = cir 
+    cyl.Dir  = extdir 
+    cyl.Solid  = True 
+
+    return cyl
+
+
+# Add cylinder, with inner hole:
+#     r_ext: external radius,
+#     r_int: internal radius,
+#     h: height 
+#     name 
+#     axis: 'x', 'y' or 'z'
+#           'x' will along the x axis
+#           'y' will along the y axis
+#           'z' will be vertical
+#     h_disp: displacement on the height. 
+#             if 0, the base of the cylinder will be on the plane
+#             if -h/2: the plane will be cutting h/2
+
+def addCylHole (r_ext, r_int, h, name, axis = 'z', h_disp = 0):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    cyl_ext =  addCyl (r_ext, h, name + "_ext")
+    cyl_int =  addCyl (r_int, h + 2, name + "_int")
+
+    if axis == 'x':
+        rot = FreeCAD.Rotation (VY, 90)
+        cyl_ext.Placement.Base = (h_disp, 0, 0)
+        cyl_int.Placement.Base = (h_disp-1, 0, 0)
+    elif axis == 'y':
+        rot = FreeCAD.Rotation (VX, -90)
+        cyl_ext.Placement.Base = (0, h_disp, 0)
+        cyl_int.Placement.Base = (0, h_disp-1, 0)
+    else: # 'z' or any other 
+        rot = FreeCAD.Rotation (VZ, 0)
+        cyl_ext.Placement.Base = (0, 0, h_disp)
+        cyl_int.Placement.Base = (0, 0, h_disp-1)
+
+    cyl_ext.Placement.Rotation = rot
+    cyl_int.Placement.Rotation = rot
+
+    cylHole = doc.addObject("Part::Cut", name)
+    cylHole.Base = cyl_ext
+    cylHole.Tool = cyl_int
+
+    return cylHole
 
 """  -------------------- addBolt  ---------------------------------
    the hole for the bolt shank and the head or the nut

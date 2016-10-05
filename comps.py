@@ -4,7 +4,7 @@ import FreeCAD;
 import Part;
 import logging
 import os
-#import Draft;
+import Draft;
 #import copy;
 #import Mesh;
 
@@ -18,14 +18,14 @@ from fcfun import addBolt, addBoltNut_hole, NutHole
 logging.basicConfig(level=logging.DEBUG,
                     format='%(%(levelname)s - %(message)s')
 #
-#        _______            TotH 
+#        _______       _______________________________  TotH = H
 #       |  ___  |                     
-#       | /   \ |
+#       | /   \ |      __________ HoleH = h
 #       | \___/ |  __
 #     __|       |__ /| __
-#    |_____________|/  __ TotD
+#    |_____________|/  __ TotD = L ___________________
 #
-#     <-   TotW  ->
+#     <- TotW  = W->
 #
 # hole_x: 1 the depth along X axis 
 #           Hole facing X
@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.DEBUG,
 #              it can be done because it is a new shape formed from the union
 
 
-class Sk ():
+class Sk (object):
 
     """
      SK dimensions:
@@ -87,6 +87,7 @@ class Sk ():
             sk_center_y = 20;
             # Axis height:
             sk_axis_z = 23;
+            self.HoleH = sk_axis_z;
     
             # tightening bolt with added tolerances:
             # Bolt's head radius
@@ -277,14 +278,14 @@ class Sk ():
 # length:   the length of the profile
 # axis      'x', 'y' or 'z'
 #           'x' will along the x axis
-#           'x' will along the y axis
+#           'y' will along the y axis
 #           'z' will be vertical
 # cx:     1 if you want the coordinates referenced to the x center of the piece
 #         it can be done because it is a new shape formed from the union
 # cy:     1 if you want the coordinates referenced to the y center of the piece
 # cz:     1 if you want the coordinates referenced to the z center of the piece
 
-class MisumiAlu30s6w8 ():
+class MisumiAlu30s6w8 (object):
 
     doc = FreeCAD.ActiveDocument
     # filename of Aluminum profile sketch
@@ -388,6 +389,105 @@ class MisumiAlu30s6w8 ():
         alu_extr.Solid = True
 
         self.CadObj = alu_extr
+
+
+# ---------- class LinBearing ----------------------------------------
+# Creates a cylinder with a thru-hole object
+# it also creates a copy of the cylinder without the hole, but a little
+# bit larger, to be used to cut other shapes where this cylinder will be
+# This will be useful for linear bearing/bushings container
+#     r_ext: external radius,
+#     r_int: internal radius,
+#     h: height 
+#     name 
+#     axis: 'x', 'y' or 'z'
+#           'x' will along the x axis
+#           'y' will along the y axis
+#           'z' will be vertical
+#     h_disp: displacement on the height. 
+#             if 0, the base of the cylinder will be on the plane
+#             if -h/2: the plane will be cutting h/2
+#     r_tol : What to add to r_ext for the container cylinder
+#     h_tol : What to add to h for the container cylinder, half on each side
+
+class LinBearing (object):
+
+    def __init__ (self, r_ext, r_int, h, name, axis = 'z', h_disp = 0,
+                  r_tol = 0, h_tol = 0):
+
+        self.base_place = (0,0,0)
+        self.r_ext  = r_ext
+        self.r_int  = r_int
+        self.h      = h
+        self.name   = name
+        self.axis   = axis
+        self.h_disp = h_disp
+        self.r_tol  = r_tol
+        self.h_tol  = h_tol
+
+        bearing = fcfun.addCylHole (r_ext = r_ext,
+                              r_int = r_int,
+                              h= h,
+                              name = name,
+                              axis = axis,
+                              h_disp = h_disp)
+        self.bearing = bearing
+
+        bearing_cont = fcfun.addCyl_pos (r = r_ext + r_tol,
+                                         h= h + h_tol,
+                                         name = name + "_cont",
+                                         axis = axis,
+                                         h_disp = h_disp - h_tol/2.0)
+        # Hide the container
+        self.bearing_cont = bearing_cont
+        if bearing_cont.ViewObject != None:
+            bearing_cont.ViewObject.Visibility=False
+
+
+    # Move the bearing and its container
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        self.bearing.Placement.Base = FreeCAD.Vector(position)
+        self.bearing_cont.Placement.Base = FreeCAD.Vector(position)
+
+
+# ---------- class LinBearingClone ----------------------------------------
+# Creates an object that is like LinBearing, but it has clones of it
+# instead of original Cylinders
+# h_bearing: is a LinBearing object. It has the h to indicate that it is
+#            a handler, not a FreeCAD object. To get to the FreeCad object
+#            take the attributes: bearing and bearing_cont (container)
+# name     : name of the objects, depending on namadd, it will add it
+#            to the original or not
+# namadd   : 1: add to the original name
+#            0: creates a new name
+
+class LinBearingClone (LinBearing):
+
+    def __init__ (self, h_bearing, name, namadd = 1):
+        self.base_place = h_bearing.base_place
+        self.r_ext      = h_bearing.r_ext
+        self.r_int      = h_bearing.r_int
+        self.h          = h_bearing.h
+        if namadd == 1:
+            self.name       = h_bearing.name + "_" + name
+        else:
+            self.name       = h_bearing.name
+        self.axis       = h_bearing.axis
+        self.h_disp     = h_bearing.h_disp
+        self.r_tol      = h_bearing.r_tol
+        self.h_tol      = h_bearing.h_tol
+
+        bearing_clone = Draft.clone(h_bearing.bearing)
+        bearing_clone.Label = self.name
+        self.bearing = bearing_clone
+
+        bearing_cont_clone = Draft.clone(h_bearing.bearing_cont)
+        bearing_cont_clone.Label = self.name + "_cont"
+        self.bearing_cont = bearing_cont_clone
+        if bearing_cont_clone.ViewObject != None:
+            bearing_cont_clone.ViewObject.Visibility=False
+    
 
               
 
