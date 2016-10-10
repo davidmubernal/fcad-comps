@@ -63,7 +63,7 @@ logging.basicConfig(level=logging.DEBUG,
 #
 #
 #
-#      ____|_________ ________________ length
+#      ____|_________ __________________________________________ length
 #     |  |   |   ____|
 #     |  |   |  |____| ----------------------- holdrod_sep
 #     |  |   |       |
@@ -72,7 +72,7 @@ logging.basicConfig(level=logging.DEBUG,
 #     |  |   |       |                        |
 #     |  |   |   ____|
 #     |  |   |  |____|----- holdrod2end --------
-#     |__|___|_______|________________ 
+#     |__|___|_______|__________________________________________ 
 #
 #
 #
@@ -85,6 +85,8 @@ logging.basicConfig(level=logging.DEBUG,
 #          axis. On the direction of the holding axis
 # partheight : heigth of each part of the slider. So the total height will be
 #              twice this height
+# holdrod_sep : separation between the 2 rods that are holded and forms the 
+#               perpendicular axis movement
 # bearing0 : FreeCad object of the bearing, closer to the origin
 # bearing1 : FreeCad object of the bearing, farther to the origin
 # top_slide : FreeCad object of the top part of the slider
@@ -124,15 +126,22 @@ class EndShaftSlider (object):
     #  1.5 TOL because diameter values are minimum, so they may be larger
     BOLT_NUT_R_TOL = BOLT_NUT_R + 1.5*TOL
 
+    # Bolts for the pulleys
+    BOLTPUL_R = 4
+    BOLTPUL_SHANK_R_TOL = BOLTPUL_R / 2.0 + TOL/2.0
+    BOLTPUL_NUT_R = kcomp.NUT_D934_D[BOLTPUL_R] / 2.0
+    BOLTPUL_NUT_L = kcomp.NUT_D934_L[BOLTPUL_R] + TOL
+    #  1.5 TOL because diameter values are minimum, so they may be larger
+    BOLTPUL_NUT_R_TOL = BOLTPUL_NUT_R + 1.5*TOL
+
     XTR_BOT_OUT = 1.0  
 
-    def __init__ (self, r_slidrod, r_holdrod, holdrod_sep, slider_l,
+    def __init__ (self, r_slidrod, r_holdrod, holdrod_sep, 
                   name, holdrod_cen = 1, side = 'left'):
 
 
         self.r_slidrod = r_slidrod
         self.r_holdrod = r_holdrod
-        self.length      = slider_l
         self.name        = name
         #self.axis        = axis
         self.holdrod_sep = holdrod_sep
@@ -145,7 +154,7 @@ class EndShaftSlider (object):
             self.OUT_SEP_L = 10.0
         elif self.BOLT_R == 4:
             self.OUT_SEP_W = 10.0
-            self.OUT_SEP_L = 12.0
+            self.OUT_SEP_L = 14.0
         else:
             print "not defined"
 
@@ -155,6 +164,8 @@ class EndShaftSlider (object):
         bearing_d_tol = bearing_d + 2.0 * TOL
         bearing_r     = bearing_d / 2.0
         bearing_r_tol = bearing_r + TOL
+
+        holdrod_r_tol =  r_holdrod + TOL/2.0
 
         holdrod_insert = self.HOLDROD_INS_RATIO * (2*r_slidrod) 
 
@@ -166,19 +177,21 @@ class EndShaftSlider (object):
         self.width = slider_w
 
 
-        # calculation of the minimum length
-        slider_min_l = (  2 * bearing_l_tol 
-                        + 2 * self.OUT_SEP_L 
-                        + self.MIN_BEAR_SEP )
-
-                     
-        if slider_min_l > slider_l:
-            print (" Error: slider length: " + str(slider_l))
-            print (" is smaller than its minimum length: " + str(slider_min_l))
-            print (" Minimun length will be used")
-            self.length = slider_min_l
-
-
+        # calculation of the length
+        # it can be determined by the holdrod_sep (separation of the hold rods)
+        # or by the dimensions of the linear bearings. It will be the largest
+        # of these two: 
+        # tlen: total length ..
+        tlen_holdrod = holdrod_sep + 2 * self.OUT_SEP_L + 2 * holdrod_r_tol
+        tlen_bearing = (  2 * bearing_l_tol
+                        + 2* self.OUT_SEP_L
+                        + self.MIN_BEAR_SEP)
+        if tlen_holdrod > tlen_bearing:
+            self.length = tlen_holdrod
+            print "length comes from holdrod"
+        else:
+            self.length = tlen_bearing
+            print "length comes from bearing: Check for errors"
        
 
         self.partheight = (  bearing_r
@@ -196,21 +209,17 @@ class EndShaftSlider (object):
         if holdrod_cen == 1:
             # offset if it is centered on the y
             y_offs = - slid_y/2.0
+        else:
+            y_offs = 0
 
 
         slid_posx = - (bearing_r + self.OUT_SEP_W)
 
-        # equal separation between the bearing, and the bearings and the end
-        bearing_eq_sep =  (  self.length - 2 * bearing_l_tol) / 3.0
 
-        if bearing_eq_sep < self.OUT_SEP_L : 
-            print "taking minimum bearing separation"
-            bearing0_pos_y = self.OUT_SEP_L
-            bearing1_pos_y = self.length - (self.OUT_SEP_L + bearing_l_tol)
-        else:
-            bearing0_pos_y = bearing_eq_sep
-            bearing1_pos_y = self.length - (bearing_eq_sep + bearing_l_tol)
+        bearing0_pos_y = self.OUT_SEP_L
+        bearing1_pos_y = self.length - (self.OUT_SEP_L + bearing_l_tol)
          
+        # adding the offset
         bearing0_pos_y = bearing0_pos_y + y_offs
         bearing1_pos_y = bearing1_pos_y + y_offs
 
@@ -227,12 +236,16 @@ class EndShaftSlider (object):
         botslid_chf = fillet_len (botslid_box, slid_z,
                                   self.CHAMF_R, "botslid_chf")
 
+        # list of elements that cut:
+        cutlist = []
+
         sliderod = fcfun.addCyl_pos (r = r_slidrod + self.SLIDEROD_SPACE,
                                h = slid_y +2,
                                name = "sliderod",
                                axis = 'y',
                                h_disp = y_offs - 1)
 
+        cutlist.append (sliderod)
 
         h_lmuu_0 = comps.LinBearing (
                          r_ext = bearing_r,
@@ -244,12 +257,14 @@ class EndShaftSlider (object):
                          r_tol  = TOL,
                          h_tol  = self.TOL_BEARING_L)
 
+        cutlist.append (h_lmuu_0.bearing_cont)
+
         h_lmuu_1 = comps.LinBearingClone (
                                       h_lmuu_0,
                                       "lm" + str(int(2*r_slidrod)) + "uu_1",
                                       namadd = 0)
-
         h_lmuu_1.BasePlace ((0, bearing1_pos_y - bearing0_pos_y, 0))
+        cutlist.append (h_lmuu_1.bearing_cont)
 
 
         # ------------ hold rods ----------------
@@ -263,8 +278,10 @@ class EndShaftSlider (object):
 
         holdrod_0.Placement.Base = FreeCAD.Vector(
                                  0,
-                                 self.OUT_SEP_L + r_holdrod + TOL/2.0 + y_offs,
+                                 #self.OUT_SEP_L + r_holdrod + TOL/2.0 + y_offs,
+                                 (self.length - holdrod_sep)/2 + y_offs,
                                  0)
+        cutlist.append (holdrod_0)
 
         holdrod_1 = fcfun.addCyl_pos (
                                 r = r_holdrod + TOL/2.0,  #small tolerance, 
@@ -275,8 +292,10 @@ class EndShaftSlider (object):
 
         holdrod_1.Placement.Base = FreeCAD.Vector(
                   0,
-                  self.length - (self.OUT_SEP_L + r_holdrod + TOL/2.0) + y_offs,
+                 #self.length - (self.OUT_SEP_L + r_holdrod + TOL/2.0) + y_offs,
+                  (self.length + holdrod_sep)/2 + y_offs,
                   0)
+        cutlist.append (holdrod_1)
 
         # -------------------- bolts and nuts
         bolt0 = addBoltNut_hole (
@@ -301,38 +320,169 @@ class EndShaftSlider (object):
         bolt_low_pos_y =  self.OUT_SEP_L / 2.0 + y_offs
         bolt_high_pos_y =  self.length - self.OUT_SEP_L / 2.0 + y_offs
 
+        bolt_lowmid_pos_y =  1.5 * self.OUT_SEP_L + 2 * holdrod_r_tol + y_offs
+        bolt_highmid_pos_y = (  self.length
+                             - 1.5 * self.OUT_SEP_L
+                             - 2 * holdrod_r_tol
+                             + y_offs)
+
+        bolt_pull_pos_x =   (  bearing_r_tol
+                              + self.MIN_BEAR_SEP
+                              + 0.25 * holdrod_insert )
+        bolt_pullow_pos_y =  2.5 * self.OUT_SEP_L + 2 * holdrod_r_tol + y_offs
+        bolt_pulhigh_pos_y = (  self.length
+                             - 2.5 * self.OUT_SEP_L
+                             - 2 * holdrod_r_tol
+                             + y_offs)
+
         bolt0.Placement.Base = FreeCAD.Vector (bolt_left_pos_x,
-                                               0,
+                                               self.length/2 + y_offs,
                                                -self.partheight)
         bolt0.Placement.Rotation = FreeCAD.Rotation (VZ, 90)
+        cutlist.append (bolt0)
 
+# Naming convention for the bolts
+#      ______________ 
+#     |lu|   |   _ru_|       right up
+#     |  |   |  |____|
+#     |  |   |    rmu|       right middle up
+#     |  |   | pu    |  pulley up
+#     |0 |   | r     | right
+#     |  |   | pd    |  pulley down
+#     |  |   |   _rmd|       right middle down
+#     |  |   |  |____|
+#     |ld|___|____rd_|       right down
+#       
+        # Right
+        boltr = Draft.clone(bolt0)
+        boltr.Label = "bolt_hole_r"
+        boltr.Placement.Base =  FreeCAD.Vector (-bolt_left_pos_x,
+                                                self.length/2 + y_offs,
+                                               -self.partheight)
+        boltr.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
+        cutlist.append (boltr)
+
+
+        # Left Up
         boltlu = Draft.clone(bolt0)
         boltlu.Label = "bolt_hole_lu"
         boltlu.Placement.Base =  FreeCAD.Vector (bolt_left_pos_x,
                                                 bolt_low_pos_y,
                                                -self.partheight)
-        boltlu.Placement.Rotation = FreeCAD.Rotation (VZ, 60)
-
+        boltlu.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
+        cutlist.append (boltlu)
+        
+        # Left Down
         boltld = Draft.clone(bolt0)
         boltld.Label = "bolt_hole_ld"
         boltld.Placement.Base =  FreeCAD.Vector (bolt_left_pos_x,
                                                 bolt_high_pos_y,
                                                -self.partheight)
-        boltld.Placement.Rotation = FreeCAD.Rotation (VZ, 60)
+        boltld.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
+        cutlist.append (boltld)
 
+        # Right Up 
         boltru = Draft.clone(bolt0)
         boltru.Label = "bolt_hole_ru"
         boltru.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
                                                 bolt_high_pos_y,
                                                -self.partheight)
-        boltru.Placement.Rotation = FreeCAD.Rotation (VZ, 60)
+        boltru.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
+        cutlist.append (boltru)
 
+        # Right Down
         boltrd = Draft.clone(bolt0)
         boltrd.Label = "bolt_hole_rd"
         boltrd.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
                                                 bolt_low_pos_y,
                                                -self.partheight)
-        boltru.Placement.Rotation = FreeCAD.Rotation (VZ, 60)
+        boltrd.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
+        cutlist.append (boltrd)
+
+        # Right Middle Up 
+        boltrmu = Draft.clone(bolt0)
+        boltrmu.Label = "bolt_hole_rmu"
+        boltrmu.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
+                                                  bolt_highmid_pos_y,
+                                                 -self.partheight)
+        boltrmu.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
+        cutlist.append (boltrmu)
+
+        # Right Middle Down
+        boltrmd = Draft.clone(bolt0)
+        boltrmd.Label = "bolt_hole_rmd"
+        boltrmd.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
+                                                bolt_lowmid_pos_y,
+                                               -self.partheight)
+        boltrmd.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
+        cutlist.append (boltrmd)
+
+        # Pulley bolt       
+        boltpull0 = addBolt (
+                            r_shank   = self.BOLTPUL_SHANK_R_TOL,
+                            l_bolt    = 2 * self.partheight,
+                            r_head    = self.BOLTPUL_NUT_R_TOL,
+                            l_head    = self.BOLTPUL_NUT_L,
+                            hex_head  = 1, extra=1,
+                            support = 1, 
+                            headdown  = 1, name="boltpul_hole")
+
+        boltpull0.Placement.Base =  FreeCAD.Vector (bolt_pull_pos_x,
+                                                    bolt_pulhigh_pos_y,
+                                                   -self.partheight)
+        boltpull0.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
+        cutlist.append (boltpull0)
+
+        # Pulley Down
+        boltpull1 = Draft.clone(boltpull0)
+        boltpull1.Label = "boltpul_hole_1"
+        boltpull1.Placement.Base =  FreeCAD.Vector (bolt_pull_pos_x,
+                                                    bolt_pullow_pos_y,
+                                                   -self.partheight)
+        boltpull1.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
+        cutlist.append (boltpull1)
+
+        # --- make a dent in the interior to save plastic
+        # points: p dent
+
+        pdent_ur = FreeCAD.Vector ( self.width + slid_posx + 1,
+                                    bolt_highmid_pos_y - 1,
+                                   -self.partheight - 1)
+        pdent_ul = FreeCAD.Vector ( bolt_pull_pos_x + 1,
+                                    bolt_pulhigh_pos_y - self.OUT_SEP_L ,
+                                   -self.partheight - 1)
+        pdent_dr = FreeCAD.Vector ( self.width + slid_posx + 1,
+                                    bolt_lowmid_pos_y +1,
+                                   -self.partheight - 1)
+        pdent_dl = FreeCAD.Vector ( bolt_pull_pos_x + 1,
+                                    bolt_pullow_pos_y + self.OUT_SEP_L ,
+                                   -self.partheight - 1)
+
+        pdent_list = [ pdent_ur, pdent_ul, pdent_dl, pdent_dr]
+
+        dent_plane = doc.addObject("Part::Polygon", "dent_plane")
+        dent_plane.Nodes = pdent_list
+        dent_plane.Close = True
+        dent_plane.ViewObject.Visibility = False
+        dent = doc.addObject("Part::Extrusion", "dent")
+        dent.Base = dent_plane
+        dent.Dir = (0,0, 2*self.partheight +2)
+        dent.Solid = True
+        cutlist.append (dent)
+
+        holes = doc.addObject("Part::MultiFuse", "holes")
+        holes.Shapes = cutlist
+
+        top_slide = doc.addObject("Part::Cut", "top_slide")
+        top_slide.Base = topslid_chf 
+        top_slide.Tool = holes 
+        self.top_slide = top_slide
+
+        bot_slide = doc.addObject("Part::Cut", "bot_slide")
+        bot_slide.Base = botslid_chf 
+        bot_slide.Tool = holes 
+        self.bot_slide = bot_slide
+
 """
 
     # Move the bearing and its container
@@ -348,10 +498,17 @@ doc = FreeCAD.newDocument()
 
 endshaftslider = EndShaftSlider(r_slidrod = 6.0,
                                 r_holdrod = 6.0,
-                                holdrod_sep = 50.0,
-                                slider_l      = 150.0,
+                                holdrod_sep = 150.0,
                                 name          = "slider_left",
                                 holdrod_cen = 1,
                                 side = 'left')
+
+
+#endshaftslider_2 = EndShaftSlider(r_slidrod = 6.0,
+                                #r_holdrod = 6.0,
+                                #holdrod_sep = 60.0,
+                                #name          = "slider_left",
+                                #holdrod_cen = 0,
+                                #side = 'left')
 
 doc.recompute()
