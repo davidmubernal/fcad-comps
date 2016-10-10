@@ -383,7 +383,7 @@ def addBoltNut_hole (r_shank,        l_bolt,
 #      |__|__ z = 0    |  | -- z = 0
 #                       \/
 
-class NutHole ():
+class NutHole (object):
 
     def __init__(self, nut_r, nut_h, hole_h, name,
                  extra = 1, nuthole_x = 1, cx=0, cy=0, holedown = 0):
