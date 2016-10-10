@@ -19,13 +19,17 @@ BLACK  = (0.0, 0.0, 0.0)
 
 RED    = (1.0, 0.0, 0.0)
 GREEN  = (0.0, 1.0, 0.0)
-BLUE   = (0.0, 1.0, 1.0)
+BLUE   = (0.0, 0.0, 1.0)
 
 YELLOW = (1.0, 1.0, 0.0)
 MAGENT = (1.0, 0.0, 1.0)
 CIAN   = (0.0, 1.0, 1.0)
 
 ORANGE = (1.0, 0.5, 0.0)
+
+RED_05    = (1.0, 0.5, 0.5)
+GREEN_05  = (0.5, 1.0, 0.5)
+BLUE_05   = (0.5, 0.5, 1.0)
 
 # no rotation vector
 V0ROT = FreeCAD.Rotation(VZ,0)

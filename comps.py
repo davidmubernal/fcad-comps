@@ -410,6 +410,11 @@ class MisumiAlu30s6w8 (object):
 #     r_tol : What to add to r_ext for the container cylinder
 #     h_tol : What to add to h for the container cylinder, half on each side
 
+# base_place: position of the 3 elements: All of them have the same base
+#             position.
+#             It is (0,0,0) when initialized, it has to be changed using the
+#             function base_place
+
 class LinBearing (object):
 
     def __init__ (self, r_ext, r_int, h, name, axis = 'z', h_disp = 0,
