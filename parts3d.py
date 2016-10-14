@@ -39,16 +39,13 @@ logging.basicConfig(level=logging.DEBUG,
 #     slidrod_r : radius of the rod where the slider runs on
 #     holdrod_r : radius of the rod that this slider holds
 #     holdrod_sep : separation between the rods that are holded
-#     slider_l    : length of the slider, along the rod where it runs
-####  axis        : 'x' or 'y'
-####                the rod axis direction
 #     holdrod_cen : 1: if the piece is centered on the perpendicular 
 #     side        : 'left' or 'right' (slidding on axis Y)
-#     side        : 'bottom' or 'top' (slidding on axis X)
+#                 : 'bottom' or 'top' (slidding on axis X)
 #
 #          Y      axis= 'y'    side='left'
 #          |
-#          |
+#          |                                  
 #          |
 #          |
 #      ____|_________
@@ -56,11 +53,11 @@ logging.basicConfig(level=logging.DEBUG,
 #     |  |   |  |____|
 #     |  |   |       |
 #     |  |   |       |
-#     |  |   |       |---------------- X: holdrod_cent = 1
+#     |  |   |       |---------------- X: holdrod_cen = 1
 #     |  |   |       |
 #     |  |   |   ____|
 #     |  |   |  |____|
-#     |__|___|_______|________________ X: holdrod_cent = 0
+#     |__|___|_______|________________ X: holdrod_cen = 0
 #
 #
 #
@@ -75,8 +72,8 @@ logging.basicConfig(level=logging.DEBUG,
 #     |  |   |  |____|----- holdrod2end --------
 #     |__|___|_______|__________________________________________ 
 #
-#
-#
+#          |    |
+#          |----|----> slide2holdrod (+)
 #
 
 
@@ -88,6 +85,11 @@ logging.basicConfig(level=logging.DEBUG,
 #              twice this height
 # holdrod_sep : separation between the 2 rods that are holded and forms the 
 #               perpendicular axis movement
+# slide2holdrod : distance from the sliding rod (axis) to
+#                 the beginning of the hold rod (axis). Positive
+# slide2holdrod_sign : distance from the sliding rod (axis) to
+#                 the beginning of the hold rod (axis). Positive
+#                 or negative depending on the sign
 # bearings : FreeCad object of the bearings
 # top_slide : FreeCad object of the top part of the slider
 # bot_slide : FreeCad object of the bottm part of the slider
@@ -151,9 +153,11 @@ class EndShaftSlider (object):
         self.base_place = (0,0,0)
         self.slidrod_r = slidrod_r
         self.holdrod_r = holdrod_r
+        self.holdrod_sep = holdrod_sep
+        self.holdrod_cen = holdrod_cen
+    
         self.name        = name
         #self.axis        = axis
-        self.holdrod_sep = holdrod_sep
 
         # Separation from the end of the linear bearing to the end of the piece
         # on the width dimension (perpendicular to the movement)
@@ -178,6 +182,14 @@ class EndShaftSlider (object):
 
         holdrod_insert = self.HOLDROD_INS_RATIO * (2*slidrod_r) 
 
+        self.slide2holdrod = bearing_r + self.MIN_BEAR_SEP 
+        if side == 'right' or side == 'top':
+            # the distance will be negative, either on the X axis (right)
+            # or on the Y axis (top)
+            self.slide2holdrod_sign = - self.slide2holdrod
+        else:
+            self.slide2holdrod_sign = self.slide2holdrod
+    
         # calculation of the width
         # dimensions should not depend on tolerances
         slider_w = (  bearing_d     #bearing_d_tol
@@ -208,6 +220,11 @@ class EndShaftSlider (object):
 
         self.partheight = (  bearing_r
                            + self.OUT_SEP_H)
+
+        
+        # distance from the center of the hold rod to the end on the sliding
+        # direction
+        self.holdrod2end = (self.length - holdrod_sep)/2
 
 #        if axis == 'x':
 #            slid_x = self.length
@@ -288,13 +305,13 @@ class EndShaftSlider (object):
                                 h = holdrod_insert + 1,
                                 name = "holdrod_0",
                                 axis = 'x',
-                                h_disp = bearing_r_tol + self.MIN_BEAR_SEP )
+                                h_disp = bearing_r + self.MIN_BEAR_SEP )
+                                #h_disp = bearing_r_tol + self.MIN_BEAR_SEP )
 
         holdrod_0.Placement.Base = FreeCAD.Vector(
-                                 0,
-                                 #self.OUT_SEP_L + holdrod_r + TOL/2.0 + y_offs,
-                                 (self.length - holdrod_sep)/2 + y_offs,
-                                 0)
+                                     0,
+                                     self.holdrod2end + y_offs,
+                                     0)
         cutlist.append (holdrod_0)
 
         holdrod_1 = fcfun.addCyl_pos (
@@ -302,13 +319,13 @@ class EndShaftSlider (object):
                                 h = holdrod_insert + 1,
                                 name = "holdrod_1",
                                 axis = 'x',
-                                h_disp = bearing_r_tol + self.MIN_BEAR_SEP )
+                                h_disp = bearing_r + self.MIN_BEAR_SEP )
+                                #h_disp = bearing_r_tol + self.MIN_BEAR_SEP )
 
         holdrod_1.Placement.Base = FreeCAD.Vector(
-                  0,
-                 #self.length - (self.OUT_SEP_L + holdrod_r + TOL/2.0) + y_offs,
-                  (self.length + holdrod_sep)/2 + y_offs,
-                  0)
+                                       0,
+                                       self.length - self.holdrod2end + y_offs,
+                                       0)
         cutlist.append (holdrod_1)
 
         # -------------------- bolts and nuts

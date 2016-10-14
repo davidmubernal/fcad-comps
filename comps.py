@@ -8,10 +8,19 @@ import Draft;
 #import copy;
 #import Mesh;
 
+# ---------------------- can be taken away after debugging
+# directory this file is
+filepath = os.getcwd()
+import sys
+# to get the components
+# In FreeCAD can be added: Preferences->General->Macro->Macro path
+sys.path.append(filepath)
+# ---------------------- can be taken away after debugging
+
 import kcomp # before, it was called mat_cte
 import fcfun
 
-from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, fillet_len
+from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, addCyl_pos, fillet_len
 from fcfun import addBolt, addBoltNut_hole, NutHole
 
 
@@ -494,7 +503,306 @@ class LinBearingClone (LinBearing):
             bearing_cont_clone.ViewObject.Visibility=False
     
 
-              
+# ---------- class T8NutHousing ----------------------
+# Housing for a T8 Nut of a leadscrew
 
-    
+class T8NutHousing (object):
 
+    Length = kcomp.T8NH_L
+    Width  = kcomp.T8NH_W
+    Height = kcomp.T8NH_H
+
+    # separation between the screws that attach to the moving part
+    ScrewLenSep  = kcomp.T8NH_ScrLSep
+    ScrewWidSep  = kcomp.T8NH_ScrWSep
+
+    # separation between the screws to the en
+    ScrewLen2end = (Length - ScrewLenSep)/2
+    ScrewWid2end = (Width  - ScrewWidSep)/2
+
+    # Screw dimensions, that attach to the moving part: M4 x 7
+    ScrewD = kcomp.T8NH_ScrD
+    ScrewR = ScrewD / 2.0
+    ScrewL = kcomp.T8NH_ScrL + kcomp.TOL
+
+    # Hole for the nut and the screw
+    ShaftD = kcomp.T8N_D_SHAFT_EXT + kcomp.TOL # I don't know the tolerances
+    ShaftR = ShaftD / 2.0
+    FlangeD = kcomp.T8N_D_FLAN + kcomp.TOL # I don't know the tolerances
+    FlangeR = FlangeD / 2.0
+    FlangeL = kcomp.T8N_FLAN_L + kcomp.TOL
+    FlangeScrewD = kcomp.T8NH_FlanScrD
+    FlangeScrewR = FlangeScrewD / 2.0
+    FlangeScrewL = kcomp.T8NH_FlanScrL + kcomp.TOL
+    # Diameter where the Flange Screws are located
+    FlangeScrewPosD = kcomp.T8N_D_SCREW_POS
+  
+    def __init__ (self, name, nutaxis = 'x', screwface_axis = 'z',
+                  cx = 1, cy= 1, cz = 0):
+        doc = FreeCAD.ActiveDocument
+        #housing_box = addBox (self.Length, self.Width, self.Height,
+        #                      name= name + "_box")
+        housing_box = fcfun.addBox_cen (self.Length, self.Width, self.Height,
+                                  name= name + "_box", 
+                                  cx=True, cy=True, cz=True)
+
+        hole_list = []
+
+        leadscr_hole = addCyl_pos (r=self.ShaftR, h= self.Length + 1,
+                                   name = "leadscr_hole",
+                                   axis = 'x', h_disp = -self.Length/2.0-1)
+        #leadscr_hole.Placement.Base = FreeCAD.Vector (0,
+                                                      #self.Width/2.0,
+                                                      #self.Height/2.0)
+        hole_list.append(leadscr_hole)
+        nutflange_hole = addCyl_pos (r=self.FlangeR, h= self.FlangeL + 1,
+                                   name = "nutflange_hole",
+                                   axis = 'x',
+                                   h_disp = self.Length/2.0 - self.FlangeL)
+        #nutflange_hole.Placement.Base = FreeCAD.Vector (0,
+        #                                              self.Width/2.0,
+        #                                              self.Height/2.0)
+        hole_list.append(nutflange_hole)
+        # screws to attach the nut flange to the housing
+        # M3 x 10
+        screwflange_l = addCyl_pos (r = self.FlangeScrewR,
+                                    h = self.FlangeScrewL + 1,
+                                    name = "screwflange_l",
+                                    axis = 'x',
+                                    h_disp =   self.Length/2.0
+                                             - self.FlangeL
+                                             - self.FlangeScrewL)
+        screwflange_l.Placement.Base = FreeCAD.Vector(0,
+                                    - self.FlangeScrewPosD / 2.0,
+                                   )
+        hole_list.append(screwflange_l)
+        screwflange_r = addCyl_pos (r = self.FlangeScrewR,
+                                    h = self.FlangeScrewL + 1,
+                                    name = "screwflange_r",
+                                    axis = 'x',
+                                    h_disp =   self.Length/2.0
+                                             - self.FlangeL
+                                             - self.FlangeScrewL)
+        screwflange_r.Placement.Base = FreeCAD.Vector (0,
+                                   self.FlangeScrewPosD / 2.0,
+                                   0)
+        hole_list.append(screwflange_r)
+
+
+        # screws to attach the housing to the moving part
+        # M4x7
+        screwface_1 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
+                                        name="screwface_1",
+                                        axis = 'z',
+                                        h_disp = -self.Height/2 -1)
+        screwface_1.Placement.Base = FreeCAD.Vector (
+                                    - self.Length/2.0 + self.ScrewLen2end,
+                                    - self.Width/2.0 + self.ScrewWid2end,
+                                      0)
+        hole_list.append (screwface_1)
+        screwface_2 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
+                                        name="screwface_2",
+                                        axis = 'z',
+                                        h_disp = -self.Height/2 -1)
+        screwface_2.Placement.Base = FreeCAD.Vector(
+                                      self.ScrewLenSep /2.0,
+                                    - self.Width/2.0 + self.ScrewWid2end,
+                                      0)
+        hole_list.append (screwface_2)
+        screwface_3 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
+                                        name="screwface_3",
+                                        axis = 'z',
+                                        h_disp = -self.Height/2 -1)
+        screwface_3.Placement.Base = FreeCAD.Vector (
+                                    - self.Length/2.0 + self.ScrewLen2end,
+                                      self.ScrewWidSep /2.0,
+                                      0)
+        hole_list.append (screwface_3)
+        screwface_4 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
+                                        name="screwface_4",
+                                        axis = 'z',
+                                        h_disp = -self.Height/2 -1)
+        screwface_4.Placement.Base = FreeCAD.Vector(
+                                      self.ScrewLenSep /2.0,
+                                      self.ScrewWidSep /2.0,
+                                      0)
+        hole_list.append (screwface_4)
+        nuthouseholes = doc.addObject ("Part::MultiFuse", "nuthouse_holes")
+        nuthouseholes.Shapes = hole_list
+       
+        # rotation calculation
+        if nutaxis == 'x':
+           yaw = 0
+           pitch = 0
+           if screwface_axis == 'y':
+               roll  = 90
+           elif screwface_axis == '-y':
+               roll  = -90
+           elif screwface_axis == 'z':
+               roll  = 180
+           elif screwface_axis == '-z':
+               roll  = 0
+           else:
+               print "error 1 in yaw-pitch-roll"
+        elif nutaxis == '-x':
+           yaw = 180
+           pitch = 0
+           if screwface_axis == 'y':
+               roll  = -90 #negative because of the yaw
+           elif screwface_axis == '-y':
+               roll  = 90 # positive because of the yaw = 180
+           elif screwface_axis == 'z':
+               roll = 180
+           elif screwface_axis == '-z':
+               roll  = 0
+           else:
+               print "error 2 in yaw-pitch-roll"
+        elif nutaxis == 'y':
+           yaw = 90
+           pitch = 0
+           if screwface_axis == 'x':
+               roll  = -90
+           elif screwface_axis == '-x':
+               roll  = 90
+           elif screwface_axis == 'z':
+               roll  = 180
+           elif screwface_axis == '-z':
+               roll  = 0
+           else:
+               print "error 3 in yaw-pitch-roll"
+        elif nutaxis == '-y':
+           yaw = -90
+           pitch = 0
+           if screwface_axis == 'x':
+               roll  = 90 
+           elif screwface_axis == '-x':
+               roll  = -90 
+           elif screwface_axis == 'z':
+               roll  = 180
+           elif screwface_axis == '-z':
+               roll  = 0
+           else:
+               print "error 4 in yaw-pitch-roll"
+        elif nutaxis == 'z':
+           pitch = -90
+           yaw = 0
+           if screwface_axis == 'x':
+               roll  = 0 
+           elif screwface_axis == '-x':
+               roll  = 180 
+           elif screwface_axis == 'y':
+               roll  = 90
+           elif screwface_axis == '-y':
+               roll  = -90
+           else:
+               print "error 5 in yaw-pitch-roll"
+        elif nutaxis == '-z':
+           pitch = 90
+           yaw = 0
+           if screwface_axis == 'x':
+               roll  = 180 
+           elif screwface_axis == '-x':
+               roll  = 0 
+           elif screwface_axis == 'y':
+               roll  = 90
+           elif screwface_axis == '-y':
+               roll  = -90
+           else:
+               print "error 6 in yaw-pitch-roll"
+           
+        housing_box.Placement.Rotation = FreeCAD.Rotation(yaw,pitch,roll)
+        nuthouseholes.Placement.Rotation = FreeCAD.Rotation(yaw,pitch,roll)
+
+        if nutaxis == 'x' or nutaxis == '-x':
+            if screwface_axis == '-z' or screwface_axis == 'z':
+                if cx == False:
+                    housing_box.Placement.Base.x = self.Length / 2.0
+                    nuthouseholes.Placement.Base.x = self.Length / 2.0
+                if cy == False:
+                    housing_box.Placement.Base.y = self.Width / 2.0
+                    nuthouseholes.Placement.Base.y  = self.Width / 2.0
+                if cz == False:
+                    housing_box.Placement.Base.z = self.Height / 2.0
+                    nuthouseholes.Placement.Base.z  = self.Height / 2.0
+            if screwface_axis == '-y' or screwface_axis == 'y':
+                if cx == False:
+                    housing_box.Placement.Base.x = self.Length / 2.0
+                    nuthouseholes.Placement.Base.x = self.Length / 2.0
+                if cy == False:
+                    housing_box.Placement.Base.y = self.Height / 2.0
+                    nuthouseholes.Placement.Base.y  = self.Height / 2.0
+                if cz == False:
+                    housing_box.Placement.Base.z = self.Width / 2.0
+                    nuthouseholes.Placement.Base.z  = self.Width / 2.0
+        elif nutaxis == 'y':
+            if screwface_axis == '-x' or screwface_axis == 'x':
+                if cx == False:
+                    housing_box.Placement.Base.x = self.Height / 2.0
+                    nuthouseholes.Placement.Base.x = self.Height / 2.0
+                if cy == False:
+                    housing_box.Placement.Base.y = self.Length / 2.0
+                    nuthouseholes.Placement.Base.y  = self.Length / 2.0
+                if cz == False:
+                    housing_box.Placement.Base.z = self.Width / 2.0
+                    nuthouseholes.Placement.Base.z  = self.Width / 2.0
+            if screwface_axis == '-z' or screwface_axis == 'z':
+                if cx == False:
+                    housing_box.Placement.Base.x = self.Width / 2.0
+                    nuthouseholes.Placement.Base.x = self.Width / 2.0
+                if cy == False:
+                    housing_box.Placement.Base.y = self.Length / 2.0
+                    nuthouseholes.Placement.Base.y  = self.Length / 2.0
+                if cz == False:
+                    housing_box.Placement.Base.z = self.Height / 2.0
+                    nuthouseholes.Placement.Base.z  = self.Height / 2.0
+        elif nutaxis == 'z':
+            if screwface_axis == '-x' or screwface_axis == 'x':
+                if cx == False:
+                    housing_box.Placement.Base.x = self.Height / 2.0
+                    nuthouseholes.Placement.Base.x = self.Height / 2.0
+                if cy == False:
+                    housing_box.Placement.Base.y = self.Width / 2.0
+                    nuthouseholes.Placement.Base.y  = self.Width / 2.0
+                if cz == False:
+                    housing_box.Placement.Base.z = self.Length / 2.0
+                    nuthouseholes.Placement.Base.z  = self.Length / 2.0
+            if screwface_axis == '-y' or screwface_axis == 'y':
+                if cx == False:
+                    housing_box.Placement.Base.x = self.Width / 2.0
+                    nuthouseholes.Placement.Base.x = self.Width / 2.0
+                if cy == False:
+                    housing_box.Placement.Base.y = self.Height / 2.0
+                    nuthouseholes.Placement.Base.y  = self.Height / 2.0
+                if cz == False:
+                    housing_box.Placement.Base.z = self.Length / 2.0
+                    nuthouseholes.Placement.Base.z  = self.Length / 2.0
+                
+
+               
+        
+
+        t8nuthouse = doc.addObject ("Part::Cut", "t8nuthouse")
+        t8nuthouse.Base = housing_box
+        t8nuthouse.Tool = nuthouseholes
+
+        self.CadObj = t8nuthouse
+
+        doc.recompute()
+
+doc = FreeCAD.newDocument()
+
+T8 = T8NutHousing (name="T8NutHousing", nutaxis='z', screwface_axis ='-x', cx=0, cy = 1, cz=0)
+
+T8moved = T8NutHousing (name="T8NutHousing_desp", nutaxis='x', screwface_axis ='-z', cx=1, cy = 1, cz=1)
+
+T8moved.CadObj.Placement.Base = fcfun.calc_desp_nocen (
+                                            Length = T8moved.Length,
+                                            Width = T8moved.Width,
+                                            Height = T8moved.Height,
+                                            vec1 = (0,0,1),
+                                            vec2 = (-1,0,0),
+                                            cx=0, cy = 1, cz=0)
+
+T8moved.CadObj.Placement.Rotation = fcfun.calc_rotation (
+                                            vec1 = (0,0,1),
+                                            vec2 = (-1,0,0))

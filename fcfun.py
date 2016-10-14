@@ -52,6 +52,48 @@ def addBox(x, y, z, name, cx= False, cy=False):
     box.Placement.Base =FreeCAD.Vector(xpos,ypos,0)
     return box
 
+
+# adds a box, centered on the specified axis, with its
+# Placement and Rotation at zero. So it can be referenced absolutely from
+# its given position
+
+def addBox_cen(x, y, z, name, cx= False, cy=False, cz=False):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+
+    if cx == True:
+        x0 = -x/2.0
+        x1 =  x/2.0
+    else:
+        x0 =  0
+        x1 =  x
+    if cy == True:
+        y0 = -y/2.0
+        y1 =  y/2.0
+    else:
+        y0 =  0
+        y1 =  y
+    if cz == True:
+        z0 = - z/2.0
+    else:
+        z0 = 0
+
+    p00 = FreeCAD.Vector (x0,y0,z0)
+    p10 = FreeCAD.Vector (x1,y0,z0)
+    p11 = FreeCAD.Vector (x1,y1,z0)
+    p01 = FreeCAD.Vector (x0,y1,z0)
+    sq_list = [p00, p10, p11, p01]
+    square =  doc.addObject("Part::Polygon",name + "_sq")
+    square.Nodes =sq_list
+    square.Close = True
+    square.ViewObject.Visibility = False
+    box = doc.addObject ("Part::Extrusion", name)
+    box.Base = square
+    box.Dir = (0,0, z)
+    box.Solid = True
+    
+    return box
+
 # Add cylinder r: radius, h: height 
 def addCyl (r, h, name):
     # we have to bring the active document
@@ -491,4 +533,169 @@ def fillet_len (box, e_len, radius, name):
     if box.ViewObject != None:
       box.ViewObject.Visibility=False
     return box_fllt
+
+#  ---------------- calc_rotation ------------------------
+#  ---------------- Yaw, Pitch and Roll transfor
+#  Having an object with an orientation defined by 2 vectors
+#  First vector direction (x,y,z) is (1,0,0) 
+#  Second vector direction (x,y,z) is (0,0,-1) 
+#  we want to rotate the object in an ortoghonal direction. The vectors
+#  will be in -90, 180, or 90 degrees.
+#  this function returns the Rotation given by yaw, pitch and roll
+
+def calc_rotation (vec1, vec2):
+           
+    # rotation calculation
+    if vec1 == (1,0,0):
+       yaw = 0
+       pitch = 0
+       if vec2 == (0,1,0):
+           roll  = 90
+       elif vec2 == (0,-1,0):
+           roll  = -90
+       elif vec2 == (0,0,1):
+           roll  = 180
+       elif vec2 == (0,0,-1):
+           roll  = 0
+       else:
+           print "error 1 in yaw-pitch-roll"
+    elif vec1 == (-1,0,0):
+       yaw = 180
+       pitch = 0
+       if vec2 == (0,1,0):
+           roll  = -90 #negative because of the yaw
+       elif vec2 == (0,-1,0):
+           roll  = 90 # positive because of the yaw = 180
+       elif vec2 == (0,0,1):
+           roll = 180
+       elif vec2 == (0,0,-1):
+           roll  = 0
+       else:
+           print "error 2 in yaw-pitch-roll"
+    elif vec1 == (0,1,0):
+       yaw = 90
+       pitch = 0
+       if vec2 == (1,0,0):
+           roll  = -90
+       elif vec2 == (-1,0,0):
+           roll  = 90
+       elif vec2 == (0,0,1):
+           roll  = 180
+       elif vec2 == (0,0,-1):
+           roll  = 0
+       else:
+           print "error 3 in yaw-pitch-roll"
+    elif vec1 == (0,-1,0):
+       yaw = -90
+       pitch = 0
+       if vec2 == (1,0,0):
+           roll  = 90 
+       elif vec2 == (-1,0,0):
+           roll  = -90 
+       elif vec2 == (0,0,1):
+           roll  = 180
+       elif vec2 == (0,0,-1):
+           roll  = 0
+       else:
+           print "error 4 in yaw-pitch-roll"
+    elif vec1 == (0,0,1):
+       pitch = -90
+       yaw = 0
+       if vec2 == (1,0,0):
+           roll  = 0 
+       elif vec2 == (-1,0,0):
+           roll  = 180 
+       elif vec2 == (0,1,0):
+           roll  = 90
+       elif vec2 == (0,-1,0):
+           roll  = -90
+       else:
+           print "error 5 in yaw-pitch-roll"
+    elif vec1 == (0,0,-1):
+       pitch = 90
+       yaw = 0
+       if vec2 == (1,0,0):
+           roll  = 180 
+       elif vec2 == (-1,0,0):
+           roll  = 0 
+       elif vec2 == (0,1,0):
+           roll  = 90
+       elif vec2 == (0,-1,0):
+           roll  = -90
+       else:
+           print "error 6 in yaw-pitch-roll"
+
+    vrot = FreeCAD.Rotation(yaw,pitch,roll)
+    return vrot
+
+#  ---------------- calc_desp_nocen ------------------------
+#  similar to calc_rot, but calculates de displacement, when we don't want
+#  to have any of the dimensions centered
+
+def calc_desp_nocen (Length, Width, Height, 
+                     vec1, vec2, cx=False, cy=False, cz=False):
+           
+    # rotation calculation
+    x = 0
+    y = 0
+    z = 0
+    if abs(vec1[0]) == 1: # X axis: vec1 == (1,0,0) or vec1 == (-1,0,0):
+        if abs(vec2[1]) == 1:   # Y
+            if cx == False:
+                x = Length / 2.0
+            if cy == False:
+                y = Height / 2.0
+            if cz == False:
+                z = Width / 2.0
+        elif abs(vec2[2]) == 1:    # Z
+            if cx == False:
+                x = Length / 2.0
+            if cy == False:
+                y = Width / 2.0
+            if cz == False:
+                z = Height / 2.0
+        else:
+            print "error 1 in calc_desp_nocen"
+    elif abs(vec1[1]) == 1: # Y axis
+        if abs(vec2[0]) == 1:   # X
+            if cx == False:
+                x = Height / 2.0
+            if cy == False:
+                y = Length / 2.0
+            if cz == False:
+                z = Width / 2.0
+        elif abs(vec2[2]) == 1:    # Z
+            if cx == False:
+                x = Width / 2.0
+            if cy == False:
+                y = Length / 2.0
+            if cz == False:
+                z = Height / 2.0
+        else:
+            print "error 2 in calc_desp_nocen"
+    elif abs(vec1[2]) == 1: # Z axis
+        if abs(vec2[0]) == 1:   # X
+            if cx == False:
+                x = Height / 2.0
+            if cy == False:
+                y = Width / 2.0
+            if cz == False:
+                z = Length / 2.0
+        elif abs(vec2[1]) == 1:    # Y
+            if cx == False:
+                x = Width / 2.0
+            if cy == False:
+                y = Height / 2.0
+            if cz == False:
+                z = Length / 2.0
+        else:
+            print "error 3 in calc_desp_nocen"
+    else:
+        print "error 3 in calc_desp_nocen"
+
+
+    vdesp = FreeCAD.Vector(x,y,z)
+    return vdesp
+
+
 
