@@ -111,7 +111,7 @@ SK12 = { 'd':12.0, 'H':37.5, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
 #              | |
 #               T8NUT_SHAFT_OUT: 1.5
 
-T8N_SCREW_D     = 0.35
+T8N_SCREW_D     = 3.5
 T8N_D_FLAN      = 22.0
 T8N_D_SCREW_POS = 16.0
 T8N_D_SHAFT_EXT = 10.2

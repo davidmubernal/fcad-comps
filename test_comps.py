@@ -8,6 +8,7 @@
 import os
 import sys
 import FreeCAD;
+import FreeCADGui;
 import Part;
 import Draft;
 import logging  # to avoid using print statements
@@ -71,6 +72,8 @@ sk12_fl.Placement.Base = FreeCAD.Vector (-20, 15, 30)
 
 # the shaft support on the left back
 
+doc = FreeCAD.ActiveDocument
+
 sk12_000 = comps.Sk(size=12, name="sk12_000", hole_x = 0, cx=0, cy=0)
 sk12_001 = comps.Sk(size=12, name="sk12_001", hole_x = 0,  cx=0, cy=1)
 sk12_100 = comps.Sk(size=12, name="sk12_100", hole_x = 1,  cx=0, cy=0)
@@ -86,6 +89,65 @@ mi_z111 = comps.MisumiAlu30s6w8 (30, "z_111", axis= 'z', cx=1, cy=1, cz=1)
 mi_x110 = comps.MisumiAlu30s6w8 (30, "x_110", axis= 'x', cx=1, cy=1, cz=0)
 mi_y101 = comps.MisumiAlu30s6w8 (30, "y_101", axis= 'y', cx=1, cy=0, cz=1)
 mi_z011 = comps.MisumiAlu30s6w8 (30, "z_011", axis= 'z', cx=0, cy=1, cz=1)
+
+doc = FreeCAD.ActiveDocument
+
+# ---- rounded bars
+rectrndbar_z_x_cy = comps.RectRndBar (Base = 20, Height =10, Length = 30,
+                  Radius =2,
+                  Thick = 4, 
+                  inrad_same = True, axis = 'z',
+                  baseaxis = 'x', name = "rectrndbar_z_x_cy",
+                  cx=False, cy=True, cz=False)
+
+rectrndbar_x_z = comps.RectRndBar (Base = 20, Height =10, Length = 30,
+                  Radius =2,
+                  Thick = 2, 
+                  inrad_same = True, axis = 'x',
+                  baseaxis = 'z', name = "rectrndbar_x_z",
+                  cx=False, cy=False, cz=False)
+
+rectrndbar_y_x_cxy = comps.RectRndBar (Base = 20, Height =10, Length = 30,
+                  Radius =2,
+                  Thick = 1, 
+                  inrad_same = False, axis = 'y',
+                  baseaxis = 'x', name = "rectrndbar_y_x_cxy",
+                  cx=True, cy=True, cz=False)
+
+rectrndbar_y_z_cyz = comps.RectRndBar (Base = 20, Height =10, Length = 40,
+                  Radius =0.5,
+                  Thick = 4, 
+                  inrad_same = True, axis = 'y',
+                  baseaxis = 'z', name = "rectrndbar_y_z_cyz",
+                  cx=False, cy=True, cz=True)
+
+
+
+# to test T8 Nut and Nut housing
+T8 = comps.T8NutHousing (name="T8NutHousing", nutaxis='-x',
+                         screwface_axis ='-z', cx=0, cy = 1, cz=1)
+nutt8 = comps.T8Nut("nutt8", nutaxis = '-x' )
+doc.recompute()
+
+T8moved = comps.T8NutHousing (name="T8NutHousing_desp", nutaxis='x',
+                              screwface_axis ='-z', cx=1, cy = 1, cz=1)
+
+T8moved.CadObj.Placement.Base = fcfun.calc_desp_ncen (
+                                            Length = T8moved.Length,
+                                            Width = T8moved.Width,
+                                            Height = T8moved.Height,
+                                            vec1 = (0,0,1),
+                                            vec2 = (-1,0,0),
+                                            cx=0, cy = 1, cz=0)
+
+T8moved.CadObj.Placement.Rotation = fcfun.calc_rot (
+                                            vec1 = (0,0,1),
+                                            vec2 = (-1,0,0))
+
+
+Gui.ActiveDocument = Gui.getDocument(doc.Label)
+guidoc = Gui.getDocument(doc.Label)
+Gui.ActiveDocument.ActiveView.setAxisCross(True)
 
 doc.recompute()
 

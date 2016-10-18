@@ -3,9 +3,24 @@
 import FreeCAD;
 import Part;
 
+from FreeCAD import Base
+
+# ---------------------- can be taken away after debugging
+import os;
+import sys;
+# directory this file is
+filepath = os.getcwd()
+import sys
+# to get the components
+# In FreeCAD can be added: Preferences->General->Macro->Macro path
+sys.path.append(filepath)
+# ---------------------- can be taken away after debugging
+
+
 import kcomp # before was mat_cte
 
 from kcomp import LAYER3D_H
+
 
 # vector constants
 V0 = FreeCAD.Vector(0,0,0)
@@ -30,6 +45,10 @@ ORANGE = (1.0, 0.5, 0.0)
 RED_05    = (1.0, 0.5, 0.5)
 GREEN_05  = (0.5, 1.0, 0.5)
 BLUE_05   = (0.5, 0.5, 1.0)
+
+YELLOW_05 = (1.0, 1.0, 0.5)
+MAGENT_05 = (1.0, 0.5, 1.0)
+CIAN_05   = (0.5, 1.0, 1.0)
 
 # no rotation vector
 V0ROT = FreeCAD.Rotation(VZ,0)
@@ -189,6 +208,177 @@ def addCylHole (r_ext, r_int, h, name, axis = 'z', h_disp = 0):
     cylHole.Tool = cyl_int
 
     return cylHole
+
+# ------------------- def shpRndRectWire
+# Creates a wire (shape), that is a rectangle with rounded edges.
+# if r== 0, it will be a rectangle
+# x: dimension of the base, on the X axis
+# y: dimension of the height, on the Y axis
+# r: radius of the rouned edge. 
+# The wire will be centered
+#
+#                   Y
+#                   |_ X
+#               
+#       ______     ___ y
+#      /      \ r
+#      |      |
+#      |      |              z=0
+#      |      |
+#      \______/    ___
+#      
+#      |_______| x
+
+
+def shpRndRectWire (x=1, y=1, r= 0.5, zpos = 0):
+
+    #doc = FreeCAD.ActiveDocument
+
+    if 2*r >= x or 2*r >= y:
+        print "Radius too large: addRoundRectan"
+        if x > y:
+            r = y/2.0 - 0.1 # otherwise there will be a problem
+        else:
+            r = x/2.0 - 0.1 
+    
+    # points as if they were on X - Y
+    #        lyy
+    #    r_y      rx_y
+    #       ______     
+    # 0_ry /      \ x_ry
+    #      |      |
+    # lx0  |      |        lxx
+    # 0_r  |      | x_r
+    #      \______/  
+    #      r_0  rx_0
+    #         ly0
+
+
+    x_0  =   - x/2.0
+    x_r  = r - x/2.0
+    x_rx = x/2.0 - r
+    x_x  = x/2.0 
+    y_0  =   - y/2.0
+    y_r  = r - y/2.0
+    y_ry = y/2.0 - r
+    y_y  = y/2.0 
+
+    # Lines:
+    p_r_0  = FreeCAD.Vector(x_r,  y_0, zpos)
+    p_rx_0 = FreeCAD.Vector(x_rx, y_0, zpos)
+    # toShape, because otherwise we couldn't make the wire.
+    # by doing this we are creating an edge
+    # an alternative would be to use makeLine
+    ly0 = Part.Line(p_r_0, p_rx_0).toShape() # Horizontal lower line
+
+    p_x_r  = FreeCAD.Vector(x_x   ,y_r, zpos)
+    p_x_ry = FreeCAD.Vector(x_x   ,y_ry, zpos)
+    lxx = Part.Line(p_x_r, p_x_ry).toShape() # vertical on the right
+
+    p_r_y  = FreeCAD.Vector(x_r,  y_y, zpos)
+    p_rx_y = FreeCAD.Vector(x_rx, y_y, zpos)
+    lyy = Part.Line(p_r_y, p_rx_y).toShape() # Horizontal top line
+
+    p_0_r  = FreeCAD.Vector(x_0, y_r,  zpos)
+    p_0_ry = FreeCAD.Vector(x_0, y_ry, zpos)
+    lx0 = Part.Line(p_0_r, p_0_ry).toShape()  # vertical on the left
+    # if I wanted to see these shapes
+    #fc_ly0 = doc.addObject("Part::Feature", "ly0")
+    #fc_ly0.Shape = ly0
+    #fc_lxx = doc.addObject("Part::Feature", "lxx")
+    #fc_lxx.Shape = lxx
+    #fc_lyy = doc.addObject("Part::Feature", "lyy")
+    #fc_lyy.Shape = lyy
+    #fc_lx0 = doc.addObject("Part::Feature", "lx0")
+    #fc_lx0.Shape = lx0
+
+    if r > 0:
+        # center points of the 4 archs:
+        pcarch_00 = FreeCAD.Vector (x_r,  y_r,zpos)
+        pcarch_x0 = FreeCAD.Vector (x_rx, y_r,zpos)
+        pcarch_0y = FreeCAD.Vector (x_r,  y_ry,zpos)
+        pcarch_xy = FreeCAD.Vector (x_rx, y_ry,zpos)
+        dircir = FreeCAD.Vector (0,0,1)
+
+        # ALTERNATIVE 1: Making the OpenCascade shape,
+        # and adding it to a Freecad Object
+        arch_00 = Part.makeCircle (r, pcarch_00, dircir, 180, 270) 
+        arch_x0 = Part.makeCircle (r, pcarch_x0, dircir, 270, 0) 
+        arch_0y = Part.makeCircle (r, pcarch_0y, dircir, 90, 180) 
+        arch_xy = Part.makeCircle (r, pcarch_xy, dircir, 0, 90) 
+        # freecad object
+        #fc_arch_00 = doc.addObject("Part::Feature", "arch_00")
+        #fc_arch_00.Shape = arch_00
+        #fc_arch_x0 = doc.addObject("Part::Feature", "arch_x0")
+        #fc_arch_x0.Shape = arch_x0
+        #fc_arch_0y = doc.addObject("Part::Feature", "arch_0y")
+        #fc_arch_0y.Shape = arch_0y
+        #fc_arch_xy = doc.addObject("Part::Feature", "arch_xy")
+        #fc_arch_xy.Shape = arch_xy
+ 
+        # ALTERNATIVE 2: using the Part::Circle
+        # you have to place it with Placement
+        #cir_00 = doc.addObject("Part::Circle","cir_00")
+        #cir_00.Angle0 = 180
+        #cir_00.Angle1 = 270
+        #cir_00.Radius = r
+        #cir_00.Placement.Base = pcarch_00
+
+        # Make a wire
+        # it seems that it matters the order
+        # for this example, it doesnt work if I do Part.Shape as in the 
+        # example:
+        # http://freecadweb.org/wiki/index.php?title=Topological_data_scripting
+        wire_rndrect = Part.Wire ([
+                                     lx0,
+                                     arch_00,
+                                     ly0,
+                                     arch_x0,
+                                     lxx,
+                                     arch_xy,
+                                     lyy,
+                                     arch_0y
+                                    ])
+    else: # just a rectangle
+        wire_rndrect = Part.Wire ([
+                                     lx0,
+                                     ly0,
+                                     lxx,
+                                     lyy,
+                                    ])
+
+
+    return wire_rndrect
+
+
+
+#doc = FreeCAD.newDocument()
+
+#wire1 = shpRndRectWire (x=10, y=12,  r=0)
+
+#wire2 = shpaddRndRectWire (x=10-2, y=12-2, r= 0 )
+
+
+#rndrect_1 = doc.addObject("Part::Feature", "rndrect_1")
+#rndrect_1.Shape = wire1
+#rndrect_2 = doc.addObject("Part::Feature", "rndrect_2")
+#rndrect_2.Shape = wire2
+#face1 = Part.Face(wire1)
+#face2 = Part.Face(wire2)
+#cut = face1.cut(face2)
+#extr = cut.extrude(Base.Vector(0,0,5))
+#Part.show(extr)
+
+    #extr_rndrect = doc.addObject("Part::Extrusion", name)
+    #extr_rndrect.Base = rndrect
+    #extr_rndrect.Dir = (0,0,2)
+    #extr_rndrect.Solid = True
+    #shp_rndrect = Part.Shape 
+    #fc_rndrect = doc.addObject("Part::Feature", "fc_rndrect")
+    #fc_rndrect.Shape = shp_rndrect
+
+#doc.recompute()
+    
 
 """  -------------------- addBolt  ---------------------------------
    the hole for the bolt shank and the head or the nut
@@ -534,7 +724,7 @@ def fillet_len (box, e_len, radius, name):
       box.ViewObject.Visibility=False
     return box_fllt
 
-#  ---------------- calc_rotation ------------------------
+#  ---------------- calc_rot -----------------------------
 #  ---------------- Yaw, Pitch and Roll transfor
 #  Having an object with an orientation defined by 2 vectors
 #  First vector direction (x,y,z) is (1,0,0) 
@@ -543,7 +733,7 @@ def fillet_len (box, e_len, radius, name):
 #  will be in -90, 180, or 90 degrees.
 #  this function returns the Rotation given by yaw, pitch and roll
 
-def calc_rotation (vec1, vec2):
+def calc_rot (vec1, vec2):
            
     # rotation calculation
     if vec1 == (1,0,0):
@@ -628,12 +818,12 @@ def calc_rotation (vec1, vec2):
     vrot = FreeCAD.Rotation(yaw,pitch,roll)
     return vrot
 
-#  ---------------- calc_desp_nocen ------------------------
+#  ---------------- calc_desp_ncen ------------------------
 #  similar to calc_rot, but calculates de displacement, when we don't want
 #  to have any of the dimensions centered
 
-def calc_desp_nocen (Length, Width, Height, 
-                     vec1, vec2, cx=False, cy=False, cz=False):
+def calc_desp_ncen (Length, Width, Height, 
+                     vec1, vec2, cx=False, cy=False, cz=False, H_extr = False):
            
     # rotation calculation
     x = 0
@@ -655,7 +845,7 @@ def calc_desp_nocen (Length, Width, Height,
             if cz == False:
                 z = Height / 2.0
         else:
-            print "error 1 in calc_desp_nocen"
+            print "error 1 in calc_desp_ncen"
     elif abs(vec1[1]) == 1: # Y axis
         if abs(vec2[0]) == 1:   # X
             if cx == False:
@@ -672,7 +862,7 @@ def calc_desp_nocen (Length, Width, Height,
             if cz == False:
                 z = Height / 2.0
         else:
-            print "error 2 in calc_desp_nocen"
+            print "error 2 in calc_desp_ncen"
     elif abs(vec1[2]) == 1: # Z axis
         if abs(vec2[0]) == 1:   # X
             if cx == False:
@@ -689,9 +879,9 @@ def calc_desp_nocen (Length, Width, Height,
             if cz == False:
                 z = Length / 2.0
         else:
-            print "error 3 in calc_desp_nocen"
+            print "error 3 in calc_desp_ncen"
     else:
-        print "error 3 in calc_desp_nocen"
+        print "error 3 in calc_desp_ncen"
 
 
     vdesp = FreeCAD.Vector(x,y,z)
