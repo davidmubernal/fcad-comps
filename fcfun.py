@@ -2,6 +2,9 @@
 
 import FreeCAD;
 import Part;
+import math;
+import logging;
+import DraftVecUtils;
 
 from FreeCAD import Base
 
@@ -21,6 +24,9 @@ import kcomp # before was mat_cte
 
 from kcomp import LAYER3D_H
 
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # vector constants
 V0 = FreeCAD.Vector(0,0,0)
@@ -110,6 +116,8 @@ def addBox_cen(x, y, z, name, cx= False, cy=False, cz=False):
     box.Base = square
     box.Dir = (0,0, z)
     box.Solid = True
+    # we need to recompute if we want to do operations on this object
+    doc.recompute()
     
     return box
 
@@ -208,6 +216,45 @@ def addCylHole (r_ext, r_int, h, name, axis = 'z', h_disp = 0):
     cylHole.Tool = cyl_int
 
     return cylHole
+
+
+# same as addCylHole, but avoiding the creation of many FreeCAD objects
+# Add cylinder, with inner hole:
+#     r_out: outside radius,
+#     r_in : inside radius,
+#     h: height 
+#     name 
+#     normal: FreeCAD.Vector pointing to the normal (if its module is not one,
+#             the height will be larger than h
+#     pos: position of the cylinder
+
+def addCylHolePos (r_out, r_in, h, name, normal = VZ, pos = V0):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+
+    cir_out =  Part.makeCircle (r_out,   # Radius
+                                pos,     # Position
+                                normal)  # direction
+    cir_in =  Part.makeCircle (r_in,   # Radius
+                                pos,     # Position
+                                normal)  # direction
+
+    #print "in: %", cir_in.Curve
+    #print "out: %", cir_out.Curve
+
+    wire_cir_out = Part.Wire(cir_out)
+    wire_cir_in  = Part.Wire(cir_in)
+    face_cir_out = Part.Face(wire_cir_out)
+    face_cir_in  = Part.Face(wire_cir_in)
+
+    face_cir_hole = face_cir_out.cut(face_cir_in)
+    dir_extrus = DraftVecUtils.scaleTo(normal, h)
+    shp_cyl_hole = face_cir_hole.extrude(dir_extrus)
+
+    cyl_hole = doc.addObject("Part::Feature", name)
+    cyl_hole.Shape = shp_cyl_hole
+
+    return cyl_hole
 
 # ------------------- def shpRndRectWire
 # Creates a wire (shape), that is a rectangle with rounded edges.
@@ -379,6 +426,76 @@ def shpRndRectWire (x=1, y=1, r= 0.5, zpos = 0):
 
 #doc.recompute()
     
+
+# ------------------- def wire_sim_xy
+# Creates a wire (shape), from a list of points on the positive quadrant of XY
+# the wire is simmetrical to both X and Y
+# vecList: list of FreeCAD Vectors, the have to be in order clockwise
+# if the first or the last points are not on the axis, a new point will be
+# created
+#
+#                   Y
+#                   |_ X
+#               
+#       __|__  
+#      /  |  \ We receive these points
+#      |  |  |
+#      |  |--------          z=0
+#      |     |
+#      \_____/  
+#      
+
+def wire_sim_xy (vecList):
+
+    edgList = []
+    if vecList[0].x != 0:
+        # the first element is not on the Y axis,so we create a first point
+        vec = FreeCAD.Vector (0, vecList[0].y, vecList[0].z)
+        seg = Part.Line(vec, vecList[0]) # segment
+        edg = seg.toShape() # edge
+        edgList.append(edg) # append to the edge list
+    listlen = len(vecList)
+    for index, vec in enumerate(vecList):
+        if vec.x < 0 or vec.y < 0:
+            logger.error('WireSimXY with negative points')
+        if index < listlen-1: # it is not the last element
+            seg = Part.Line(vec, vecList[index+1])
+            edg = seg.toShape()
+            edgList.append(edg)
+        index += 1
+    if vecList[-1].y != 0: # the last element is not on the X axis
+        vec = FreeCAD.Vector (vecList[-1].x, 0, vecList[-1].z)
+        seg = Part.Line(vecList[-1], vec)
+        edg = seg.toShape()
+        edgList.append(edg)
+    # the wire for the first cuadrant, quarter
+    quwire = Part.Wire(edgList)
+    # mirror on Y axis
+    MirY = FreeCAD.Matrix()
+    MirY.scale(FreeCAD.Vector(-1,1,1))
+    mir_quwire = quwire.transformGeometry(MirY)
+    # another option
+    # mir_quwire   = quwire.mirror(FreeCAD.Vector(0,0,0), FreeCAD.Vector(1,0,0))
+
+    #halfwire = Part.Wire([quwire, mir_quwire]) # get the half wire
+    halfwire = Part.Wire([mir_quwire, quwire]) # get the half wire
+    # otherwise it doesnt work because the edges are not aligned
+    halfwire.fixWire() 
+    # mirror on X axis
+    MirX = FreeCAD.Matrix()
+    MirX.scale(FreeCAD.Vector(1,-1,1))
+    mir_halfwire = halfwire.transformGeometry(MirX)
+    totwire = Part.Wire([mir_halfwire, halfwire]) # get the total wire
+    totwire.fixWire() 
+
+    return totwire
+
+# ------------------- end def wire_sim_xy
+
+            
+
+            
+
 
 """  -------------------- addBolt  ---------------------------------
    the hole for the bolt shank and the head or the nut
@@ -710,10 +827,15 @@ def fillet_len (box, e_len, radius, name):
     doc = FreeCAD.ActiveDocument
     fllts_v = []
     edge_ind = 1
+    #logger.debug('fillet_len: box %s - %s' %
+    #                     ( str(box), str(box.Shape)))
     for edge_i in box.Shape.Edges:
+        #logging.debug('fillet_len: edge Length: %s' % str(edge_i.Length))
         if edge_i.Length == e_len: # same length
         # the index is appeneded (edge_ind),not the edge itself (edge_i)
         # radius is twice, because it can be variable
+            #logging.debug('fillet_len: append edge. Length: %s ' ,
+            #               str(edge_i.Length))
             fllts_v.append((edge_ind, radius, radius))
         edge_ind += 1
     box_fllt = doc.addObject ("Part::Fillet", name)
