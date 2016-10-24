@@ -890,7 +890,7 @@ class CentralSlider (object):
 
         h_gt2clamp0 =  beltcl.Gt2BeltClamp (base_h = slid_z,
                                             midblock =0, name="gt2clamp0")
-        gt2clamp0 = h_gt2clamp0.CadObj
+        gt2clamp0 = h_gt2clamp0.fco   # the FreeCad Object
         #gt2clamp0.Placement.Base = FreeCAD.Vector 
 
 

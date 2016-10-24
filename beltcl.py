@@ -42,7 +42,7 @@ from kcomp import TOL
 
 
 # Attributes:
-# CadObj : the FreeCAD object of the belt clamp
+# fco : the FreeCAD Object of the belt clamp
 # BaseOffset : the FreeCAD object of the belt clamp offset. To make a cut
 #              on the FreeCAD object where the belt tensioner will be.
 
@@ -257,7 +257,7 @@ class Gt2BeltClamp (object):
         gt2_clamp.Base = gt2_clamp_basic
         gt2_clamp.Tool = gt2_clamp_holes
 
-        self.CadObj = gt2_clamp
+        self.fco = gt2_clamp   # the FreeCad Object
 
     # --------------------------------------------------------------------
     # obtains the list of vectors for the base of the clamp

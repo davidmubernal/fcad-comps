@@ -811,7 +811,7 @@ class NutHole (object):
         nuthole =  doc.addObject("Part::Fuse", name)
         nuthole.Base = nut
         nuthole.Tool = hole
-        self.CadObj = nuthole
+        self.fco = nuthole   # the FreeCad Object
 
 
 

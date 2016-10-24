@@ -47,7 +47,7 @@ doc = FreeCAD.newDocument()
 """
 h_alu_x_fb = comps.MisumiAlu30s6w8 (40,
                                   "alu_x_fb", axis= 'x', cx=1, cy=1, cz=0)
-alu_x_fb = h_alu_x_fb.CadObj
+alu_x_fb = h_alu_x_fb.fco # the FreeCad Object
 
 # bb: back (y=0) bottom (z=0)
 alu_x_bb = Draft.clone(alu_x_fb)
@@ -57,7 +57,7 @@ alu_x_bb.Placement.Base = ( FreeCAD.Vector ( 0, 50,0))
 # ------------------ Shaft holders SK12 ------------------------------
 # f= f; r: right. hole_x = 0 -> hole facing Y axis
 h_sk12_fr = comps.Sk(size=12, name="sk12_fr", hole_x = 0, cx=1, cy=1)
-sk12_fr = h_sk12_fr.CadObj
+sk12_fr = h_sk12_fr.fco # the FreeCad Object
 # ROD_Y_SEP is the separation of the Y RODs
 sk12_fr.Placement.Base = FreeCAD.Vector (20, 15, 30)
 # f= front; l: left
@@ -132,7 +132,7 @@ doc.recompute()
 T8moved = comps.T8NutHousing (name="T8NutHousing_desp", nutaxis='x',
                               screwface_axis ='-z', cx=1, cy = 1, cz=1)
 
-T8moved.CadObj.Placement.Base = fcfun.calc_desp_ncen (
+T8moved.fco.Placement.Base = fcfun.calc_desp_ncen (
                                             Length = T8moved.Length,
                                             Width = T8moved.Width,
                                             Height = T8moved.Height,
@@ -140,7 +140,7 @@ T8moved.CadObj.Placement.Base = fcfun.calc_desp_ncen (
                                             vec2 = (-1,0,0),
                                             cx=0, cy = 1, cz=0)
 
-T8moved.CadObj.Placement.Rotation = fcfun.calc_rot (
+T8moved.fco.Placement.Rotation = fcfun.calc_rot (
                                             vec1 = (0,0,1),
                                             vec2 = (-1,0,0))
 

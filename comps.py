@@ -280,7 +280,7 @@ class Sk (object):
             sk_final.Base = sk_shape_w_holes
             sk_final.Tool = mbolts_sh
 
-            self.CadObj = sk_final
+            self.fco = sk_final   # the FreeCad Object
 
 # --------------------------------------------------------------------
 # Creates a Misumi Aluminun Profile 30x30 Series 6 Width 8
@@ -396,7 +396,7 @@ class MisumiAlu30s6w8 (object):
         alu_extr.Dir = self.Dir
         alu_extr.Solid = True
 
-        self.CadObj = alu_extr
+        self.fco = alu_extr   # the FreeCad Object
 
 
 # ----------- class RectRndBar ---------------------------------------------
@@ -429,6 +429,7 @@ class MisumiAlu30s6w8 (object):
 # inHeight : height of the inner rectangle
 # hollow   : True, if it is hollow, False if it is not
 # face     : the face has been extruded
+# fco      : FreeCad Object
 
 class RectRndBar (object):
 
@@ -519,6 +520,8 @@ class RectRndBar (object):
         shp_extr = face.extrude(dir_extr)
         rndbar = doc.addObject("Part::Feature", name)
         rndbar.Shape = shp_extr
+
+        self.fco = rndbar
         
 # ----------- end class RectRndBar ----------------------------------------
             
@@ -752,7 +755,7 @@ class T8Nut (object):
         doc.recompute()
         t8nut.ViewObject.ShapeColor = fcfun.YELLOW
 
-        self.CadObj = t8nut
+        self.fco = t8nut  # the FreeCad Object
    
                       
     
@@ -935,6 +938,6 @@ class T8NutHousing (object):
         t8nuthouse.Base = housing_box
         t8nuthouse.Tool = nuthouseholes
 
-        self.CadObj = t8nuthouse
+        self.fco = t8nuthouse  # the FreeCad Object
 
 
