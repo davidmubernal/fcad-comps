@@ -1,3 +1,15 @@
+# ----------------------------------------------------------------------------
+# -- Test Components
+# -- Test classes and functions of comps
+# ----------------------------------------------------------------------------
+# -- (c) Felipe Machado
+# -- Area of Electronics. Rey Juan Carlos University (urjc.es)
+# -- October-2016
+# ----------------------------------------------------------------------------
+# --- LGPL Licence
+# ----------------------------------------------------------------------------
+
+
 # to test the classes and functions of comps
 #  execute freecad from the cmd console on the directory
 # "C:\Program Files\FreeCAD 0.16\bin\freecad" test_comps.py

@@ -1,4 +1,14 @@
-# group of parts, components, objects
+# ----------------------------------------------------------------------------
+# -- Groups of parts, components and objects
+# -- comps library
+# -- Python FreeCAD functions and classes that groups components
+# ----------------------------------------------------------------------------
+# -- (c) Felipe Machado
+# -- Area of Electronics. Rey Juan Carlos University (urjc.es)
+# -- October-2016
+# ----------------------------------------------------------------------------
+# --- LGPL Licence
+# ----------------------------------------------------------------------------
 
 import FreeCAD;
 import Part;

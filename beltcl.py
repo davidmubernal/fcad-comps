@@ -1,4 +1,15 @@
-# classes and functions to make belt tensioner
+# ----------------------------------------------------------------------------
+# -- Belt Clamp Tensioner
+# -- comps library
+# -- Python classes and functions to make belt tensioner in FreeCAD
+# ----------------------------------------------------------------------------
+# -- (c) Felipe Machado
+# -- Area of Electronics. Rey Juan Carlos University (urjc.es)
+# -- October-2016
+# ----------------------------------------------------------------------------
+# --- LGPL Licence
+# ----------------------------------------------------------------------------
+
 import FreeCAD;
 import Part;
 import Draft;

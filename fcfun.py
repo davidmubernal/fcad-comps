@@ -1,4 +1,14 @@
-# My functions for FreeCad (mfc)
+# ----------------------------------------------------------------------------
+# -- FreeCad Functions
+# -- comps library
+# -- Python functions for FreeCAD
+# ----------------------------------------------------------------------------
+# -- (c) Felipe Machado
+# -- Area of Electronics. Rey Juan Carlos University (urjc.es)
+# -- October-2016
+# ----------------------------------------------------------------------------
+# --- LGPL Licence
+# ----------------------------------------------------------------------------
 
 import FreeCAD;
 import Part;

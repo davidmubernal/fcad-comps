@@ -1,7 +1,15 @@
-# file with constants about diferent components, materials and pieces 
-# this is the old mat_cte.py. But mat seemed to be mathematical
-# and some other general constants for the printer
-
+# ----------------------------------------------------------------------------
+# -- Component Constants
+# -- comps library
+# -- Constants about different components, materials, parts and 3D printer
+# --   settings
+# ----------------------------------------------------------------------------
+# -- (c) Felipe Machado
+# -- Area of Electronics. Rey Juan Carlos University (urjc.es)
+# -- October-2016
+# ----------------------------------------------------------------------------
+# --- LGPL Licence
+# ----------------------------------------------------------------------------
 
 # ---------------------- Tolerance in mm
 TOL = 0.4

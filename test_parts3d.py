@@ -1,4 +1,16 @@
-# to test the classes and functions of comps
+# ----------------------------------------------------------------------------
+# -- Test Parts 3D
+# -- To test the classes and functions of parts3d.py
+# ----------------------------------------------------------------------------
+# -- (c) Felipe Machado
+# -- Area of Electronics. Rey Juan Carlos University (urjc.es)
+# -- October-2016
+# ----------------------------------------------------------------------------
+# --- LGPL Licence
+# ----------------------------------------------------------------------------
+
+
+
 #  execute freecad from the cmd console on the directory
 # "C:\Program Files\FreeCAD 0.16\bin\freecad" test_parts3d.py
 
