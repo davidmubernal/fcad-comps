@@ -1,3 +1,15 @@
+# ----------------------------------------------------------------------------
+# -- Parts 3D
+# -- comps library
+# -- Python scripts to create 3D parts models in FreeCAD
+# ----------------------------------------------------------------------------
+# -- (c) Felipe Machado
+# -- Area of Electronics. Rey Juan Carlos University (urjc.es)
+# -- October-2016
+# ----------------------------------------------------------------------------
+# --- LGPL Licence
+# ----------------------------------------------------------------------------
+
 # classes that creates objects to be 3D printed
 
 import FreeCAD;
@@ -96,7 +108,11 @@ logger = logging.getLogger(__name__)
 # dent_w  : width of the dent, if no dent is needed, just dent_w = 0
 # dent_l  : length of the dent, 
 # dent_sl : small dimension of the dent length
-# iddlepulls : FreeCad object of the idle pulleys
+# idlepull_axsep : separation between the axis iddle pulleys
+# belt_sep : separation between the inner part of the iddle pulleys
+#                   that is where the belts are. So it is
+#                   idlepull_axsep - 2* radius of the bearing
+# idlepulls : FreeCad object of the idle pulleys
 # bearings : FreeCad object of the bearings
 # top_slide : FreeCad object of the top part of the slider
 # bot_slide : FreeCad object of the bottm part of the slider
@@ -133,13 +149,13 @@ class EndShaftSlider (object):
     MLTOL = TOL - 0.05 # reducing the tolrances, it was too tolerant :)
 
     # Bolts to hold the top and bottom parts:
-    BOLT_R = 4
-    BOLT_HEAD_R = kcomp.D912_HEAD_D[BOLT_R] / 2.0
-    BOLT_HEAD_L = kcomp.D912_HEAD_L[BOLT_R] + MTOL
+    BOLT_D = 4
+    BOLT_HEAD_R = kcomp.D912_HEAD_D[BOLT_D] / 2.0
+    BOLT_HEAD_L = kcomp.D912_HEAD_L[BOLT_D] + MTOL
     BOLT_HEAD_R_TOL = BOLT_HEAD_R + MTOL/2.0 
-    BOLT_SHANK_R_TOL = BOLT_R / 2.0 + MTOL/2.0
-    BOLT_NUT_R = kcomp.NUT_D934_D[BOLT_R] / 2.0
-    BOLT_NUT_L = kcomp.NUT_D934_L[BOLT_R] + MTOL
+    BOLT_SHANK_R_TOL = BOLT_D / 2.0 + MTOL/2.0
+    BOLT_NUT_R = kcomp.NUT_D934_D[BOLT_D] / 2.0
+    BOLT_NUT_L = kcomp.NUT_D934_L[BOLT_D] + MTOL
     #  1.5 TOL because diameter values are minimum, so they may be larger
     BOLT_NUT_R_TOL = BOLT_NUT_R + 1.5*MTOL
 
@@ -166,11 +182,11 @@ class EndShaftSlider (object):
 
         # Separation from the end of the linear bearing to the end of the piece
         # on the width dimension (perpendicular to the movement)
-        if self.BOLT_R == 3:
+        if self.BOLT_D == 3:
             self.OUT_SEP_W = 8.0
             # on the length dimension (parallel to the movement)
             self.OUT_SEP_L = 10.0
-        elif self.BOLT_R == 4:
+        elif self.BOLT_D == 4:
             self.OUT_SEP_W = 10.0
             self.OUT_SEP_L = 14.0
         else:
@@ -471,23 +487,23 @@ class EndShaftSlider (object):
         boltpull0.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
         cutlist.append (boltpull0)
 
-        # washers and bearings (iddle pulley), from bottom to top
-        # lower washer. DIN9021 (large), size M6
-        idlepull_name_list = [
-                kcomp.HollowCyl (part = 'washer', size = 6, kind= 'large'),
-                kcomp.HollowCyl (part = 'washer', size = 4, kind= 'regular'),
-                kcomp.HollowCyl (part = 'bearing', size = 624), # 624ZZ
-                kcomp.HollowCyl (part = 'washer', size = 4, kind= 'regular'),
-                kcomp.HollowCyl (part = 'washer', size = 6, kind= 'large'),
-                kcomp.HollowCyl (part = 'washer', size = 4, kind= 'large')
-                          ]
-
-        h_idlepull0 = partgroup.BearWashGroup (holcyl_list = idlepull_name_list,
+        # idlepull_name_list is a list of the components for building
+        # an idle pulley out of washers and bearings
+        h_idlepull0 = partgroup.BearWashGroup (
+                                   holcyl_list = kcomp.idlepull_name_list,
                                    name = 'idlepull_0',
                                    normal = VZ,
                                    pos = boltpull0.Placement.Base + 
                                          FreeCAD.Vector(0,0,2*self.partheight))
         idlepull0 = h_idlepull0.fco
+
+        # separation between the axis iddle pulleys
+        self.idlepull_axsep = bolt_pulhigh_pos_y - bolt_pullow_pos_y
+        # separation between the inner part of the iddle pulleys
+        # ie: idlepull_axsep - the diameter of the pulley (bearing)
+        # -1 is because the belt is 1.38mm thick. So in each side we can
+        # substract 0.5 mm
+        self.belt_sep = self.idlepull_axsep - h_idlepull0.d_maxbear - 1
 
         # Hole for Pulley Down
         boltpull1 = Draft.clone(boltpull0)
@@ -651,6 +667,7 @@ class EndShaftSlider (object):
 # Arguments:
 #     rod_r   : radius of the rods where the slider runs on
 #     rod_sep : separation between the rods 
+#     belt_sep: separation between the belt
 #     dent_w  : width of the dent, if no dent is needed, just dent_w = 0
 #     dent_l  : length of the dent, 
 #     dent_sl : small dimension of the dent length
@@ -662,11 +679,11 @@ class EndShaftSlider (object):
 #     |_|       |_| -------------
 #     |_         _|
 #     | |_______| |
-#     |           |
+#     |           | ---------
 #     |           |
 #     |           |----X
 #     |           |
-#     |  _______  |
+#     |  _______  | --------- belt_sep
 #     |_|       |_|
 #     |_         _|
 #     | |_______| | ------------- rod_sep
@@ -703,9 +720,12 @@ class EndShaftSlider (object):
 #              twice this height
 # rod_sep : separation between the 2 rods that are holded and forms the 
 #               perpendicular axis movement
+# belt_sep: separation between the belt
 # dent_w  : width of the dent, if no dent is needed, just dent_w = 0
 # dent_l  : length of the dent, 
 # dent_sl : small dimension of the dent length
+# parts : list of FreeCad objects that the slider contains
+# idlepulls : FreeCad object of the idle pulleys
 # bearings : FreeCad object of the bearings
 # top_slide : FreeCad object of the top part of the slider
 # bot_slide : FreeCad object of the bottm part of the slider
@@ -738,23 +758,25 @@ class CentralSlider (object):
     MLTOL = TOL - 0.05 # reducing the tolrances, it was too tolerant :)
 
     # Bolts to hold the top and bottom parts:
-    BOLT_R = 4
-    BOLT_HEAD_R = kcomp.D912_HEAD_D[BOLT_R] / 2.0
-    BOLT_HEAD_L = kcomp.D912_HEAD_L[BOLT_R] + MTOL
+    BOLT_D = 4
+    BOLT_HEAD_R = kcomp.D912_HEAD_D[BOLT_D] / 2.0
+    BOLT_HEAD_L = kcomp.D912_HEAD_L[BOLT_D] + MTOL
     BOLT_HEAD_R_TOL = BOLT_HEAD_R + MTOL/2.0 
-    BOLT_SHANK_R_TOL = BOLT_R / 2.0 + MTOL/2.0
-    BOLT_NUT_R = kcomp.NUT_D934_D[BOLT_R] / 2.0
-    BOLT_NUT_L = kcomp.NUT_D934_L[BOLT_R] + MTOL
+    BOLT_SHANK_R_TOL = BOLT_D / 2.0 + MTOL/2.0
+    BOLT_NUT_R = kcomp.NUT_D934_D[BOLT_D] / 2.0
+    BOLT_NUT_L = kcomp.NUT_D934_L[BOLT_D] + MTOL
     #  1.5 TOL because diameter values are minimum, so they may be larger
     BOLT_NUT_R_TOL = BOLT_NUT_R + 1.5*MTOL
 
-    def __init__ (self, rod_r, rod_sep, name, dent_w, dent_l, dent_sl):
+    def __init__ (self, rod_r, rod_sep, name, belt_sep,
+                  dent_w, dent_l, dent_sl):
 
         doc = FreeCAD.ActiveDocument
         self.base_place = (0,0,0)
         self.rod_r      = rod_r
         self.rod_sep    = rod_sep
         self.name       = name
+        self.belt_sep   = belt_sep
         self.dent_w     = dent_w
         if dent_w == 0:
             self.dent_l     = 0
@@ -782,9 +804,9 @@ class CentralSlider (object):
         #   
         # separation from the end of the linear bearing to the end
         self.OUT_SEP_MOV = 4.0
-        if self.BOLT_R == 3:
+        if self.BOLT_D == 3:
             self.OUT_SEP_MOVPP = 10.0
-        elif self.BOLT_R == 4:
+        elif self.BOLT_D == 4:
             self.OUT_SEP_MOVPP = 10.0
         else:
             print "Bolt Size not defined in CentralSlider"
@@ -866,6 +888,67 @@ class CentralSlider (object):
         botrod.Placement.Base.y = -rod_sep /2.0
         cutlist.append (botrod)
 
+        # --------------------- Idle Pulley
+        # idlepull_name_list is a list of the components for building
+        # an idle pulley out of washers and bearings
+        # we dont have enough information for the position yet
+        h_csidlepull0 = partgroup.BearWashGroup (
+                                   holcyl_list = kcomp.idlepull_name_list,
+                                   name = 'csidlepull_0',
+                                   normal = VZ,
+                                   pos = FreeCAD.Vector(0,0,self.partheight))
+        csidlepull0 = h_csidlepull0.fco
+        # 0.5 is for the thickness of the belt
+        bolt_pull_pos_y = self.belt_sep /2.0 - h_csidlepull0.r_maxbear -0.5 
+        csidlepull0.Placement.Base = FreeCAD.Vector(
+                                                  -slid_x/2.,
+                                                   bolt_pull_pos_y,
+                                                   0)
+        csidlepull1 = Draft.clone(csidlepull0)
+        csidlepull1.Label = "cisidlepull_1"
+        csidlepull1.Placement.Base = FreeCAD.Vector(
+                                                   slid_x/2.,
+                                                   bolt_pull_pos_y,
+                                                   0)
+
+        csidlepull_list = [ csidlepull0, csidlepull1]
+        csidlepulls = doc.addObject("Part::Compound", "csidlepulls")
+        csidlepulls.Links = csidlepull_list
+
+        # list of parts of the central slider, any part that is a FreeCad
+        # Object
+        parts_list = []
+        parts_list.append (csidlepulls)
+
+        # Hole for the Idle Pulley bolt       
+        csboltpull0 = addBolt (
+                            r_shank   = EndShaftSlider.BOLTPUL_SHANK_R_TOL,
+                            l_bolt    = 2 * self.partheight,
+                            r_head    = EndShaftSlider.BOLTPUL_NUT_R_TOL,
+                            l_head    = EndShaftSlider.BOLTPUL_NUT_L,
+                            hex_head  = 1, extra=1,
+                            support = 1, 
+                            headdown  = 1, name="csboltpul_hole")
+
+        csboltpull0.Placement.Base =  FreeCAD.Vector (
+                                                   slid_x/2.,
+                                                   bolt_pull_pos_y,
+                                                   -self.partheight)
+        csboltpull0.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
+
+        cutlist.append (csboltpull0)
+        # the other Idle Pulley bolt hole
+        csboltpull1 = Draft.clone(csboltpull0)
+        csboltpull1.Label = "csboltpul_hole_1"
+        csboltpull1.Placement.Base =  FreeCAD.Vector (
+                                                   -slid_x/2.,
+                                                   bolt_pull_pos_y,
+                                                   -self.partheight)
+        csboltpull1.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
+        cutlist.append (csboltpull1)
+
+
+
         # --------------------- Linear Bearings -------------------
         h_lmuu_0 = comps.LinBearing (
                          r_ext = bearing_r,
@@ -894,9 +977,67 @@ class CentralSlider (object):
         #gt2clamp0.Placement.Base = FreeCAD.Vector 
 
 
+        # --------------------- Motor -------------------
+        h_nema14 = comps.NemaMotor(size=14, length=26.0, shaft_l=24.,
+               circle_r = 0, circle_h=2.,
+               name="nema14_my5602", chmf=2., rshaft_l = 0,
+               bolt_depth = 3.5, bolt_out = 2 + self.partheight/2.,
+               normal= FreeCAD.Vector(0,0,1),
+               #pos = FreeCAD.Vector(0,0,-self.partheight))
+               pos = FreeCAD.Vector(0,0,self.partheight/2.))
+
+        parts_list.append (h_nema14.fco)
+        shp_contnema14 = h_nema14.shp_cont  # this is a shape, not a fco
+
+        h_nema17 = comps.NemaMotor(size=17, length=33.5, shaft_l=24.,
+               circle_r = 12., circle_h=2.,
+               name="nema17_ST4209S1006B", chmf=2., rshaft_l = 10.,
+               bolt_depth = 4.5, bolt_out = 2 + self.partheight/2.,
+               normal= FreeCAD.Vector(0,0,1),
+               #pos = FreeCAD.Vector(0,0,-self.partheight))
+               pos = FreeCAD.Vector(0,0,self.partheight/2.))
+
+        parts_list.append (h_nema17.fco)
+        shp_contnema17 = h_nema17.shp_cont  # this is a shape, not a fco
+        shp_contmotors = shp_contnema17.fuse(shp_contnema14)
+
+        contmotors = doc.addObject("Part::Feature", "contmotors")
+        contmotors.Shape = shp_contmotors
+        cutlist.append (contmotors)
+
+        # ------ the small motor Nanotec STF2818X0504-A -- just the bolt holes
+        mtol = kcomp.TOL - 0.1
+        nanostf28_boltsep = 34.1
+        bhole_motorstf0 = addBolt (
+            r_shank =  1.5  + mtol/2., # nemabolt_d/2. + mtol/2.,
+            l_bolt = 2 + self.partheight/2.,
+            r_head = kcomp.D912_HEAD_D[3]/2. + mtol/2.,
+            l_head = kcomp.D912_HEAD_L[3] + mtol,
+            hex_head = 0, extra =1, support=1, headdown = 0,
+            name ="bhole_notorstf0")
+
+        bhole_motorstf1 = Draft.clone(bhole_motorstf0)
+        bhole_motorstf1.Label = "bhole_notorstf1"
+
+        bhole_motorstf0.Placement.Base = FreeCAD.Vector(
+                                                -nanostf28_boltsep/2.,
+                                                 0,
+                                                 self.partheight/2.)
+        bhole_motorstf1.Placement.Base = FreeCAD.Vector(
+                                                 nanostf28_boltsep/2.,
+                                                 0,
+                                                 self.partheight/2.)
+        bholes_motorstf = doc.addObject("Part::Fuse", "bholes_motorstf")
+        bholes_motorstf.Base = bhole_motorstf0
+        bholes_motorstf.Tool = bhole_motorstf1
+
+        cutlist.append (bholes_motorstf)
+
         # ----------- final fusion of holes
         holes = doc.addObject("Part::MultiFuse", "censlid_holes")
         holes.Shapes = cutlist
+
+        self.parts = parts_list
 
         # bearings fusion:
         bearings = doc.addObject("Part::Fuse", name + "_bear")
@@ -921,6 +1062,8 @@ class CentralSlider (object):
     # move both sliders (top & bottom) and the bearings
     def BasePlace (self, position = (0,0,0)):
         self.base_place = position
+        for part in self.parts:
+            part.Placement.Base = FreeCAD.Vector(position)
         self.bearings.Placement.Base = FreeCAD.Vector(position)
         self.top_slide.Placement.Base = FreeCAD.Vector(position)
         self.bot_slide.Placement.Base = FreeCAD.Vector(position)
@@ -929,6 +1072,7 @@ class CentralSlider (object):
 doc = FreeCAD.newDocument()
 #CentralSlider (rod_r = kcit.ROD_R, rod_sep = 150.0, name="central_slider")
 cs = CentralSlider (rod_r = 6, rod_sep = 150.0, name="central_slider",
+                    belt_sep = 100,  # check value
                     dent_w = 18,
                     dent_l = 122,
                     dent_sl = 68)

@@ -43,6 +43,9 @@ V0 = FreeCAD.Vector(0,0,0)
 VX = FreeCAD.Vector(1,0,0)
 VY = FreeCAD.Vector(0,1,0)
 VZ = FreeCAD.Vector(0,0,1)
+VXN = FreeCAD.Vector(-1,0,0)
+VYN = FreeCAD.Vector(0,-1,0)
+VZN = FreeCAD.Vector(0,0,-1)
 
 # color constants
 WHITE  = (1.0, 1.0, 1.0)
@@ -184,6 +187,66 @@ def addCyl_pos (r, h, name, axis = 'z', h_disp = 0):
     cyl.Solid  = True 
 
     return cyl
+
+
+
+# same as addCyl_pos, but avoiding the creation of many FreeCAD objects
+# Add cylinder
+#     r: radius,
+#     h: height 
+#     name 
+#     normal: FreeCAD.Vector pointing to the normal (if its module is not one,
+#             the height will be larger than h
+#     pos: position of the cylinder
+
+def addCylPos (r, h, name, normal = VZ, pos = V0):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+
+    cir =  Part.makeCircle (r,   # Radius
+                            pos,     # Position
+                            normal)  # direction
+
+    #print "circle: %", cir_out.Curve
+
+    wire_cir = Part.Wire(cir)
+    face_cir = Part.Face(wire_cir)
+
+    dir_extrus = DraftVecUtils.scaleTo(normal, h)
+    shp_cyl = face_cir.extrude(dir_extrus)
+
+    cyl = doc.addObject("Part::Feature", name)
+    cyl.Shape = shp_cyl
+
+    return cyl
+
+
+# same as addCylPos, but just creates the shape
+# Add cylinder
+#     r: radius,
+#     h: height 
+#     normal: FreeCAD.Vector pointing to the normal (if its module is not one,
+#             the height will be larger than h
+#     pos: position of the cylinder
+
+def addShpCylPos (r, h, normal = VZ, pos = V0):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+
+    cir =  Part.makeCircle (r,   # Radius
+                            pos,     # Position
+                            normal)  # direction
+
+    #print "circle: %", cir_out.Curve
+
+    wire_cir = Part.Wire(cir)
+    face_cir = Part.Face(wire_cir)
+
+    dir_extrus = DraftVecUtils.scaleTo(normal, h)
+    shp_cyl = face_cir.extrude(dir_extrus)
+
+    return shp_cyl
+
 
 
 # Add cylinder, with inner hole:
@@ -520,7 +583,7 @@ def wire_sim_xy (vecList):
    h_layer3d: height of the layer for printing, if 0, means that the support
               is not needed
    extra: 1 if you want 1 mm on top and botton to avoid cutting on the same
-               plane pieces after makeing differences 
+               plane pieces after making cuts (boolean difference) 
    support: 1 if you want to include a triangle between the shank and the head
               to support the shank and not building the head on the air
               using kcomp.LAYER3D_H
