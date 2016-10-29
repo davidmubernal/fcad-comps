@@ -234,6 +234,14 @@ idlepull_name_list = [
             HollowCyl (part = 'washer', size = 4, kind= 'large')
               ]
 
+def get_idlepull_maxbear_d (idlepull_list):
+    d_maxbear = 0
+    for ind, elem in enumerate(idlepull_list):
+        if elem.part == 'bearing':
+            if d_maxbear < elem.d_out :
+                d_maxbear = elem.d_out
+    return d_maxbear
+    
 
 # ----------------------------- NEMA motor dimensions --------
 

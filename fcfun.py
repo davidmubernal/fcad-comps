@@ -134,6 +134,69 @@ def addBox_cen(x, y, z, name, cx= False, cy=False, cz=False):
     
     return box
 
+
+# adds a shape of box, referenced on the specified axis, with its
+# Placement and Rotation at zero. So it can be referenced absolutely from
+# its given position
+
+def shp_boxcen(x, y, z, cx= False, cy=False, cz=False, pos=V0):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+
+    if cx == True:
+        x0 = -x/2.0
+        x1 =  x/2.0
+    else:
+        x0 =  0
+        x1 =  x
+    if cy == True:
+        y0 = -y/2.0
+        y1 =  y/2.0
+    else:
+        y0 =  0
+        y1 =  y
+    if cz == True:
+        z0 = - z/2.0
+    else:
+        z0 = 0
+
+    p00 = FreeCAD.Vector (x0,y0,z0) + pos
+    p10 = FreeCAD.Vector (x1,y0,z0) + pos
+    p11 = FreeCAD.Vector (x1,y1,z0) + pos
+    p01 = FreeCAD.Vector (x0,y1,z0) + pos
+    # the square
+    shp_wire_sq = Part.makePolygon([p00, p10, p11, p01, p00])
+    # the face
+    shp_face_sq = Part.Face(shp_wire_sq)
+    shp_box = shp_face_sq.extrude(FreeCAD.Vector(0,0,z))
+
+    doc.recompute()
+    
+    return shp_box
+
+# same as shp_bxcen but with a filleted dimension
+def shp_boxcenfill (x, y, z, fillrad,
+                   fx=False, fy=False, fz=True,
+                   cx= False, cy=False, cz=False, pos=V0):
+
+    shp_box = shp_boxcen (x=x, y=y, z=z, cx=cx, cy=cy, cz=cz, pos=pos)
+    edg_list = []
+    for ind, edge in enumerate(shp_box.Edges):
+        vertex0 = edge.Vertexes[0]
+        vertex1 = edge.Vertexes[1]
+        p0 = vertex0.Point
+        p1 = vertex1.Point
+        vdif = p1 - p0
+        if vdif.x != 0 and fx==True:
+            edg_list.append(edge)
+        elif vdif.y != 0 and fy==True:
+            edg_list.append(edge)
+        elif vdif.z != 0 and fz==True:
+            edg_list.append(edge)
+    shp_boxfill = shp_box.makeFillet(fillrad, edg_list)
+    return (shp_boxfill)
+
+
 # Add cylinder r: radius, h: height 
 def addCyl (r, h, name):
     # we have to bring the active document
@@ -229,7 +292,7 @@ def addCylPos (r, h, name, normal = VZ, pos = V0):
 #             the height will be larger than h
 #     pos: position of the cylinder
 
-def addShpCylPos (r, h, normal = VZ, pos = V0):
+def shp_cyl (r, h, normal = VZ, pos = V0):
     # we have to bring the active document
     doc = FreeCAD.ActiveDocument
 
@@ -243,9 +306,9 @@ def addShpCylPos (r, h, normal = VZ, pos = V0):
     face_cir = Part.Face(wire_cir)
 
     dir_extrus = DraftVecUtils.scaleTo(normal, h)
-    shp_cyl = face_cir.extrude(dir_extrus)
+    shpcyl = face_cir.extrude(dir_extrus)
 
-    return shp_cyl
+    return shpcyl
 
 
 
@@ -1082,5 +1145,22 @@ def calc_desp_ncen (Length, Width, Height,
     vdesp = FreeCAD.Vector(x,y,z)
     return vdesp
 
+
+def getvecofname(axis):
+
+    if axis == 'x':
+        vec = (1,0,0)
+    elif axis == '-x':
+        vec = (-1,0,0)
+    elif axis == 'y':
+        vec = (0,1,0)
+    elif axis == '-y':
+        vec = (0,-1,0)
+    elif axis == 'z':
+        vec = (0,0,1)
+    elif axis == '-z':
+        vec = (0,0,-1)
+
+    return vec
 
 

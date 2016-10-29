@@ -331,18 +331,19 @@ class MisumiAlu30s6w8 (object):
 
         list_obj_alumprofile = []
         for obj in doc_sk.Objects:
-            """
-            if (hasattr(obj,'ViewObject') and obj.ViewObject.isVisible()
-                and hasattr(obj,'Shape') and len(obj.Shape.Faces) > 0 ):
-               # len(obj.Shape.Faces) > 0 to avoid sketches
-                list_obj_alumprofile.append(obj)
-            """
+            
+            #if (hasattr(obj,'ViewObject') and obj.ViewObject.isVisible()
+            #    and hasattr(obj,'Shape') and len(obj.Shape.Faces) > 0 ):
+            #   # len(obj.Shape.Faces) > 0 to avoid sketches
+            #    list_obj_alumprofile.append(obj)
             if len(obj.Shape.Faces) == 0:
                 orig_alumsk = obj
 
         FreeCAD.ActiveDocument = doc
         self.Sk = doc.addObject("Sketcher::SketchObject", 'sk_' + name)
         self.Sk.Geometry = orig_alumsk.Geometry
+        print (orig_alumsk.Geometry)
+        print (orig_alumsk.Constraints)
         self.Sk.Constraints = orig_alumsk.Constraints
         self.Sk.ViewObject.Visibility = False
 
@@ -623,14 +624,14 @@ class NemaMotor (object):
         shp_motorbox = motorface.extrude(neg_lnormal)
         # shaft shape
         if rshaft_l == 0: # no rear shaft
-            shp_shaft = fcfun.addShpCylPos (
+            shp_shaft = fcfun.shp_cyl (
                                r=kcomp.NEMA_SHAFT_D[size]/2.,
                                h= shaft_l,
                                normal = nnormal,
                                pos = pos)
         else:
             rshaft_posend = DraftVecUtils.scaleTo(neg_lnormal, rshaft_l+length)
-            shp_shaft = fcfun.addShpCylPos (
+            shp_shaft = fcfun.shp_cyl (
                                r=kcomp.NEMA_SHAFT_D[size]/2.,
                                h= shaft_l + rshaft_l + length,
                                normal = nnormal,
@@ -656,22 +657,22 @@ class NemaMotor (object):
 #        bhole01_posrot = DraftVecUtils.rotate(bhole01_pos, rot.Angle, rot.Axis)
 #        bhole10_posrot = DraftVecUtils.rotate(bhole10_pos, rot.Angle, rot.Axis)
 #        bhole11_posrot = DraftVecUtils.rotate(bhole11_pos, rot.Angle, rot.Axis)
-#        shp_bolt00 = fcfun.addShpCylPos (
+#        shp_bolt00 = fcfun.shp_cyl (
 #                                   r=kcomp.NEMA_BOLT_D[size]/2.+kcomp.TOL/2.,
 #                                   h=bolt_depth + shaft_l,
 #                                   normal = nnormal,
 #                                   pos= bhole00_posrot)
-#        shp_bolt01 = fcfun.addShpCylPos ( 
+#        shp_bolt01 = fcfun.shp_cyl ( 
 #                                   r=kcomp.NEMA_BOLT_D[size]/2.+kcomp.TOL/2.,
 #                                   h=bolt_depth + shaft_l,
 #                                   normal = nnormal,
 #                                   pos= bhole01_posrot)
-#        shp_bolt10 = fcfun.addShpCylPos (
+#        shp_bolt10 = fcfun.shp_cyl (
 #                                   r=kcomp.NEMA_BOLT_D[size]/2.+kcomp.TOL/2.,
 #                                   h=bolt_depth + shaft_l,
 #                                   normal = nnormal,
 #                                   pos= bhole10_posrot)
-#        shp_bolt11 = fcfun.addShpCylPos (
+#        shp_bolt11 = fcfun.shp_cyl (
 #                                   r=kcomp.NEMA_BOLT_D[size]/2.+kcomp.TOL/2.,
 #                                   h=bolt_depth + shaft_l,
 #                                   normal = nnormal,
@@ -745,7 +746,7 @@ class NemaMotor (object):
         else:
             calcircle_r = circle_r
         if circle_h != 0:
-            shp_circle = fcfun.addShpCylPos (
+            shp_circle = fcfun.shp_cyl (
                                r=calcircle_r,
                                h= circle_h + 1, #supperposition for union
                                normal = nnormal,
@@ -779,13 +780,13 @@ class NemaMotor (object):
             # the container is much wider than the shaft
 
             if rshaft_l == 0: # no rear shaft
-                shp_contshaft = fcfun.addShpCylPos (
+                shp_contshaft = fcfun.shp_cyl (
                                    r=calcircle_r + kcomp.TOL,
                                    h= shaft_l + 1,
                                    normal = nnormal,
                                    pos = pos - nnormal )
             else:
-                shp_contshaft = fcfun.addShpCylPos (
+                shp_contshaft = fcfun.shp_cyl (
                                    r=calcircle_r + kcomp.TOL,
                                    h= shaft_l + rshaft_l + length,
                                    normal = nnormal,
@@ -816,7 +817,8 @@ class NemaMotor (object):
     def BasePlace (self, position = (0,0,0)):
         self.base_place = position
         self.fco.Placement.Base = FreeCAD.Vector(position)
-        self.shp_cont.Placement.Base = FreeCAD.Vector(position)
+        #self.shp_cont.Placement.Base = FreeCAD.Vector(position)
+        self.fco_cont.Placement.Base = FreeCAD.Vector(position)
 
 #doc =FreeCAD.newDocument()
 
@@ -1205,30 +1207,30 @@ class T8NutHousing (object):
        
         # rotation vector calculation
         if nutaxis == 'x':
-           vec1 = (1,0,0)
+            vec1 = (1,0,0)
         elif nutaxis == '-x':
-           vec1 = (-1,0,0)
+            vec1 = (-1,0,0)
         elif nutaxis == 'y':
-           vec1 = (0,1,0)
+            vec1 = (0,1,0)
         elif nutaxis == '-y':
-           vec1 = (0,-1,0)
+            vec1 = (0,-1,0)
         elif nutaxis == 'z':
-           vec1 = (0,0,1)
+            vec1 = (0,0,1)
         elif nutaxis == '-z':
-           vec1 = (0,0,-1)
+            vec1 = (0,0,-1)
 
         if screwface_axis == 'x':
-           vec2 = (1,0,0)
+            vec2 = (1,0,0)
         elif screwface_axis == '-x':
-           vec2 = (-1,0,0)
+            vec2 = (-1,0,0)
         elif screwface_axis == 'y':
-           vec2 = (0,1,0)
+            vec2 = (0,1,0)
         elif screwface_axis == '-y':
-           vec2 = (0,-1,0)
+            vec2 = (0,-1,0)
         elif screwface_axis == 'z':
-           vec2 = (0,0,1)
+            vec2 = (0,0,1)
         elif screwface_axis == '-z':
-           vec2 = (0,0,-1)
+            vec2 = (0,0,-1)
 
         vrot = fcfun.calc_rot (vec1,vec2)
         vdesp = fcfun.calc_desp_ncen (
