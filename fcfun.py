@@ -196,6 +196,56 @@ def shp_boxcenfill (x, y, z, fillrad,
     shp_boxfill = shp_box.makeFillet(fillrad, edg_list)
     return (shp_boxfill)
 
+# def shp_face_lgrail 
+# adds a shape of the profile (face) of a linear guide rail, the dent is just
+# rough, to be able to see that it is a profile
+# Arguments:
+# rail_w : width of the rail
+# rail_h : height of the rail
+# axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
+# axis_b : the axis where the base of the rail is poingint:
+#           'x', 'y', 'z', '-x', '-y', '-z',
+# It will be centered on the width axis, and zero on the length and height
+#                        Z
+#                       |
+#               _________________ 5
+#              |                 | 4
+#               \             3 /   A little dent to see that it is a rail
+#               /               \ 2
+#              |                 |
+#              |                 |
+#              |_________________|  _____________ Y
+#                                 1
+
+def shp_face_lgrail (rail_w, rail_h, axis_l = 'x', axis_b = '-z'):
+
+    #First we do it on like it is axis_l = 'x' and axis_h = 'z' 
+    #so we draw width on Y and height on Z
+
+
+    v1  = FreeCAD.Vector(0,  rail_w/2., 0)
+    v1n = FreeCAD.Vector(0, -rail_w/2., 0)
+    v2  = FreeCAD.Vector(0,  rail_w/2.,  rail_h/2.)
+    v2n = FreeCAD.Vector(0, -rail_w/2.,  rail_h/2.)
+    v3  = FreeCAD.Vector(0,  rail_w/2.-rail_h/8.,rail_h/2. + rail_h/8.)
+    v3n = FreeCAD.Vector(0, -rail_w/2.+rail_h/8.,rail_h/2. + rail_h/8.)
+    v4  = FreeCAD.Vector(0,  rail_w/2.,  rail_h/2. + rail_h/4.)
+    v4n = FreeCAD.Vector(0, -rail_w/2.,  rail_h/2. + rail_h/4.)
+    v5  = FreeCAD.Vector(0,  rail_w/2.,  rail_h)
+    v5n = FreeCAD.Vector(0, -rail_w/2.,  rail_h)
+
+    # the square
+    shp_wire_rail = Part.makePolygon([v1, v2, v3, v4, v5,
+                                    v5n, v4n, v3n, v2n, v1n, v1])
+
+    vrot = calc_rot(getvecofname(axis_l), getvecofname(axis_b))
+    # the face
+    #shp_wire_rail.rotate(vrot) # It doesn't work
+    shp_wire_rail.Placement.Rotation = vrot
+    shp_face_rail = Part.Face(shp_wire_rail)
+    
+    return (shp_face_rail)
+
 
 # Add cylinder r: radius, h: height 
 def addCyl (r, h, name):
@@ -293,8 +343,6 @@ def addCylPos (r, h, name, normal = VZ, pos = V0):
 #     pos: position of the cylinder
 
 def shp_cyl (r, h, normal = VZ, pos = V0):
-    # we have to bring the active document
-    doc = FreeCAD.ActiveDocument
 
     cir =  Part.makeCircle (r,   # Radius
                             pos,     # Position
@@ -352,6 +400,32 @@ def addCylHole (r_ext, r_int, h, name, axis = 'z', h_disp = 0):
     cylHole.Tool = cyl_int
 
     return cylHole
+
+# Same as addCylHole, but just a shape
+# Add cylinder, with inner hole:
+#     r_ext: external radius,
+#     r_int: internal radius,
+#     h: height 
+#     axis: 'x', 'y' or 'z'
+#           'x' will along the x axis
+#           'y' will along the y axis
+#           'z' will be vertical
+#     h_disp: displacement on the height. 
+#             if 0, the base of the cylinder will be on the plane
+#             if -h/2: the plane will be cutting h/2
+
+def shp_cylhole (r_ext, r_int, h, axis = 'z', h_disp = 0.):
+
+    normal = getfcvecofname(axis)
+    pos_ext = DraftVecUtils.scaleTo(normal, h_disp)
+    pos_int = DraftVecUtils.scaleTo(normal, h_disp-1)
+
+    shp_cyl_ext =  shp_cyl (r_ext, h, normal = normal, pos=pos_ext)
+    shp_cyl_int =  shp_cyl (r_int, h+2, normal = normal, pos=pos_int)
+
+    shp_cyl_hole = shp_cyl_ext.cut(shp_cyl_int)
+
+    return shp_cyl_hole
 
 
 # same as addCylHole, but avoiding the creation of many FreeCAD objects
@@ -1163,4 +1237,8 @@ def getvecofname(axis):
 
     return vec
 
+def getfcvecofname(axis):
+
+    fc_vec = FreeCAD.Vector(getvecofname(axis))
+    return fc_vec
 

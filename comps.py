@@ -39,6 +39,8 @@ from fcfun import addBolt, addBoltNut_hole, NutHole
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(%(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
 #
 #        _______       _______________________________  TotH = H
 #       |  ___  |                     
@@ -245,10 +247,9 @@ class Sk (object):
             mbolt_sh_r.Placement.Base = mbolt_sh_r_pos
             mbolt_sh_l.Placement.Base = mbolt_sh_l_pos
 
-            """ Equivalente expresions to the ones above
-            mbolt_sh_l.Placement = FreeCAD.Placement(mbolt_sh_l_pos, v0rot, v0)
-            mbolt_sh_r.Placement = FreeCAD.Placement(mbolt_sh_r_pos, v0rot, v0)
-            """
+            # Equivalent expresions to the ones above
+            #mbolt_sh_l.Placement = FreeCAD.Placement(mbolt_sh_l_pos, v0rot, v0)
+            #mbolt_sh_r.Placement = FreeCAD.Placement(mbolt_sh_r_pos, v0rot, v0)
 
             mbolts_sh = doc.addObject("Part::Fuse", "mbolts_sh")
             mbolts_sh.Base = mbolt_sh_r
@@ -306,6 +307,9 @@ class Sk (object):
 #         it can be done because it is a new shape formed from the union
 # cy:     1 if you want the coordinates referenced to the y center of the piece
 # cz:     1 if you want the coordinates referenced to the z center of the piece
+# ATTRIBUTES:
+# fco: The freecad object
+# Sk: The sketch of the aluminum profile
 
 class MisumiAlu30s6w8 (object):
 
@@ -349,6 +353,8 @@ class MisumiAlu30s6w8 (object):
 
         FreeCAD.closeDocument(doc_sk.Name)
         FreeCAD.ActiveDocument = doc #otherwise, clone will not work
+
+        doc.recompute()
 
         # The sketch is on plane XY, facing Z
         if axis == 'x':
@@ -562,6 +568,7 @@ class RectRndBar (object):
 #         usually is on the base of the shaft
 
 # ATTRIBUTES: all the arguments, and:
+# shaft_d: diameter of the motor shaft
 # fco: the FreeCad Object of the motor
 # shp_cont: the container of the motor. To cut other pieces. It is a shape
 #           not a FreeCad Object (fco)
@@ -584,13 +591,14 @@ class NemaMotor (object):
 
         doc = FreeCAD.ActiveDocument
         self.base_place = (0,0,0)
-        self.size = size
-        self.width = kcomp.NEMA_W[size]
-        self.length = length
-        self.shaft_l = shaft_l
+        self.size     = size
+        self.width    = kcomp.NEMA_W[size]
+        self.length   = length
+        self.shaft_l  = shaft_l
+        self.shaft_d  = kcomp.NEMA_SHAFT_D[size]
         self.circle_r = circle_r
         self.circle_h = circle_h
-        self.chmf = chmf
+        self.chmf     = chmf
         self.rshaft_l = rshaft_l
         self.bolt_depth = bolt_depth
         self.bolt_out = bolt_out
@@ -625,15 +633,15 @@ class NemaMotor (object):
         # shaft shape
         if rshaft_l == 0: # no rear shaft
             shp_shaft = fcfun.shp_cyl (
-                               r=kcomp.NEMA_SHAFT_D[size]/2.,
+                               r=self.shaft_d/2.,
                                h= shaft_l,
                                normal = nnormal,
                                pos = pos)
         else:
             rshaft_posend = DraftVecUtils.scaleTo(neg_lnormal, rshaft_l+length)
             shp_shaft = fcfun.shp_cyl (
-                               r=kcomp.NEMA_SHAFT_D[size]/2.,
-                               h= shaft_l + rshaft_l + length,
+                               r = self.shaft_d/2.,
+                               h = shaft_l + rshaft_l + length,
                                normal = nnormal,
                                pos = pos + rshaft_posend)
                                
@@ -1251,4 +1259,301 @@ class T8NutHousing (object):
 
         self.fco = t8nuthouse  # the FreeCad Object
 
+#  -------------------- FlexCoupling
+# Creates a flexible Shaft Coupling
+# ARGUMENTS:
+# ds: diameter of the smaller shaft
+# dl: diameter of the larger shaft
+# ctype: rb, xb
+# axis: 'x', 'y' or 'z'
+#           'x' will along the x axis
+#           'y' will along the y axis
+#           'z' will be vertical
+# center: 1, 0: centered or not on the axis
+# larg_neg: 1, 0: if the large diameter is on the negative side or not
+# ATTRIBUTES
+# The arguments and:
+# length: Length of the coupler
+# diam: External diameter of the coupler
+# fco: The freecad object
+
+class FlexCoupling (object):
+
+    def __init__ (self, ds, dl, ctype='rb', name='flexcoupling',
+                  axis='z', center = 1, larg_neg = 1):
+
+        doc = FreeCAD.ActiveDocument
+        self.ds = ds 
+        self.dl = ds 
+        self.ctype = ctype 
+        self.axis = axis 
+        self.center = center 
+        self.larg_neg = larg_neg 
+        self.name = name 
+
+        if ctype == 'rb':
+            self.length = kcomp.FLEXSC_RB_L[(ds,dl)]
+            self.diam = kcomp.FLEXSC_RB_D[(ds,dl)]
+        else:
+            logger.error('Type not yet defined')
+
+        # Shape of the larger diameter
+        if larg_neg == 1:
+            hpos_larg = -self.length/2
+            hpos_smal = 0
+        else:
+            hpos_larg = -1  # superposition
+            hpos_smal = -self.length/2
+        shp_dl = fcfun.shp_cylhole (self.diam/2., dl/2., self.length/2.+1,
+                                    axis=axis, h_disp = hpos_larg)
+        shp_ds = fcfun.shp_cylhole (self.diam/2., ds/2., self.length/2.,
+                                    axis=axis, h_disp = hpos_smal)
+
+        shp_FlexCoupling = shp_dl.fuse(shp_ds)
+
+        doc.recompute()
+        fco_FlexCoupling = doc.addObject ("Part::Feature", name)
+        fco_FlexCoupling.Shape = shp_FlexCoupling
+
+        self.fco = fco_FlexCoupling
+     
+
+# ---------------------- LinGuide -----------------------------------
+
+#class LinGuide (object):
+
+#   def __init__ (self, 
+
+# ---------------------- LinGuideRail -------------------------------
+# Makes the Rail of a linear guide
+# Arguments:
+# rail_l : length of the rail
+# rail_w : width of the rail
+# rail_h : height of the rail
+# bolt_lsep : separation between bolts on the length dimension
+# bolt_wsep : separation between bolts on the width dimension, it it is 0
+#             there is only one bolt
+# bolt_d : diameter of the hole for the bolt
+# bolth_d : diameter of the hole for the head of the bolt
+# bolth_h : heigth of the hole for the head of the bolt
+# boltend_sep : separation on one end, from the bolt to the end
+# axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
+# axis_b : the axis where the base of the rail is pointing:
+#                                 'x',   'y',  'z', '-x', '-y', '-z',
+# It will be centered on the width axis, and zero on the length and height
+# Optional holes for the bolts, that go beyon the rail to cut 3D printed pieces.
+# to be designed. Zero if you dont want to have them
+# bolthole_d: diameter of the hole
+# bolthole_l: length of the hole
+# NOT IMPLEMENTED YET, NOW ONLY ON THE DIRECTION OF AXIS_B (SAME)
+# bolthole_dir: direction of the hole, it would be:
+#               'same'  same direction of axis_b
+#               'opp'   oposite direction of axis_b
+#               'both'  both directions
+# bolthole_nutd: diameter of the nut 
+# bolthole_nuth: length of the nut (including the head)
+
+# name   : name of the freecad object
+# Attributes:
+# The Arguments and:
+# ###shp_face_rail : the shape of the face of the section of the rail
+# nbolt_l : number of bolts lines (can be pairs, counted as one) on the l
+#           direction
+# fco : the freecad object of the rail
+
+class LinGuideRail (object):
+
+    def __init__ (self, rail_l, rail_w, rail_h,
+                  bolt_lsep, bolt_wsep, bolt_d,
+                  bolth_d, bolth_h, boltend_sep = 0,
+                  axis_l = 'x', axis_b = '-z', name='linguiderail',
+                  bolthole_d = 0, bolthole_l = 0, bolthole_dir = 0,
+                  bolthole_nutd = 0, bolthole_nuth = 0):
+
+        self.rail_l = rail_l
+        self.rail_w = rail_w
+        self.rail_h = rail_h
+        self.bolt_lsep = bolt_lsep
+        self.bolt_wsep = bolt_wsep
+        self.bolt_d = bolt_d
+        self.bolth_d = bolth_d
+        self.bolth_h = bolth_h
+
+        doc = FreeCAD.ActiveDocument
+        shp_face_rail = fcfun.shp_face_lgrail(rail_w, rail_h, axis_l, axis_b)
+        #self.shp_face_rail = shp_face_rail
+        # vector on the direction of the rail length. Extrusion
+        vdir_l = fcfun.getfcvecofname(axis_l)
+        vdir_extr = DraftVecUtils.scaleTo(vdir_l, rail_l)
+        shp_plainrail = shp_face_rail.extrude(vdir_extr)
+
+        if boltend_sep != 0:
+            nbolt_l = (rail_l - boltend_sep) // bolt_lsep #integer division
+            self.boltend_sep = boltend_sep
+        else: # leave even distance
+            # number of bolt lines, on the length axis
+            nbolt_l = rail_l // bolt_lsep # integer division
+            #dont use % in case is not int
+            rail_rem = rail_l - nbolt_l * bolt_lsep 
+            # separation between the bolt and the end
+            self.boltend_sep = rail_rem / 2.
+        # there will be one bolt more than nbolt_l
+        self.nbolt_l = nbolt_l + 1
+        # bolt holes
+        bolth_posz = rail_h - bolth_h
+        doc.recompute()
+        if bolt_wsep == 0: # just one bolt hole per line
+            shp_boltshank = fcfun.shp_cyl(r=bolt_d/2., h=rail_h-bolth_h+2,
+                              normal=VZ, pos=FreeCAD.Vector(0,0,-1))
+            shp_bolthead = fcfun.shp_cyl(r=bolth_d/2., h=bolth_h+1,
+                              normal=VZ, pos=FreeCAD.Vector(0,0,bolth_posz))
+            shp_bolt = shp_boltshank.fuse(shp_bolthead)
+            if bolthole_d != 0:
+                fco_bolthole = addBolt(bolthole_d/2., bolthole_l,
+                                       bolthole_nutd/2., bolthole_nuth,
+                                       hex_head = 1, extra=1, support=1,
+                                       headdown = 1, name= name +"_bolthole")
+        else:
+            shp_boltshank1 = fcfun.shp_cyl(r=bolt_d/2., h=rail_h-bolth_h+2,
+                             normal=VZ, pos= FreeCAD.Vector(0,bolt_wsep/2.,-1))
+            shp_bolthead1 = fcfun.shp_cyl(r=bolth_d/2., h=bolth_h+1,
+                             normal=VZ, 
+                             pos=FreeCAD.Vector(0,bolt_wsep/2.,bolth_posz))
+            shp_bolt1 = shp_boltshank1.fuse(shp_bolthead1)
+            shp_boltshank2 = fcfun.shp_cyl(r=bolt_d/2., h=rail_h-bolth_h+2,
+                             normal=VZ,  pos=FreeCAD.Vector(0,-bolt_wsep/2.,-1))
+            shp_bolthead2 = fcfun.shp_cyl(r=bolth_d/2., h=bolth_h+1,
+                             normal=VZ,
+                             pos=FreeCAD.Vector(0,-bolt_wsep/2.,bolth_posz))
+            shp_bolt2 = shp_boltshank2.fuse(shp_bolthead2)
+            shp_bolt = shp_bolt2.fuse(shp_bolt1)
+            if bolthole_d != 0:
+                fco_bolthole1 = addBolt(bolthole_d/2., bolthole_l,
+                                       bolthole_nutd/2., bolthole_nuth,
+                                       hex_head = 1, extra=1, support=1,
+                                       headdown = 1, name =name+"_bolthole_1")
+                fco_bolthole1.Placement.Base = FreeCAD.Vector(0,bolt_wsep/2.,0)
+                fco_bolthole2 = addBolt(bolthole_d/2., bolthole_l,
+                                       bolthole_nutd/2., bolthole_nuth,
+                                       hex_head = 1, extra=1, support=1,
+                                       headdown = 1, name =name +"_bolthole_2")
+                fco_bolthole2.Placement.Base =FreeCAD.Vector(0,-bolt_wsep/2.,0)
+                fco_bolthole = doc.addObject("Part::Fuse",name+"_bolthole")
+                fco_bolthole.Base = fco_bolthole1
+                fco_bolthole.Tool = fco_bolthole2
+
+        # Rotation of the bolt holes
+        vrot = fcfun.calc_rot(fcfun.getvecofname(axis_l),
+                              fcfun.getvecofname(axis_b))
+        shp_bolt.Placement.Rotation = vrot
+
+        doc.recompute()
+        # replicate the bolt holes:
+        
+        boltpos = DraftVecUtils.scaleTo(vdir_l, self.boltend_sep)
+        addpos = DraftVecUtils.scaleTo(vdir_l, bolt_lsep)
+        shp_bolt.Placement.Base = boltpos
+        if bolthole_d != 0:
+            vdir_b = fcfun.getfcvecofname(axis_b)
+            bolthole_posz = DraftVecUtils.scaleTo(vdir_b, rail_h)
+            fco_bolthole.Placement.Base = boltpos + bolthole_posz
+            fco_bolthole.Placement.Rotation = vrot
+            bolthole_list = [ fco_bolthole ]
+        shp_bolt_list = []
+        # starts on 0, because it is one more bolt than nbolt
+        for ibolt in range(0, int(nbolt_l)):
+            boltpos += addpos
+            shp_bolt_i = shp_bolt.copy()
+            shp_bolt_i.Placement.Base = boltpos
+            shp_bolt_list.append(shp_bolt_i)
+            if bolthole_d != 0:
+                fco_bolthole_clone = Draft.clone(fco_bolthole)
+                fco_bolthole_clone.Label = fco_bolthole.Label + str(ibolt)
+                fco_bolthole_clone.Placement.Base = boltpos + bolthole_posz
+                bolthole_list.append(fco_bolthole_clone)
+            
+        shp_bolts = shp_bolt.multiFuse(shp_bolt_list)
+
+        shp_rail = shp_plainrail.cut(shp_bolts)
+
+        if bolthole_d != 0:
+            fco_bolthole = doc.addObject("Part::MultiFuse", name + "_bolt_hole")
+            fco_bolthole.Shapes = bolthole_list
+            fco_bolthole.ViewObject.Visibility = False
+            self.fco_bolthole = fco_bolthole
+
+        doc.recompute()
+        fco_rail = doc.addObject("Part::Feature", name)
+        fco_rail.Shape = shp_rail
+        fco = fco_rail
+
+        
+# a dictionary is used with the constants. Defined in kcomp.py
+# hl = f_linguiderail(200, kcomp.SEBWM16, 'y', '-z')
+def f_linguiderail (rail_l, dict_rail, axis_l, axis_b, boltend_sep = 0,
+                    name ='linguiderail'):
+
+    if boltend_sep == 0:
+        boltends =  dict_rail['boltend_sep']
+    else:
+        boltends =  boltend_sep
+
+    h_lgrail = LinGuideRail(rail_l    = rail_l,
+                            rail_w    = dict_rail['rw'],
+                            rail_h    = dict_rail['rh'],
+                            bolt_lsep = dict_rail['boltlsep'],
+                            bolt_wsep = dict_rail['boltwsep'],
+                            bolt_d    = dict_rail['boltd'],
+                            bolth_d   = dict_rail['bolthd'],
+                            bolth_h   = dict_rail['bolthh'],
+                            boltend_sep = boltends,
+                            axis_l    = axis_l,
+                            axis_b    = axis_b,
+                            name      = name)
+
+    return h_lgrail
+
+ 
+# a dictionary is used with the constants. Defined in kcomp.py
+# Includes the bolt holes (BH) to pass through another 3D piece
+def f_linguiderail_bh (rail_l, dict_rail, axis_l, axis_b, boltend_sep = 0,
+                  bolthole_d = 0, bolthole_l = 0, bolthole_dir = 0,
+                  bolthole_nutd = 0, bolthole_nuth = 0,
+                  name ='linguiderail'):
+
+    if boltend_sep == 0:
+        boltends =  dict_rail['boltend_sep']
+    else:
+        boltends =  boltend_sep
+
+    h_lgrail = LinGuideRail(rail_l    = rail_l,
+                            rail_w    = dict_rail['rw'],
+                            rail_h    = dict_rail['rh'],
+                            bolt_lsep = dict_rail['boltlsep'],
+                            bolt_wsep = dict_rail['boltwsep'],
+                            bolt_d    = dict_rail['boltd'],
+                            bolth_d   = dict_rail['bolthd'],
+                            bolth_h   = dict_rail['bolthh'],
+                            boltend_sep = boltends,
+                            axis_l    = axis_l,
+                            axis_b    = axis_b,
+                            bolthole_d = bolthole_d,
+                            bolthole_l = bolthole_l,
+                            bolthole_dir = bolthole_dir,
+                            bolthole_nutd = bolthole_nutd,
+                            bolthole_nuth = bolthole_nuth,
+                            name      = name)
+
+    return h_lgrail
+
+hl = f_linguiderail_bh(200, kcomp.SEBWM16, 'y', '-z',
+                         bolthole_d = 2 * kcomp.M3_SHANK_R_TOL,
+                         bolthole_l = 10.,
+                         bolthole_dir = 'same',
+                         bolthole_nutd = 2 * kcomp.M3_NUT_R_TOL, 
+                         bolthole_nuth = 2 * kcomp.M3_NUT_L,
+                         name = 'linguiderail' )
+
+
+# ---------------------- LinGuideBlock -------------------------------
 

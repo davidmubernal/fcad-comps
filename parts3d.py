@@ -703,6 +703,7 @@ class EndShaftSlider (object):
 #     dent_w  : width of the dent, if no dent is needed, just dent_w = 0
 #     dent_l  : length of the dent, 
 #     dent_sl : small dimension of the dent length
+#     motortype : the Nema motor used: 17, 14, ..
 #
 #           Y   
 #           |
@@ -771,6 +772,7 @@ class EndShaftSlider (object):
 # ovdent_l  : length of the dent including the overlap 
 
 # totwidth: the width including the dent
+# h_motor: the motor used, the object comps.NemaMotor
 # parts : list of FreeCad objects that the slider contains
 # idlepulls : FreeCad object of the idle pulleys
 # bearings : FreeCad object of the bearings
@@ -816,7 +818,7 @@ class CentralSlider (object):
     BOLT_NUT_R_TOL = BOLT_NUT_R + 1.5*MTOL
 
     def __init__ (self, rod_r, rod_sep, name, belt_sep,
-                  dent_w, dent_l, dent_sl):
+                  dent_w, dent_l, dent_sl, motortype=17):
 
         doc = FreeCAD.ActiveDocument
         self.base_place = (0,0,0)
@@ -825,6 +827,7 @@ class CentralSlider (object):
         self.name       = name
         self.belt_sep   = belt_sep
         self.dent_w     = dent_w
+        self.motortype  = motortype
         if dent_w == 0:
             self.dent_l     = 0
             self.dent_sl    = 0
@@ -1320,6 +1323,14 @@ class CentralSlider (object):
         contmotors.Shape = shp_contmotors
         cutlist.append (contmotors)
 
+        if motortype == 17:
+            self.h_motor = h_nema17
+        elif motortype == 14:
+            self.h_motor = h_nema14
+        else: #if motortype == 14:
+            self.h_motor = h_nema14
+            logger.error('motor not defined')
+
         # ------ the small motor Nanotec STF2818X0504-A -- just the bolt holes
         mtol = kcomp.TOL - 0.1
         nanostf28_boltsep = 34.1
@@ -1391,11 +1402,14 @@ class CentralSlider (object):
     # move both sliders (top & bottom) and the bearings
     def BasePlace (self, position = (0,0,0)):
         self.base_place = position
+        vpos = FreeCAD.Vector(position)
         for part in self.parts:
-            part.Placement.Base = FreeCAD.Vector(position)
-        self.bearings.Placement.Base = FreeCAD.Vector(position)
-        self.top_slide.Placement.Base = FreeCAD.Vector(position)
-        self.bot_slide.Placement.Base = FreeCAD.Vector(position)
+            part.Placement.Base = part.Placement.Base + vpos
+            #part.Placement = ( 
+            #       FreeCAD.Placement(vpos,V0ROT,V0).multiply(part.Placement))
+        self.bearings.Placement.Base = vpos
+        self.top_slide.Placement.Base = vpos
+        self.bot_slide.Placement.Base = vpos
         
 
 doc = FreeCAD.newDocument()

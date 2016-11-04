@@ -234,6 +234,8 @@ idlepull_name_list = [
             HollowCyl (part = 'washer', size = 4, kind= 'large')
               ]
 
+# from an idlepull_name_list, returns the maximum diameter of its bearings
+
 def get_idlepull_maxbear_d (idlepull_list):
     d_maxbear = 0
     for ind, elem in enumerate(idlepull_list):
@@ -356,6 +358,62 @@ T8NH_ScrL = 7.0
 T8NH_FlanScrD = 3.0
 T8NH_FlanScrL = 10.0
 
+# ---------------- flexible shaft coupler --------------------------
+
+# rb: 2 Nm. Referred to diameter of the coupled shafts
 
 
+# coupler diameter
+FLEXSC_RB_D = {
+                (3, 8):20.,
+                (4, 6):18.,
+                (4, 8):20.,
+                (5, 6):18.,
+                (5, 8):19., #check
+                (5,10):20.
+              }
 
+# coupler length
+FLEXSC_RB_L = {
+                (3, 8):25.,
+                (4, 6):25.,
+                (4, 8):25.,
+                (5, 6):25.,
+                (5, 8):25., #check
+                (5,10):25.
+              }
+
+# KFL Pillow Block
+#             
+#            _____     ____ L
+#           / ___ \     _
+#         /  /   \  \
+#       ( O (     ) 0 )
+#         \  \___/  /   
+#           \_____/    ____
+#          
+#         |--- J ---|
+#       |----- H -----|
+#
+
+# Housing: FL(08)
+# Bearing Number: SU(08)
+
+
+# Linear Guide Rail
+
+# Misumi SEBWM16
+
+# rw: Rail Width
+# rh: Rail Height
+# boltlsep: Bolt separation on the length dimension
+# boltwsep: Bolt separation on the width dimension, if 0, just one on a line
+# boltd: Bolt hole diameter
+# bolthd: Bolt head hole diameter
+# bolthh: Bolt head hole height
+# bolend_sep: separation of the first bolt to the end
+
+SEBWM16 = { 'rw'      : 42., 'rh': 9.5,
+            'boltlsep': 40., 'boltwsep' : 23.,
+            'boltd'   : 4.5, 'bolthd'   : 8. , 'bolthh': 4.5,
+            'boltend_sep' : 15.   }
