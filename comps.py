@@ -1357,6 +1357,7 @@ class FlexCoupling (object):
 # Attributes:
 # The Arguments and:
 # ###shp_face_rail : the shape of the face of the section of the rail
+# shp_plainrail : the shape of the plain rail
 # nbolt_l : number of bolts lines (can be pairs, counted as one) on the l
 #           direction
 # fco : the freecad object of the rail
@@ -1378,6 +1379,8 @@ class LinGuideRail (object):
         self.bolt_d = bolt_d
         self.bolth_d = bolth_d
         self.bolth_h = bolth_h
+        self.axis_l = axis_l
+        self.axis_b = axis_b
 
         doc = FreeCAD.ActiveDocument
         shp_face_rail = fcfun.shp_face_lgrail(rail_w, rail_h, axis_l, axis_b)
@@ -1386,6 +1389,7 @@ class LinGuideRail (object):
         vdir_l = fcfun.getfcvecofname(axis_l)
         vdir_extr = DraftVecUtils.scaleTo(vdir_l, rail_l)
         shp_plainrail = shp_face_rail.extrude(vdir_extr)
+        self.shp_plainrail = shp_plainrail
 
         if boltend_sep != 0:
             nbolt_l = (rail_l - boltend_sep) // bolt_lsep #integer division
@@ -1489,23 +1493,23 @@ class LinGuideRail (object):
 
         
 # a dictionary is used with the constants. Defined in kcomp.py
-# hl = f_linguiderail(200, kcomp.SEBWM16, 'y', '-z')
-def f_linguiderail (rail_l, dict_rail, axis_l, axis_b, boltend_sep = 0,
+# hl = f_linguiderail(200, kcomp.SEBWM16_R, 'y', '-z')
+def f_linguiderail (rail_l, d_rail, axis_l, axis_b, boltend_sep = 0,
                     name ='linguiderail'):
 
     if boltend_sep == 0:
-        boltends =  dict_rail['boltend_sep']
+        boltends =  d_rail['boltend_sep']
     else:
         boltends =  boltend_sep
 
     h_lgrail = LinGuideRail(rail_l    = rail_l,
-                            rail_w    = dict_rail['rw'],
-                            rail_h    = dict_rail['rh'],
-                            bolt_lsep = dict_rail['boltlsep'],
-                            bolt_wsep = dict_rail['boltwsep'],
-                            bolt_d    = dict_rail['boltd'],
-                            bolth_d   = dict_rail['bolthd'],
-                            bolth_h   = dict_rail['bolthh'],
+                            rail_w    = d_rail['rw'],
+                            rail_h    = d_rail['rh'],
+                            bolt_lsep = d_rail['boltlsep'],
+                            bolt_wsep = d_rail['boltwsep'],
+                            bolt_d    = d_rail['boltd'],
+                            bolth_d   = d_rail['bolthd'],
+                            bolth_h   = d_rail['bolthh'],
                             boltend_sep = boltends,
                             axis_l    = axis_l,
                             axis_b    = axis_b,
@@ -1516,24 +1520,24 @@ def f_linguiderail (rail_l, dict_rail, axis_l, axis_b, boltend_sep = 0,
  
 # a dictionary is used with the constants. Defined in kcomp.py
 # Includes the bolt holes (BH) to pass through another 3D piece
-def f_linguiderail_bh (rail_l, dict_rail, axis_l, axis_b, boltend_sep = 0,
+def f_linguiderail_bh (rail_l, d_rail, axis_l, axis_b, boltend_sep = 0,
                   bolthole_d = 0, bolthole_l = 0, bolthole_dir = 0,
                   bolthole_nutd = 0, bolthole_nuth = 0,
                   name ='linguiderail'):
 
     if boltend_sep == 0:
-        boltends =  dict_rail['boltend_sep']
+        boltends =  d_rail['boltend_sep']
     else:
         boltends =  boltend_sep
 
     h_lgrail = LinGuideRail(rail_l    = rail_l,
-                            rail_w    = dict_rail['rw'],
-                            rail_h    = dict_rail['rh'],
-                            bolt_lsep = dict_rail['boltlsep'],
-                            bolt_wsep = dict_rail['boltwsep'],
-                            bolt_d    = dict_rail['boltd'],
-                            bolth_d   = dict_rail['bolthd'],
-                            bolth_h   = dict_rail['bolthh'],
+                            rail_w    = d_rail['rw'],
+                            rail_h    = d_rail['rh'],
+                            bolt_lsep = d_rail['boltlsep'],
+                            bolt_wsep = d_rail['boltwsep'],
+                            bolt_d    = d_rail['boltd'],
+                            bolth_d   = d_rail['bolthd'],
+                            bolth_h   = d_rail['bolthh'],
                             boltend_sep = boltends,
                             axis_l    = axis_l,
                             axis_b    = axis_b,
@@ -1546,7 +1550,7 @@ def f_linguiderail_bh (rail_l, dict_rail, axis_l, axis_b, boltend_sep = 0,
 
     return h_lgrail
 
-hl = f_linguiderail_bh(200, kcomp.SEBWM16, 'y', '-z',
+hl = f_linguiderail_bh(200, kcomp.SEBWM16_R, 'y', '-z',
                          bolthole_d = 2 * kcomp.M3_SHANK_R_TOL,
                          bolthole_l = 10.,
                          bolthole_dir = 'same',
@@ -1554,6 +1558,109 @@ hl = f_linguiderail_bh(200, kcomp.SEBWM16, 'y', '-z',
                          bolthole_nuth = 2 * kcomp.M3_NUT_L,
                          name = 'linguiderail' )
 
+# ---------------------- LinGuideBlock -------------------------------
+
+class LinGuideBlock (object):
+
+    def __init__ (self, block_l, block_ls, block_w,  
+                        block_ws, block_h, 
+                        linguide_h,
+                        bolt_lsep, bolt_wsep,
+                        bolt_d, bolt_l,
+                        h_lgrail,
+                        block_pos_l,
+                        name):
+
+        shp_plainrail = h_lgrail.shp_plainrail
+
+        self.axis_l = h_lgrail.axis_l
+        self.axis_b = h_lgrail.axis_b
+
+        b_pos=FreeCAD.Vector(block_pos_l,0,linguide_h-block_h)
+        # central block
+        shp_cen_bl_box = fcfun.shp_boxcen(x=block_ls,
+                                      y=block_w,
+                                      z=block_h, 
+                                      cx= 0, cy=1, cz=0,
+                                      pos=b_pos)
+        vrot = fcfun.calc_rot(fcfun.getvecofname(self.axis_l),
+                              fcfun.getvecofname(self.axis_b))
+        shp_cen_bl_box.Placement.Rotation = vrot
+
+        shp_cen_bl = shp_cen_bl_box.cut(shp_plainrail)
+
+
+        Part.show(shp_cen_bl)
+
+
+    
 
 # ---------------------- LinGuideBlock -------------------------------
+
+        
+# Arguments:
+# rail_l: length of the linear guide
+# d_linguide: a dictionary is used for the constants. Defined in kcomp.py
+# axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
+# axis_b : the axis where the base of the rail is pointing:
+# boltend_sep : separation on one end, from the bolt to the end
+# bl_pos : Position of the block, relative to the length: 0. to 1.
+# hl = f_linguiderail(200, kcomp.SEBWM16_R, 'y', '-z')
+def f_linguide (rail_l, d_linguide, axis_l, axis_b, boltend_sep = 0,
+                bl_pos = 0.,
+                name ='linguiderail'):
+    print axis_l
+
+    d_rail = d_linguide['rail']
+    if boltend_sep == 0:
+        boltends =  d_rail['boltend_sep']
+    else:
+        boltends =  boltend_sep
+
+    h_lgrail = LinGuideRail(rail_l    = rail_l,
+                            rail_w    = d_rail['rw'],
+                            rail_h    = d_rail['rh'],
+                            bolt_lsep = d_rail['boltlsep'],
+                            bolt_wsep = d_rail['boltwsep'],
+                            bolt_d    = d_rail['boltd'],
+                            bolth_d   = d_rail['bolthd'],
+                            bolth_h   = d_rail['bolthh'],
+                            boltend_sep = boltends,
+                            axis_l    = axis_l,
+                            axis_b    = axis_b,
+                            name      = name)
+
+    d_block = d_linguide['block']
+
+    # position of the block refered to the rail
+    # rail_l - d_block['b'] : the length of the rail - length of the block
+    block_pos_l = bl_pos * (rail_l - d_block['bl'])
+
+    h_brail = LinGuideBlock (
+                             block_l  = d_block['bl'],
+                             block_ls = d_block['bls'],
+                             block_w  = d_block['bw'],
+                             block_ws = d_block['bws'],
+                             block_h  = d_block['bh'],
+                             linguide_h = d_block['lh'],
+                             bolt_lsep = d_block['boltlsep'],
+                             bolt_wsep = d_block['boltwsep'],
+                             bolt_d   = d_block['boltd'],
+                             bolt_l   = d_block['boltl'],
+                             h_lgrail = h_lgrail,
+                             block_pos_l = block_pos_l,
+                             name     = name)
+
+    return h_lgrail
+
+
+hl = f_linguide(200, kcomp.SEBWM16, 'y', '-z',
+                         boltend_sep = 0,
+                         bl_pos = 0.5,
+                         #bolthole_d = 2 * kcomp.M3_SHANK_R_TOL,
+                         #bolthole_l = 10.,
+                         #bolthole_dir = 'same',
+                         #bolthole_nutd = 2 * kcomp.M3_NUT_R_TOL, 
+                         #bolthole_nuth = 2 * kcomp.M3_NUT_L,
+                         name = 'linguiderail' )
 

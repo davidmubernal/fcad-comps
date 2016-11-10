@@ -196,6 +196,30 @@ def shp_boxcenfill (x, y, z, fillrad,
     shp_boxfill = shp_box.makeFillet(fillrad, edg_list)
     return (shp_boxfill)
 
+# Makes a box with width, depth, heigth.
+# Originally:
+# box_w: The width is X
+# box_d: The depth is Y
+# box_h: The Height is Z
+# and then rotation will be referred to axis_w  = (1,0,0) and 
+#                                       axis_nh = (0,0,-1)
+# centered on any of the dimensions:
+# cw, cd, ch 
+
+# AAAAAAAAAAAAAAAAAAAAAAAAAAAAA revisar
+def shp_box_rot (box_w, box_d, box_h,
+                  axis_w = 'x', axis_nh = '-z', cw=1, cd=1, ch=1 ):
+
+
+    shp_box = shp_boxcen(x=box_w, y=box_d, z=box_h,
+              cx= cw, cy=cd, cz=ch, pos=V0)
+    vrot = calc_rot(getvecofname(axis_w), getvecofname(axis_nh))
+    shp_box.Placement.Rotation = vrot
+
+    return shp_box
+
+    
+
 # def shp_face_lgrail 
 # adds a shape of the profile (face) of a linear guide rail, the dent is just
 # rough, to be able to see that it is a profile
@@ -245,6 +269,104 @@ def shp_face_lgrail (rail_w, rail_h, axis_l = 'x', axis_b = '-z'):
     shp_face_rail = Part.Face(shp_wire_rail)
     
     return (shp_face_rail)
+
+
+
+
+
+
+
+
+    
+
+# def shp_face_rail 
+# adds a shape of the profile (face) of a linear guide rail, the dent is just
+# rough, to be able to see that it is a profile
+# Arguments:
+# rail_w : width of the rail
+# rail_ws : small width of the rail
+# rail_h : height of the rail
+# axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
+# axis_b : the axis where the base of the rail is poingint:
+#           'x', 'y', 'z', '-x', '-y', '-z',
+# It will be centered on the width axis, and zero on the length and height
+#                        Z
+#                       |
+#                  ___________ 4
+#                 |           | 
+#                 |           | 3
+#                /             \  
+#               /               \ 2
+#              |                 |
+#              |_________________|  _____________ Y
+#                                 1
+
+def shp_face_rail (rail_w, rail_ws, rail_h,
+                   offs_w = 0, offs_h = 0,
+                   axis_l = 'x', axis_b = '-z',
+                   hole_d = 0, hole_relpos_z=0.4):
+# hole_relpos_z is the relative position referenced to rail_h
+
+    #First we do it on like it is axis_l = 'x' and axis_h = 'z' 
+    #so we draw width on Y and height on Z
+
+    dent = rail_h / 3.
+
+    y1 = rail_w/2 + offs_w
+    y3 = rail_w/2 -dent + offs_w
+    z0 = - offs_h
+    z2 = dent + offs_h
+    z3 = 2*dent + offs_h
+    z4 = rail_h + 2*offs_h
+
+    v1  = FreeCAD.Vector(0,  y1, z0)
+    v1n = FreeCAD.Vector(0, -y1, z0)
+    v2  = FreeCAD.Vector(0,  y1, z2)
+    v2n = FreeCAD.Vector(0, -y1, z2)
+    v3  = FreeCAD.Vector(0,  y3, z3)
+    v3n = FreeCAD.Vector(0, -y3, z3)
+    v4  = FreeCAD.Vector(0,  y3, z4)
+    v4n = FreeCAD.Vector(0, -y3, z4)
+
+    # the square
+    shp_wire_rail = Part.makePolygon([v1, v2, v3, v4,
+                                      v4n, v3n, v2n, v1n, v1])
+
+    vrot = calc_rot(getvecofname(axis_l), getvecofname(axis_b))
+    # the face
+    #shp_wire_rail.rotate(vrot) # It doesn't work
+    shp_wire_rail.Placement.Rotation = vrot
+    shp_face_rail = Part.Face(shp_wire_rail)
+    #Part.show(shp_face_rail)
+
+    if hole_d > 0:
+        cir = Part.makeCircle (hole_d/2.,
+                               FreeCAD.Vector(0, 0, hole_relpos_z*rail_h), VX)
+        cir.Placement.Rotation = vrot
+        wire_cir = Part.Wire(cir)
+        face_cir = Part.Face(wire_cir)
+        #Part.show(shp_thruhole)
+        shp_face_rail = shp_face_rail.cut(face_cir)
+        #return shp_face_hole
+
+    
+    return shp_face_rail
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Add cylinder r: radius, h: height 

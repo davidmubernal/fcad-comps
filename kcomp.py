@@ -60,6 +60,11 @@ M3_HEAD_L = D912_HEAD_L[3] + TOL
 M3_HEAD_R_TOL = M3_HEAD_R + TOL/2.0 # smaller TOL, because it's small
 M3_SHANK_R_TOL = 3 / 2.0 + TOL/2.0
 
+M4_HEAD_R = D912_HEAD_D[4] / 2.0
+M4_HEAD_L = D912_HEAD_L[4] + TOL
+M4_HEAD_R_TOL = M3_HEAD_R + TOL/2.0 # smaller TOL, because it's small
+M4_SHANK_R_TOL = 3 / 2.0 + TOL/2.0
+
 # Nut DIN934 dimensions
 """
        ___     _
@@ -89,6 +94,12 @@ M3NUT_HOLE_H = NUT_HOLE_MULT_H * M3_NUT_L
 #M3_2APOT_TOL = NUT_D934_2A[3] +  TOL
 # Apotheme is: R * cos(30) = 0.866
 M3_2APOT_TOL = 2* M3_NUT_R_TOL * 0.866
+
+M4_NUT_R = NUT_D934_D[4] / 2.0
+M4_NUT_L = NUT_D934_L[4] + TOL
+#  1.5 TOL because diameter values are minimum, so they may be larger
+M4_NUT_R_TOL = M4_NUT_R + 1.5*TOL
+
 
 # tightening bolt with added tolerances:
 # Bolt's head radius
@@ -402,7 +413,9 @@ FLEXSC_RB_L = {
 
 # Linear Guide Rail
 
-# Misumi SEBWM16
+# Misumi SEBWM16 
+
+#RAIL DIMENSIONS
 
 # rw: Rail Width
 # rh: Rail Height
@@ -413,7 +426,35 @@ FLEXSC_RB_L = {
 # bolthh: Bolt head hole height
 # bolend_sep: separation of the first bolt to the end
 
-SEBWM16 = { 'rw'      : 42., 'rh': 9.5,
-            'boltlsep': 40., 'boltwsep' : 23.,
-            'boltd'   : 4.5, 'bolthd'   : 8. , 'bolthh': 4.5,
-            'boltend_sep' : 15.   }
+SEBWM16_R = { 'rw'     : 42., 'rh': 9.5,
+              'boltlsep': 40., 'boltwsep' : 23.,
+              'boltd'   : 4.5, 'bolthd'   : 8. , 'bolthh': 4.5,
+              'boltend_sep' : 15.   }
+
+#BLOCK DIMENSIONS
+
+# bl: block Length
+# bls: block Length, the inner part (smaller)
+# bw: block Width, the larger
+# bws: block Width, the smaler part at the ends
+# bh: block Height, just the block
+# lh: linear guide Height: together the rail and the block
+# boltlsep: Bolt separation on the length dimension
+# boltwsep: Bolt separation on the length dimension
+# boltd: Bolt diameter
+# boltl: Bolt length. if 0 it is through hole
+
+SEBWM16_B = { 'bl'  : 55.,
+              'bls' : 40.,
+              'bw'  : 74.,
+              'bws' : 60.,  # not on the specifications
+              'bh'  : 13.,  # block height, just the block
+              'lh'  : 16.,  # linear guide height, with the rail
+              'boltlsep' : 20.,  # Bolt separation on the length dimension
+              'boltwsep' : 65.,  # Bolt separation on the length dimension
+              'boltd'  : 5.,  # Bolt diameter M5
+              'boltl'  : 0  # Through hole
+            }
+
+SEBWM16 = { 'rail' : SEBWM16_R,
+            'block' : SEBWM16_B}
