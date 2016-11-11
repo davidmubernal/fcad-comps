@@ -31,20 +31,50 @@ import fcfun      # import my functions for freecad
 
 #
 #
-#
-#                
 #               _________________________
-#              /                        /
-#             /                        /  
-#            /                        /   D (y)
+#                                        |
+#                                        |
+#                                        | H(z)
+#                                        |
+#                                        |
+#               _________________________|
+#              /  __________________    /
+#             /  /                     /  
+#            /  /________________     /   D (y)
 #           /________________________/
 #           |________________________|
 #
 #                      L (x)
 #
+#           ________________________________  __________________ 
+#          |                                |      |  |        + RAIL_SUP_D
+#          |                                |      + FILT_TO_RAIL
+#          |________________________________|      |  |________|
+#          |                                |      |  |
+#          |    ________________________    | ______  |
+#          |   |  ____________________  |   | ___  |  |
+#          |   | |                    | |   |  |   |  |
+#          |   | |                    | |   |  + FILT_SUP_D
+#          |   | |                    | |   |  |   + FILT_D_TOL
+#          |   | |____________________| |   | _|_  |  |
+#          |   |________________________|   | _____|  + FILT_BASE_D
+#          |                                |         |
+#          |________________________________| ________|
 #
+#                |----- FILT_SUP_L ---|
+#              |------- FILT_L_TOL -----|
+#          |---------- FILT_BASE_L ---------|
 #
-
+#           ________________________________ ______________
+#          |                                |             |
+#          |                                |             + RAIL_SUP_H
+#          |                                |             |
+#          |                                |             |
+#          |                                |             |
+#          |________________________________| _________   |
+#          |   :........................:   | ___+ FILT_H_HOLE
+#          |     :                    :     |         + FILT_BASE_H 
+#          |_____:____________________:_____| ________|___|
 
 from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, fillet_len
 from fcfun import addBolt, addBoltNut_hole, NutHole
@@ -87,9 +117,11 @@ RAIL_SUP_H = 36.
 BOLT_POS_Z = 19.5 # Last check
 BOLT_SEP_X = 25.
 
+# ON THE SUPPORT SIDE ATTACHED TO THE RAIL
+
 # bolt shank 
 #
-#        |--|  bsthick: bolt shank thickness, the rest if for the head
+#        |--|  BOLT_SHANK_THICK: bolt shank thickness, the rest if for the head
 #        |   ___
 #        |__|
 #         __
@@ -99,11 +131,25 @@ BOLT_SEP_X = 25.
 #BOLT_SHANK_THICK = RAIL_SUP_D - (kcomp.M4_HEAD_L + 3)
 BOLT_SHANK_THICK = 4
 
+
+RAIL_W = BOLT_SEP_X - 2*kcomp.M4_HEAD_R_TOL - 5
+RAIL_H = RAIL_SUP_D - 3
+RAIL_WS = RAIL_W * 0.5
+
+RAIL_BLOCK_L = 15.
+# relative position of the hole for the leadscrew
+HOLERAIL_RELPOS_Z = 0.4
+# the part on top that holds the leadscrew
+HOLD_SCREW_TOP_H = 3
+
 doc = FreeCAD.newDocument()
 
-shp_filter_base = fcfun.shp_boxcen(x=FILT_BASE_L,
+shp_filter_base = fcfun.shp_boxcenfill(
+                                   x=FILT_BASE_L,
                                    y=FILT_BASE_D-RAIL_SUP_D,
                                    z=FILT_BASE_H,
+                                   fillrad = 2,
+                                   fx=0, fy=0, fz=1,
                                    cx=1, cy=0, cz=0,
                                    pos=FreeCAD.Vector(0,RAIL_SUP_D,0))
 
@@ -131,12 +177,14 @@ shp_filter_holes = shp_filter_hole.fuse(shp_filter_thrhole)
 shp_filter_basehole = shp_filter_base.cut(shp_filter_holes)
 
 
+# the support part, that is fixed on the rail
 shp_sup_box = fcfun.shp_boxcen(
-                               x=FILT_BASE_L,
-                               y=RAIL_SUP_D,
-                               z=RAIL_SUP_H,
-                               cx=1, cy=0, cz=0,
-                               pos=V0)
+                    x=FILT_BASE_L,
+                    # Tolerance to avoid being too close to the moving part
+                    y=RAIL_SUP_D-kcomp.TOL, 
+                    z=RAIL_SUP_H,
+                    cx=1, cy=0, cz=0,
+                    pos=V0)
 
 
 # Support bolts
@@ -180,19 +228,7 @@ shp_bolts = shp_tbolt0.fuse(shp_tbolt1)
 #
 #
 
-
-
-RAIL_W = BOLT_SEP_X - 2*kcomp.M4_HEAD_R_TOL - 5
-RAIL_H = RAIL_SUP_D - 2
-RAIL_WS = RAIL_W * 0.6
-
-RAIL_BLOCK_L = 15.
-# relative position of the hole for the leadscrew
-HOLERAIL_RELPOS_Z = 0.4
-# the part on top that holds the leadscrew
-HOLD_SCREW_TOP_H = 3
-
-rail_pos_y = RAIL_SUP_D-RAIL_H + 1 # +1 to have overlap
+rail_pos_y = RAIL_SUP_D-RAIL_H # + 1 # +1 to have overlap
 # position of the hole for the leadscrew
 leadscrewhole_pos_y = rail_pos_y + HOLERAIL_RELPOS_Z * RAIL_H 
 
@@ -226,6 +262,7 @@ shp_holesee0.Placement.Base.x = -side_rail_pos_x
 shp_facerail = fcfun.shp_face_rail(rail_w = RAIL_W,
                                     rail_ws = RAIL_WS,
                                     rail_h = RAIL_H,
+                                    rail_h_plus = 2,
                                     offs_w = 0,
                                     offs_h = 0,
                                     axis_l = 'z',
@@ -252,6 +289,8 @@ h_nuthole = fcfun.NutHole (
                         cy = 0, # centered on y, on the center of the hexagon
                         holedown = 0)
 
+doc.recompute()
+
 nuthole = h_nuthole.fco
 
 nuthole.Placement.Rotation = FreeCAD.Rotation (VX,90)
@@ -273,17 +312,34 @@ railnuth1 = Draft.clone(railnuth)
 railnuth1.Label = 'blocknut1'
 railnuth1.Placement.Base.x= side_rail_pos_x
 
-filter_basehole = doc.addObject("Part::Feature", ' filter_basehole')
+filter_basehole = doc.addObject("Part::Feature", 'filter_basehole')
 filter_basehole.Shape = shp_filter_basehole
 
 filter_mov = doc.addObject("Part::MultiFuse", 'filtermov')
 filter_mov.Shapes = [filter_basehole,railnuth, railnuth0, railnuth1]
+
+# chamfer of the union between the base and the rails
+
+doc.recompute()
+doc.recompute()
+
+filter_mov_cmf = fcfun.filletchamfer (fco = filter_mov,
+                                      e_len = RAIL_WS,
+                                      name = 'filtermovchmf',
+                                      fillet = 0, #chamfer
+                                      radius = 2., 
+                                      axis = 'x', 
+                                      zpos_chk = 1, 
+                                      zpos = FILT_BASE_H )
+
+
 
 
 
 shp_face_railhole = fcfun.shp_face_rail(rail_w = RAIL_W, 
                                          rail_ws = RAIL_WS,
                                          rail_h = RAIL_H,
+                                         rail_h_plus = 2,
                                          offs_w = TOL/2.,
                                          offs_h = TOL/2,
                                          axis_l = 'z',
@@ -292,6 +348,7 @@ shp_face_railhole = fcfun.shp_face_rail(rail_w = RAIL_W,
                                          hole_relpos_z = 0)
 
 
+doc.recompute()
 
 shp_face_railhole.Placement.Base = FreeCAD.Vector(0,rail_pos_y,0)
 
@@ -325,5 +382,7 @@ shp_fix_support = shp_sup_box.cut(shp_fix_holes)
 
 fix_support = doc.addObject("Part::Feature", 'fix_support')
 fix_support.Shape = shp_fix_support
+
+doc.recompute()
 
 

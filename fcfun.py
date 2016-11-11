@@ -72,6 +72,17 @@ CIAN_05   = (0.5, 1.0, 1.0)
 # no rotation vector
 V0ROT = FreeCAD.Rotation(VZ,0)
 
+EQUAL_TOL = 0.001 # less than a micron is the same
+
+# to compare numbers that they are almost the same, but because of 
+# floating point calculations they are not exactly the same
+def equ (x,y):
+
+    if abs(x-y) < EQUAL_TOL:
+        return True
+    else:
+        return False
+  
 
 def addBox(x, y, z, name, cx= False, cy=False):
     # we have to bring the active document
@@ -206,7 +217,7 @@ def shp_boxcenfill (x, y, z, fillrad,
 # centered on any of the dimensions:
 # cw, cd, ch 
 
-# AAAAAAAAAAAAAAAAAAAAAAAAAAAAA revisar
+# check if it makes sense to have this small function
 def shp_box_rot (box_w, box_d, box_h,
                   axis_w = 'x', axis_nh = '-z', cw=1, cd=1, ch=1 ):
 
@@ -286,22 +297,31 @@ def shp_face_lgrail (rail_w, rail_h, axis_l = 'x', axis_b = '-z'):
 # rail_w : width of the rail
 # rail_ws : small width of the rail
 # rail_h : height of the rail
+# rail_h_plus : above the rail can be some height to attach, o whatever
+#               it is not inluded on rail_h
 # axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
 # axis_b : the axis where the base of the rail is poingint:
 #           'x', 'y', 'z', '-x', '-y', '-z',
 # It will be centered on the width axis, and zero on the length and height
+# hole_d : diameter of a hole inside the rail. To have a leadscrew
+# hole_relpos_z: relative position of the center of the hole, relative
+#          to the height (the rail_h, not the total height (rail_h+rail_h_plus)
 #                        Z
 #                       |
-#                  ___________ 4
-#                 |           | 
-#                 |           | 3
-#                /             \  
-#               /               \ 2
-#              |                 |
+#                  ___________ 4 ___________
+#                 |           | ____________ rail_h_plus
+#                 |           |        |
+#                 |           | 3      + rail_h
+#                /     ___     \       |
+#               /     /   \     \ 2    | _______ hole_relpos_z*rail_h
+#              |      \___/      |     |
 #              |_________________|  _____________ Y
 #                                 1
+#                  |--rail_ws-| 
+#              |----  rail_w ----| 
 
 def shp_face_rail (rail_w, rail_ws, rail_h,
+                   rail_h_plus = 0,
                    offs_w = 0, offs_h = 0,
                    axis_l = 'x', axis_b = '-z',
                    hole_d = 0, hole_relpos_z=0.4):
@@ -310,14 +330,17 @@ def shp_face_rail (rail_w, rail_ws, rail_h,
     #First we do it on like it is axis_l = 'x' and axis_h = 'z' 
     #so we draw width on Y and height on Z
 
-    dent = rail_h / 3.
+    #dent = rail_h / 3.
+    dent = (rail_w - rail_ws)/2.
+    
 
     y1 = rail_w/2 + offs_w
     y3 = rail_w/2 -dent + offs_w
     z0 = - offs_h
-    z2 = dent + offs_h
-    z3 = 2*dent + offs_h
-    z4 = rail_h + 2*offs_h
+    #z2 = dent + offs_h
+    z2 = (rail_h - dent)/2. + offs_h
+    z3 = (rail_h - dent)/2. + dent + offs_h
+    z4 = rail_h + rail_h_plus + 2*offs_h
 
     v1  = FreeCAD.Vector(0,  y1, z0)
     v1n = FreeCAD.Vector(0, -y1, z0)
@@ -1177,6 +1200,145 @@ def fillet_len (box, e_len, radius, name):
     if box.ViewObject != None:
       box.ViewObject.Visibility=False
     return box_fllt
+
+
+
+#  ---------------- edgeonaxis
+# It tells if an edge is on an axis
+# Arguments:
+# edge: an FreeCAD edge, with its vertexes
+# axis: a text, being 'x', '-x', 'y', '-y', 'z', '-z'
+
+def edgeonaxis (edge, axis):
+
+    vex0 = edge.Vertexes[0]
+    vex1 = edge.Vertexes[1]
+    #logger.debug( "vex0.X: %s", vex0.X)
+    #logger.debug( "vex1.X: %s", vex1.X)
+    #logger.debug( "vex0.Y: %s", vex0.Y)
+    #logger.debug( "vex1.Y: %s", vex1.Y)
+    #logger.debug( "vex0.Z: %s", vex0.Z)
+    #logger.debug( "vex1.Z: %s", vex1.Z)
+    #logger.debug( "axis: %s",  axis)
+
+    #v0x = vex0.X
+    #v1x = vex1.X
+    #v0y = vex0.Y
+    #v1y = vex1.Y
+    #v0z = vex0.Z
+    #v1z = vex1.Z
+
+    if (equ(vex0.X, vex1.X) and 
+        equ(vex0.Y, vex1.Y) and
+        equ(vex0.Z, vex1.Z)):
+        logger.debug('edgeonaxis:  error, same point')
+        return False
+    elif equ(vex0.X, vex1.X) and equ(vex0.Y, vex1.Y):
+        if axis == 'z' or axis == '-z':
+            return True
+        else:
+            return False
+    elif equ(vex0.X, vex1.X) and equ(vex0.Z, vex1.Z):
+        if axis == 'y' or axis == '-y':
+            return True
+        else:
+            return False
+    elif equ(vex0.Y, vex1.Y) and equ(vex0.Z, vex1.Z):
+        if axis == 'x' or axis == '-x':
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+
+
+#  --- Fillet or chamfer edges of a certain length, on a certain axis
+#  --- and a certain coordinate
+#   fco:   is the original FreeCAD object we want to fillet or chamfer
+#   fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+#   e_len: the length of the edges that we want to fillet or chamfer
+#   radius: the radius of the fillet or chamfer
+#   axis  : the axis where the fillet will be
+#   xpos_chk,ypos_chk,zpos_chk  :  if the position will be checked
+#   if axis = 'x', x_pos_check will not make sense
+#   xpos,ypos,zpos  : the position
+#   name: the name of the fco we want to create
+
+def filletchamfer (fco, e_len, name, fillet = 1, radius=1, axis='x', 
+                   xpos_chk = 0, ypos_chk = 0, zpos_chk=0,
+                   xpos = 0, ypos = 0, zpos = 0,
+                    ):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    edgelist = []
+    #logger.debug('filletchamfer: elen: %s',  e_len)
+    for edge_ind, edge in enumerate(fco.Shape.Edges):
+        #logger.debug('filletchamfer: edge Length: %s ind %s',
+        #             edge.Length, edge_ind)
+        # using equ because float number can be not exactly the same
+        if equ(edge.Length, e_len): # same length
+            if edgeonaxis (edge, axis) == True:
+                #logger.debug('edgeonaxis: Length: %s' % str(edge.Length))
+                v0 = edge.Vertexes[0]
+                v1 = edge.Vertexes[1]
+                if axis == 'x' or axis == '-x':
+                    if ypos_chk == True and zpos_chk == True:
+                        # its on the axis, so just checking one edge
+                        if equ(v0.Y, ypos) and equ(v0.Z, zpos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    elif ypos_chk == True:
+                        if equ(v0.Y, ypos):
+                            edgelist.append((edge_ind +1,radius,radius))
+                    elif zpos_chk == True:
+                        if equ(v0.Z, zpos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    else: # all the edges on axis x with e_len are appended
+                        edgelist.append((edge_ind+1,radius,radius))
+                elif axis == 'y' or axis == '-y':
+                    if xpos_chk == True and zpos_chk == True:
+                        if equ(v0.X, xpos) and equ(v0.Z, zpos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    elif xpos_chk == True:
+                        if equ(v0.X, xpos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    elif zpos_chk == True:
+                        if equ(v0.Z, zpos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    else:
+                        edgelist.append((edge_ind+1,radius,radius))
+                elif axis == 'z' or axis == '-z':
+                    if xpos_chk == True and ypos_chk == True:
+                        if equ(v0.X, ypos) and equ(v0.Y, ypos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    elif xpos_chk == True:
+                        if equ(v0.X, xpos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    elif ypos_chk == True:
+                        if equ(v0.Y, ypos):
+                            edgelist.append((edge_ind+1,radius,radius))
+                    else:
+                        edgelist.append((edge_ind+1,radius,radius))
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            fco_fillcham = doc.addObject ("Part::Fillet", name)
+        else:
+            fco_fillcham = doc.addObject ("Part::Chamfer", name)
+        fco_fillcham.Base = fco
+        fco_fillcham.Edges = edgelist
+        if fco.ViewObject != None:
+            fco.ViewObject.Visibility=False
+        doc.recompute()
+        return fco_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
+
+
+
+
 
 #  ---------------- calc_rot -----------------------------
 #  ---------------- Yaw, Pitch and Roll transfor
