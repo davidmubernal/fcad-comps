@@ -34,6 +34,7 @@ import kcomp # before, it was called mat_cte
 import fcfun
 
 from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, addCyl_pos, fillet_len
+from fcfun import VXN, VYN, VZN
 from fcfun import addBolt, addBoltNut_hole, NutHole
 
 
@@ -1345,7 +1346,7 @@ class FlexCoupling (object):
 # to be designed. Zero if you dont want to have them
 # bolthole_d: diameter of the hole
 # bolthole_l: length of the hole
-# NOT IMPLEMENTED YET, NOW ONLY ON THE DIRECTION OF AXIS_B (SAME)
+# NOT IMPLEMENTED YET, NOW ONLY ON THE DIRECTION OF AXIS_B (SAME):
 # bolthole_dir: direction of the hole, it would be:
 #               'same'  same direction of axis_b
 #               'opp'   oposite direction of axis_b
@@ -1550,15 +1551,51 @@ def f_linguiderail_bh (rail_l, d_rail, axis_l, axis_b, boltend_sep = 0,
 
     return h_lgrail
 
-hl = f_linguiderail_bh(200, kcomp.SEBWM16_R, 'y', '-z',
-                         bolthole_d = 2 * kcomp.M3_SHANK_R_TOL,
-                         bolthole_l = 10.,
-                         bolthole_dir = 'same',
-                         bolthole_nutd = 2 * kcomp.M3_NUT_R_TOL, 
-                         bolthole_nuth = 2 * kcomp.M3_NUT_L,
-                         name = 'linguiderail' )
+#hl = f_linguiderail_bh(200, kcomp.SEBWM16_R, 'y', '-z',
+#                         bolthole_d = 2 * kcomp.M3_SHANK_R_TOL,
+#                         bolthole_l = 10.,
+#                         bolthole_dir = 'same',
+#                         bolthole_nutd = 2 * kcomp.M3_NUT_R_TOL, 
+#                         bolthole_nuth = 2 * kcomp.M3_NUT_L,
+#                         name = 'linguiderail' )
 
 # ---------------------- LinGuideBlock -------------------------------
+# Creates the block of the linear guide
+# Arguments:
+# block_l: Total length of the block
+# block_ls: Small length of the block. Usually there is a plastic end, for 
+#           lubricant or whatever
+# block_w: Total Width of the block
+# block_ws: Small width of the block (the plastic end)
+# linguide_h: Height of the linear guide. Total, Rail + Block
+# bolt_lsep: separation of the bolts, on the length direction
+# bolt_wsep: separation of the bolts, on the width direction
+# bolt_d: diameter of the hole of the bolt
+# bolt_l: length of the hole. if 0, it is a thru-hole
+# h_lgrail: handler of the linear guide rail
+# block_pos_l: position of the block relative to the rail. From 0 to 1
+
+# Attributes:
+# axis_l: direction of the rail: 'x', 'y', 'z'
+# axis_b: direction of the bottom of the rail: 'x', '-x', 'y', '-y', 'z', '-z'
+
+#
+#                 __________________     _____________
+#              __|__________________|__  ___           |
+#             |                        |    |          |
+#             | 0 --- bolt_wsep ---  0 |    |          |
+#             | :                      |    |          |
+#             | :                      |    + block_sl + block_l
+#             | + bolt_lsep            |    |          |
+#             | :                      |    |          |
+#             | 0                    0 |    |          |
+#             |________________________| ___|          |
+#                |__________________|    ______________|
+#
+#             |  |                  |  |
+#             |  |____ block_ws ____|  |
+#             |_______ block_w ________|
+#
 
 class LinGuideBlock (object):
 
@@ -1571,10 +1608,28 @@ class LinGuideBlock (object):
                         block_pos_l,
                         name):
 
+        self.block_l  = block_l
+        self.block_ls = block_ls
+        self.block_w  = block_w
+        self.block_ws = block_ws
+        self.block_h  = block_h 
+        self.linguide_h = linguide_h 
+        self.bolt_lsep = bolt_lsep 
+        self.bolt_wsep = bolt_wsep 
+        self.bolt_d  = bolt_d 
+        if bolt_l == 0:
+            self.bolt_l  = block_h 
+        else:
+            self.bolt_l  = bolt_l 
+        self.h_lgrail  = h_lgrail 
+        self.block_pos_l  = block_pos_l 
+
         shp_plainrail = h_lgrail.shp_plainrail
 
         self.axis_l = h_lgrail.axis_l
         self.axis_b = h_lgrail.axis_b
+
+        blockend_l = (block_l - block_ls)/2.
 
         b_pos=FreeCAD.Vector(block_pos_l,0,linguide_h-block_h)
         # central block
@@ -1583,20 +1638,75 @@ class LinGuideBlock (object):
                                       z=block_h, 
                                       cx= 0, cy=1, cz=0,
                                       pos=b_pos)
+        # bolt holes
+        boltpos_z = linguide_h+1
+        if bolt_l == 0:
+            bolt_h = self.bolt_l + 2
+        else:
+            bolt_h = self.bolt_l + 1
+
+        #if bolt_l == 0:
+            #boltpos_z = linguide_h-block_h-1
+        #else:
+        #    boltpos_z = linguide_h-block_h
+
+        boltpos00 = FreeCAD.Vector(block_pos_l + block_ls/2- bolt_lsep/2,
+                                -bolt_wsep/2.,boltpos_z)
+        shp_bolt00=fcfun.shp_cyl (r=bolt_d/2., h=bolt_h, normal=VZN,
+                                 pos = boltpos00)
+        boltpos01 = FreeCAD.Vector(block_pos_l + block_ls/2+ bolt_lsep/2,
+                                -bolt_wsep/2.,boltpos_z)
+        shp_bolt01=fcfun.shp_cyl (r=bolt_d/2., h=bolt_h, normal=VZN,
+                                 pos = boltpos01)
+        boltpos10 = FreeCAD.Vector(block_pos_l + block_ls/2- bolt_lsep/2,
+                                 bolt_wsep/2.,boltpos_z)
+        shp_bolt10=fcfun.shp_cyl (r=bolt_d/2., h=bolt_h, normal=VZN,
+                                 pos = boltpos10)
+        boltpos11 = FreeCAD.Vector(block_pos_l + block_ls/2+ bolt_lsep/2,
+                                 bolt_wsep/2.,boltpos_z)
+        shp_bolt11=fcfun.shp_cyl (r=bolt_d/2., h=bolt_h, normal=VZN,
+                                 pos = boltpos11)
+        shp_bolts = shp_bolt00.multiFuse([shp_bolt01,shp_bolt10, shp_bolt11])
+
+
+        shp_cen_blhole = shp_cen_bl_box.cut(shp_bolts)
+
+
+     
+
+        # end blocks
+        bbot_pos=FreeCAD.Vector(block_pos_l-blockend_l,0,linguide_h-block_h)
+        shp_botend_bl_box = fcfun.shp_boxcen(x=blockend_l,
+                                      y=block_ws,
+                                      z=block_h, 
+                                      cx= 0, cy=1, cz=0,
+                                      pos=bbot_pos)
+
+        btop_pos=FreeCAD.Vector(block_pos_l+block_ls,0,linguide_h-block_h)
+        shp_topend_bl_box = fcfun.shp_boxcen(x=blockend_l,
+                                      y=block_ws,
+                                      z=block_h, 
+                                      cx= 0, cy=1, cz=0,
+                                      pos=btop_pos)
+        shp_bl_box = shp_cen_blhole.multiFuse([shp_botend_bl_box,
+                                               shp_topend_bl_box])
+
+
+
+
         vrot = fcfun.calc_rot(fcfun.getvecofname(self.axis_l),
                               fcfun.getvecofname(self.axis_b))
-        shp_cen_bl_box.Placement.Rotation = vrot
+        shp_bl_box.Placement.Rotation = vrot
 
-        shp_cen_bl = shp_cen_bl_box.cut(shp_plainrail)
+        shp_bl = shp_bl_box.cut(shp_plainrail)
 
 
-        Part.show(shp_cen_bl)
+        Part.show(shp_bl)
 
 
     
 
-# ---------------------- LinGuideBlock -------------------------------
-
+# ---------------------- f_linguide -------------------------------
         
 # Arguments:
 # rail_l: length of the linear guide
@@ -1609,6 +1719,7 @@ class LinGuideBlock (object):
 def f_linguide (rail_l, d_linguide, axis_l, axis_b, boltend_sep = 0,
                 bl_pos = 0.,
                 name ='linguiderail'):
+
     print axis_l
 
     d_rail = d_linguide['rail']
@@ -1654,13 +1765,14 @@ def f_linguide (rail_l, d_linguide, axis_l, axis_b, boltend_sep = 0,
     return h_lgrail
 
 
-hl = f_linguide(200, kcomp.SEBWM16, 'y', '-z',
-                         boltend_sep = 0,
-                         bl_pos = 0.5,
-                         #bolthole_d = 2 * kcomp.M3_SHANK_R_TOL,
-                         #bolthole_l = 10.,
-                         #bolthole_dir = 'same',
-                         #bolthole_nutd = 2 * kcomp.M3_NUT_R_TOL, 
-                         #bolthole_nuth = 2 * kcomp.M3_NUT_L,
-                         name = 'linguiderail' )
+#hl = f_linguide(200, kcomp.SEB15A, 'y', '-z',
+#hl = f_linguide(200, kcomp.SEBWM16, 'y', '-z',
+#                         boltend_sep = 0,
+#                         bl_pos = 0.5,
+#                         #bolthole_d = 2 * kcomp.M3_SHANK_R_TOL,
+#                         #bolthole_l = 10.,
+#                         #bolthole_dir = 'same',
+#                         #bolthole_nutd = 2 * kcomp.M3_NUT_R_TOL, 
+#                         #bolthole_nuth = 2 * kcomp.M3_NUT_L,
+#                         name = 'linguiderail' )
 

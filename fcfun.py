@@ -185,6 +185,69 @@ def shp_boxcen(x, y, z, cx= False, cy=False, cz=False, pos=V0):
     
     return shp_box
 
+
+# The same as shp_boxcen, but when it is used to cut. So sometimes it is 
+# useful to leave an extra 1mm on some sides to avoid making cuts sharing
+# faces. The extra part is added but not influences on the reference
+# Arguments:
+# x, y , z: the size of the edges of the box
+# cx, cy , cz: if the box will be centered on any of these axis
+# cx, cy , cz: if the box will be centered on any of these axis
+# xtr_x, xtr_nx, xtr_y, xtr_ny, xtr_z , xtr_nz:   
+# if an extra mm will be added, the number will determine the size
+#
+#
+#
+#                     | Y    cy=1, xtr_ny=1
+#                     |
+#                1    |
+#                _________
+#               | |       |
+#               | |       |
+#               | |       |
+#               | |       |
+#               |_|_______|
+
+
+def shp_boxcenxtr(x, y, z, cx= False, cy=False, cz=False,
+                  xtr_x = 0, xtr_nx = 0,
+                  xtr_y = 0, xtr_ny = 0,
+                  xtr_z = 0, xtr_nz = 0,
+                  pos=V0):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+
+    if cx == True:
+        x0 = -x/2.0 - xtr_nx
+        x1 =  x/2.0 + xtr_x
+    else:
+        x0 =  0 - xtr_nx
+        x1 =  x + xtr_x
+    if cy == True:
+        y0 = -y/2.0 - xtr_ny
+        y1 =  y/2.0 + xtr_y
+    else:
+        y0 =  0 - xtr_ny
+        y1 =  y + xtr_y
+    if cz == True:
+        z0 = - z/2.0 - xtr_nz
+    else:
+        z0 = 0 - xtr_nz
+
+    p00 = FreeCAD.Vector (x0,y0,z0) + pos
+    p10 = FreeCAD.Vector (x1,y0,z0) + pos
+    p11 = FreeCAD.Vector (x1,y1,z0) + pos
+    p01 = FreeCAD.Vector (x0,y1,z0) + pos
+    # the square
+    shp_wire_sq = Part.makePolygon([p00, p10, p11, p01, p00])
+    # the face
+    shp_face_sq = Part.Face(shp_wire_sq)
+    shp_box = shp_face_sq.extrude(FreeCAD.Vector(0,0, z+xtr_z+xtr_nz))
+
+    doc.recompute()
+    
+    return shp_box
+
 # same as shp_bxcen but with a filleted dimension
 def shp_boxcenfill (x, y, z, fillrad,
                    fx=False, fy=False, fz=True,
@@ -1080,7 +1143,8 @@ def addBoltNut_hole (r_shank,        l_bolt,
 # cx:     1 if you want the coordinates referenced to the x center of the piece
 #         it can be done because it is a new shape formed from the union
 # cy:     1 if you want the coordinates referenced to the y center of the piece
-# holedown:   0: the z0 is the bottom of the square (hole)
+# holedown:  I THINK IS THE OTHER WAY; CHECK
+#             0: the z0 is the bottom of the square (hole)
 #             1: the z0 is the center of the hexagon (nut)
 #              it can be done because it is a new shape formed from the union
 #

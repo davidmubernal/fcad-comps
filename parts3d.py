@@ -36,6 +36,7 @@ import beltcl   # import my CAD components
 import partgroup  # import my CAD components
 
 from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, fillet_len
+from fcfun import VXN, VYN, VZN
 from fcfun import addBolt, addBoltNut_hole, NutHole
 from kcomp import TOL
 
@@ -704,6 +705,11 @@ class EndShaftSlider (object):
 #     dent_l  : length of the dent, 
 #     dent_sl : small dimension of the dent length
 #     motortype : the Nema motor used: 17, 14, ..
+#     lg_y    : the linear guide on the positive Y end. 0 if none
+#     lg_ny   : the linear guide on the negative Y end. 0 if none
+#     lg_x    : the linear guide on the positive X end. 0 if none
+#     lg_nx   : the linear guide on the negative X end. 0 if none
+#     
 #
 #           Y   
 #           |
@@ -818,7 +824,8 @@ class CentralSlider (object):
     BOLT_NUT_R_TOL = BOLT_NUT_R + 1.5*MTOL
 
     def __init__ (self, rod_r, rod_sep, name, belt_sep,
-                  dent_w, dent_l, dent_sl, motortype=17):
+                  dent_w, dent_l, dent_sl, motortype=17,
+                  lg_y=0, lg_ny=0, lg_x=0, lg_nx=0):
 
         doc = FreeCAD.ActiveDocument
         self.base_place = (0,0,0)
@@ -828,6 +835,10 @@ class CentralSlider (object):
         self.belt_sep   = belt_sep
         self.dent_w     = dent_w
         self.motortype  = motortype
+        self.lg_y       = lg_y
+        self.lg_ny      = lg_ny
+        self.lg_x       = lg_x
+        self.lg_nx      = lg_nx
         if dent_w == 0:
             self.dent_l     = 0
             self.dent_sl    = 0
@@ -867,7 +878,16 @@ class CentralSlider (object):
 
 
         self.length = rod_sep + 2 * bearing_r + 2 * self.OUT_SEP_MOVPP
-        self.width  = bearing_l + 2 * self.OUT_SEP_MOV
+        lg_y_w = 0
+        lg_ny_w = 0
+        if lg_y != 0:
+            lg_y_w = lg_y['rail']['rw']
+        if lg_ny !=0:
+            lg_ny_w = lg_ny['rail']['rw']
+        # check the max value of the linearguides, and then, the max
+        # value of the bearing compared with the linear guide
+        self.width  = (max([bearing_l,lg_y_w,lg_ny_w])
+                       + 2 * self.OUT_SEP_MOV)
         self.partheight  = bearing_r + self.OUT_SEP_H
         self.totwidth  = self.width + 2*self.dent_w
 
@@ -896,6 +916,8 @@ class CentralSlider (object):
         cutlist = []
         # List to add to the bottom slider
         addbotlist = []
+        # list of objects to be added to the top slider
+        addtoplist = []
         # ----------------------------- outward dent
         #               t                         y
         #           tl ___ tr  (top right)        |_ x
@@ -954,6 +976,8 @@ class CentralSlider (object):
             topcenslid_dent = doc.addObject("Part::Fuse","topcenslid_dent")
             topcenslid_dent.Base = topcenslid_fllt
             topcenslid_dent.Tool = topdent
+
+            addtoplist.append (topcenslid_dent)
 
             botcenslid_dent = doc.addObject("Part::Fuse","botcenslid_dent")
             botcenslid_dent.Base = botcenslid_fllt
@@ -1201,7 +1225,7 @@ class CentralSlider (object):
         bclten0_cont = h_bclten0.fco_cont   # the container
         # It is not centered. being one corner in (0,0,0)
         # the width is h_gt2clamp0.CBASE_W + 2 * h_gt2clamp0.extind
-        #    _________
+        #     _________
         #    |         |
         #   /           \ 
         #  |             |
@@ -1359,12 +1383,248 @@ class CentralSlider (object):
 
         cutlist.append (bholes_motorstf)
 
-        # ----------- final fusion of holes
-        holes = doc.addObject("Part::MultiFuse", "censlid_holes")
-        holes.Shapes = cutlist
 
-        holes_top = doc.addObject("Part::MultiFuse", "censlid_tophles")
+        # ----------- Linear guides for the vertical movement
+        # the width of the support
+        lg_sup_w = 6
+
+
+        # list of objects to be cut to the bottom slider
+        cutbotlist = []
+
+        # Linear Guide on the negative side of X
+        if lg_nx != 0:
+            lg_nx_b = lg_nx['block']
+            lg_nx_r = lg_nx['rail']
+            # Making a hole just the size of:
+            # the total linear guide height - block height - TOL (+ 1 to cut)
+            lg_hole_in = lg_nx_b['lh'] - lg_nx_b['bh'] - TOL
+            # the width of the hole
+            lg_hole_w = lg_nx_r['rw'] + 1.5*TOL # both sides: 1.5 TOL
+            pos_lg_nx = FreeCAD.Vector(-(self.totwidth/2+1),0,0)
+            shp_lg_nx_hole = fcfun.shp_boxcen(lg_hole_in+1,
+                                              lg_hole_w,
+                                               2*slid_z+2,
+                                       cx=0, cy=1, cz=1, pos=pos_lg_nx)
+            fco_lg_hole_nx=doc.addObject("Part::Feature", 'lg_hole_nx')
+            fco_lg_hole_nx.Shape = shp_lg_nx_hole
+            cutlist.append(fco_lg_hole_nx)
+
+            # Making the support on the top slider, and the hole on the bottom
+            pos_lg_nx_sup = FreeCAD.Vector(-(self.totwidth/2 - lg_hole_in),
+                                           0,-lg_nx_r['boltlsep'])
+            shp_lg_nx_sup = fcfun.shp_boxcen(lg_sup_w,
+                                             lg_nx_r['rw'], 
+                                             lg_nx_r['boltlsep']+1,
+                                             cx=0, cy=1, cz=0,
+                                             pos=pos_lg_nx_sup)
+            
+            fco_lg_nx_sup = doc.addObject("Part::Feature",
+                                               'lg_nx_sup')
+            fco_lg_nx_sup.Shape = shp_lg_nx_sup
+
+            addtoplist.append(fco_lg_nx_sup)
+            # bolt holes on the support
+            lg_nx_bolt_list = []
+            # bolt on top, negative Y, or centered if only one
+            pos_lg_nx_bolt_t0 = FreeCAD.Vector(pos_lg_nx_sup.x-1,
+                                            -lg_nx_r['boltwsep']/2.,
+                                            slid_z/2.)
+            lg_nx_bolt_t0 = fcfun.shp_cyl (r=lg_nx_r['boltd']/2.,
+                                        h = lg_sup_w+2, 
+                                  normal = VX, pos= pos_lg_nx_bolt_t0)
+
+            # bolt at bottom, negative Y, or centered if only one
+            pos_lg_nx_bolt_b0 = FreeCAD.Vector(pos_lg_nx_sup.x-1,
+                                            -lg_nx_r['boltwsep']/2.,
+                                            slid_z/2. -  lg_nx_r['boltlsep'])
+            lg_nx_bolt_b0 = fcfun.shp_cyl (r=lg_nx_r['boltd']/2.,
+                                        h = lg_sup_w+2, 
+                                        normal = VX, pos= pos_lg_nx_bolt_b0)
+
+            lg_nx_bolt0 = lg_nx_bolt_t0.fuse(lg_nx_bolt_b0)
+            # nut hole to introduce the nut
+            lg_nx_bolt_d = lg_nx_r['boltd']
+            lg_nx_bolt_d_int = int(lg_nx_bolt_d)
+            lg_nx_nut_d = kcomp.NUT_D934_D[lg_nx_bolt_d_int]
+            lg_nx_nut_l = kcomp.NUT_D934_L[lg_nx_bolt_d_int]
+            lg_nx_nut_r_tol = lg_nx_nut_d/2. + 1.5*TOL
+            lg_nx_nut_2apot_tol = 2* lg_nx_nut_r_tol * kcomp.APOT_R
+
+            h_lgnxnuthole0 = fcfun.NutHole(nut_r = lg_nx_nut_r_tol,
+                                         nut_h = lg_nx_nut_l * 1.5,
+                                         hole_h = slid_z /2. + 2*TOL,
+                                         name = 'lg_nx_nuthole0',
+                                         extra = 1,
+                                         nuthole_x = 1,
+                                         cx = 0,
+                                         cy = 1,
+                                         holedown = 0)
+            doc.recompute()
+            lgnxnuthole0 = h_lgnxnuthole0.fco
+            lgnxnuthole0.Placement.Base = FreeCAD.Vector(
+                                                    pos_lg_nx_sup.x + lg_sup_w,
+                                                    pos_lg_nx_bolt_t0.y ,
+                                                    pos_lg_nx_bolt_t0.z-TOL)
+
+            doc.recompute()
+            cuttoplist.append(lgnxnuthole0)
+                                                    
+            if lg_nx_r['boltwsep'] != 0: # there are 2 bolts in a row
+                lg_nx_bolt1 = lg_nx_bolt0.copy()
+                lg_nx_bolt1.Placement.Base.y = lg_nx_r['boltwsep']
+                lg_nx_bolts = lg_nx_bolt0.fuse(lg_nx_bolt1)
+                # clone the nut hole
+                lgnxnuthole1 = Draft.clone(lgnxnuthole0)
+                lgnxnuthole1.Label = 'lgnx_nuthole1'
+                lgnxnuthole1.Placement.Base = FreeCAD.Vector(
+                             pos_lg_nx_sup.x + lg_sup_w,
+                             pos_lg_nx_bolt_t0.y+ lg_nx_bolt1.Placement.Base.y ,
+                             pos_lg_nx_bolt_t0.z-TOL)
+                cuttoplist.append(lgnxnuthole1)
+
+            else:
+                lg_nx_bolts = lg_nx_bolt0
+            fco_lg_nx_bolts = doc.addObject("Part::Feature", 'lg__nx_bolts')
+            fco_lg_nx_bolts.Shape = lg_nx_bolts
+            cuttoplist.append(fco_lg_nx_bolts)
+
+            pos_lg_nx_sup_hole = FreeCAD.Vector(-(self.totwidth/2 - lg_hole_in),
+                                           0,-slid_z-1)
+            shp_lg_nx_sup_hole = fcfun.shp_boxcen(lg_sup_w + TOL,
+                                             lg_hole_w,
+                                             slid_z+2,
+                                             cx=0, cy=1, cz=0,
+                                             pos=pos_lg_nx_sup_hole)
+            fco_lg_nx_sup_hole = doc.addObject("Part::Feature",
+                                               'lg_nx_sup_hole')
+            fco_lg_nx_sup_hole.Shape = shp_lg_nx_sup_hole
+            cutbotlist.append(fco_lg_nx_sup_hole)
+            
+
+
+        # ------------- Linear Guide on the positive side of X
+        if lg_x != 0:
+            lg_x_b = lg_x['block']
+            lg_x_r = lg_x['rail']
+            # Making a hole just the size of:
+            # the total linear guide height - block height - TOL (+ 1 to cut)
+            lg_hole_in = lg_x_b['lh'] - lg_x_b['bh'] - TOL
+            # the width of the hole
+            lg_hole_w = lg_x_r['rw'] + 1.5*TOL # both sides: 1.5 TOL
+            pos_lg_x = FreeCAD.Vector((self.totwidth/2- lg_hole_in),0,0)
+            shp_lg_x_hole = fcfun.shp_boxcen(lg_hole_in+1,
+                                              lg_hole_w,
+                                               2*slid_z+2,
+                                       cx=0, cy=1, cz=1, pos=pos_lg_x)
+            fco_lg_hole_x=doc.addObject("Part::Feature", 'lg_hole_x')
+            fco_lg_hole_x.Shape = shp_lg_x_hole
+            cutlist.append(fco_lg_hole_x)
+
+            # Making the support on the top slider, and the hole on the bottom
+            pos_lg_x_sup = FreeCAD.Vector(
+                                    +(self.totwidth/2 - lg_hole_in - lg_sup_w),
+                                    0,-lg_x_r['boltlsep'])
+            shp_lg_x_sup = fcfun.shp_boxcen(lg_sup_w,
+                                             lg_nx_r['rw'], 
+                                             lg_nx_r['boltlsep']+1,
+                                             cx=0, cy=1, cz=0,
+                                             pos=pos_lg_x_sup)
+            
+            fco_lg_x_sup = doc.addObject("Part::Feature",
+                                               'lg_x_sup')
+            fco_lg_x_sup.Shape = shp_lg_x_sup
+
+            addtoplist.append(fco_lg_x_sup)
+            # bolt holes on the support
+            lg_x_bolt_list = []
+            # bolt on top, negative Y, or centered if only one
+            pos_lg_x_bolt_t0 = FreeCAD.Vector(pos_lg_x_sup.x-1,
+                                            -lg_x_r['boltwsep']/2.,
+                                            slid_z/2.)
+            lg_x_bolt_t0 = fcfun.shp_cyl (r=lg_x_r['boltd']/2.,
+                                        h = lg_sup_w+2, 
+                                  normal = VXN, pos= pos_lg_x_bolt_t0)
+
+            # bolt at bottom, negative Y, or centered if only one
+            pos_lg_x_bolt_b0 = FreeCAD.Vector(pos_lg_x_sup.x-1,
+                                            -lg_x_r['boltwsep']/2.,
+                                            slid_z/2. -  lg_x_r['boltlsep'])
+            lg_x_bolt_b0 = fcfun.shp_cyl (r=lg_x_r['boltd']/2.,
+                                        h = lg_sup_w+2, 
+                                        normal = VXN, pos= pos_lg_x_bolt_b0)
+
+            lg_x_bolt0 = lg_x_bolt_t0.fuse(lg_x_bolt_b0)
+            # nut hole to introduce the nut
+            lg_x_bolt_d = lg_x_r['boltd']
+            lg_x_bolt_d_int = int(lg_x_bolt_d)
+            lg_x_nut_d = kcomp.NUT_D934_D[lg_x_bolt_d_int]
+            lg_x_nut_l = kcomp.NUT_D934_L[lg_x_bolt_d_int]
+            lg_x_nut_r_tol = lg_x_nut_d/2. + 1.5*TOL
+            lg_x_nut_2apot_tol = 2* lg_x_nut_r_tol * kcomp.APOT_R
+
+            h_lgxnuthole0 = fcfun.NutHole(nut_r = lg_x_nut_r_tol,
+                                         nut_h = lg_x_nut_l * 1.5,
+                                         hole_h = slid_z /2. + 2*TOL,
+                                         name = 'lg_x_nuthole0',
+                                         extra = 1,
+                                         nuthole_x = 1,
+                                         cx = 0,
+                                         cy = 1,
+                                         holedown = 0)
+            doc.recompute()
+            lgxnuthole0 = h_lgxnuthole0.fco
+            lgxnuthole0.Placement.Base = FreeCAD.Vector(
+                                                    pos_lg_x_sup.x + lg_sup_w,
+                                                    pos_lg_x_bolt_t0.y ,
+                                                    pos_lg_x_bolt_t0.z-TOL)
+
+            doc.recompute()
+            cuttoplist.append(lgxnuthole0)
+                                                    
+            if lg_x_r['boltwsep'] != 0: # there are 2 bolts in a row
+                lg_x_bolt1 = lg_x_bolt0.copy()
+                lg_x_bolt1.Placement.Base.y = lg_x_r['boltwsep']
+                lg_x_bolts = lg_x_bolt0.fuse(lg_x_bolt1)
+                # clone the nut hole
+                lgxnuthole1 = Draft.clone(lgxnuthole0)
+                lgxnuthole1.Label = 'lgx_nuthole1'
+                lgxnuthole1.Placement.Base = FreeCAD.Vector(
+                               pos_lg_x_sup.x + lg_sup_w,
+                               pos_lg_x_bolt_t0.y+ lg_x_bolt1.Placement.Base.y ,
+                               pos_lg_x_bolt_t0.z-TOL)
+                cuttoplist.append(lgxnuthole1)
+
+            else:
+                lg_x_bolts = lg_bolt0
+            fco_lg_x_bolts = doc.addObject("Part::Feature", 'lg_x_bolts')
+            fco_lg_x_bolts.Shape = lg_x_bolts
+            cuttoplist.append(fco_lg_x_bolts)
+
+            pos_lg_x_sup_hole = FreeCAD.Vector(+(self.totwidth/2 - lg_hole_in),
+                                           0,-slid_z-1)
+            shp_lg_x_sup_hole = fcfun.shp_boxcen(lg_sup_w + TOL,
+                                             lg_hole_w,
+                                             slid_z+2,
+                                             cx=0, cy=1, cz=0,
+                                             pos=pos_lg_x_sup_hole)
+            fco_lg_x_sup_hole = doc.addObject("Part::Feature",
+                                               'lg_x_sup_hole')
+            fco_lg_x_sup_hole.Shape = shp_lg_x_sup_hole
+            cutbotlist.append(fco_lg_x_sup_hole)
+            
+            
+            
+
+        # ----------- final fusion of holes
+        #holes = doc.addObject("Part::MultiFuse", "censlid_holes")
+        #holes.Shapes = cutlist
+
+        holes_top = doc.addObject("Part::MultiFuse", "censlid_topholes")
         holes_top.Shapes = cutlist + cuttoplist
+
+        holes_bot = doc.addObject("Part::MultiFuse", "censlid_botholes")
+        holes_bot.Shapes = cutlist + cutbotlist
 
         self.parts = parts_list
 
@@ -1376,20 +1636,26 @@ class CentralSlider (object):
         bearings.Tool = h_lmuu_1.bearing
         self.bearings = bearings
 
-        # ----- adding the belt clamps:
+        # ----- adding the supports to the top slider:
+        topcenslid_sup = doc.addObject("Part::MultiFuse", name + "_bot_sup")
+        topcenslid_sup.Shapes = addtoplist
+
+        doc.recompute()
+
+        # ----- adding the belt clamps to the bottom slider:
         botcenslid_cl = doc.addObject("Part::MultiFuse", name + "_bot_cl")
         botcenslid_cl.Shapes = addbotlist
 
         doc.recompute()
         # ----------- final cut
         topcenslid = doc.addObject("Part::Cut", name + "_top")
-        topcenslid.Base = topcenslid_dent
+        topcenslid.Base = topcenslid_sup
         topcenslid.Tool = holes_top
         self.top_slide = topcenslid
 
         botcenslid = doc.addObject("Part::Cut", name + "_bot")
         botcenslid.Base = botcenslid_cl
-        botcenslid.Tool = holes
+        botcenslid.Tool = holes_bot
 
         doc.recompute()
         #botcenslid.Shape = botcenslid.Shape.removeSplitter()
@@ -1418,4 +1684,6 @@ cs = CentralSlider (rod_r = 6, rod_sep = 150.0, name="central_slider",
                     belt_sep = 100,  # check value
                     dent_w = 18,
                     dent_l = 122,
-                    dent_sl = 68)
+                    dent_sl = 68,
+                    lg_nx = kcomp.SEBWM16,
+                    lg_x = kcomp.SEBWM16 )
