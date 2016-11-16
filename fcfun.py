@@ -210,9 +210,9 @@ def shp_boxcen(x, y, z, cx= False, cy=False, cz=False, pos=V0):
 
 
 def shp_boxcenxtr(x, y, z, cx= False, cy=False, cz=False,
-                  xtr_x = 0, xtr_nx = 0,
-                  xtr_y = 0, xtr_ny = 0,
-                  xtr_z = 0, xtr_nz = 0,
+                  xtr_nx = 0, xtr_x = 0,
+                  xtr_ny = 0, xtr_y = 0,
+                  xtr_nz = 0, xtr_z = 0,
                   pos=V0):
     # we have to bring the active document
     doc = FreeCAD.ActiveDocument
@@ -230,7 +230,7 @@ def shp_boxcenxtr(x, y, z, cx= False, cy=False, cz=False,
         y0 =  0 - xtr_ny
         y1 =  y + xtr_y
     if cz == True:
-        z0 = - z/2.0 - xtr_nz
+        z0 = -z/2.0 - xtr_nz
     else:
         z0 = 0 - xtr_nz
 
@@ -345,14 +345,6 @@ def shp_face_lgrail (rail_w, rail_h, axis_l = 'x', axis_b = '-z'):
     return (shp_face_rail)
 
 
-
-
-
-
-
-
-    
-
 # def shp_face_rail 
 # adds a shape of the profile (face) of a linear guide rail, the dent is just
 # rough, to be able to see that it is a profile
@@ -437,20 +429,6 @@ def shp_face_rail (rail_w, rail_ws, rail_h,
 
     
     return shp_face_rail
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -565,6 +543,43 @@ def shp_cyl (r, h, normal = VZ, pos = V0):
     shpcyl = face_cir.extrude(dir_extrus)
 
     return shpcyl
+
+
+# Add cylinder, can be centered on the position, and also can have an extra
+#  mm on top and bottom to make cuts
+#     r: radius,
+#     h: height 
+#     normal: FreeCAD.Vector pointing to the normal 
+#     ch : centered on the middle, of the height
+#     xtr_top : extra on top (but does not influence the centering)
+#     xtr_bot : extra on bottom (but does not influence the centering)
+#     pos: position of the cylinder
+#     
+
+def shp_cylcenxtr (r, h, normal = VZ,
+                         ch = 1, xtr_top=0, xtr_bot=0, pos = V0):
+
+    # Normalize the normal, in case it is not one:
+    nnormal = DraftVecUtils.scaleTo(normal, 1)
+    if ch == 1: # we have to move the circle half the height down + xtr_bot
+        basepos = pos - DraftVecUtils.scaleTo(nnormal, h/2. + xtr_bot)
+    else:
+        basepos = pos - DraftVecUtils.scaleTo(nnormal, xtr_bot)
+
+    cir =  Part.makeCircle (r,   # Radius
+                            basepos,     # Position
+                            nnormal)  # direction
+
+    print "circle: %", cir.Curve
+
+    wire_cir = Part.Wire(cir)
+    face_cir = Part.Face(wire_cir)
+
+    dir_extrus = DraftVecUtils.scaleTo(normal, h+xtr_bot+xtr_top)
+    shpcyl = face_cir.extrude(dir_extrus)
+
+    return shpcyl
+
 
 
 
