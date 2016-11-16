@@ -283,7 +283,7 @@ class EndShaftSlider (object):
 
         botslid_box = addBox(slid_x, slid_y, slid_z, "bosidetslid_box")
         botslid_box.Placement.Base = FreeCAD.Vector(slid_posx, y_offs,
-                                                    -self.partheight)
+                                                    -slid_z)
 
         topslid_fllt = fillet_len (topslid_box, slid_z, 
                                   self.FILLT_R, "topsideslid_fllt")
@@ -354,7 +354,7 @@ class EndShaftSlider (object):
         # -------------------- bolts and nuts
         bolt0 = addBoltNut_hole (
                             r_shank   = self.BOLT_SHANK_R_TOL,
-                            l_bolt    = 2 * self.partheight,
+                            l_bolt    = 2 * slid_z,
                             r_head    = self.BOLT_HEAD_R_TOL,
                             l_head    = self.BOLT_HEAD_L,
                             r_nut     = self.BOLT_NUT_R_TOL,
@@ -394,7 +394,7 @@ class EndShaftSlider (object):
 
         bolt0.Placement.Base = FreeCAD.Vector (bolt_left_pos_x,
                                                self.length/2 + y_offs,
-                                               -self.partheight)
+                                               -slid_z)
         bolt0.Placement.Rotation = FreeCAD.Rotation (VZ, 90)
         cutlist.append (bolt0)
 
@@ -415,7 +415,7 @@ class EndShaftSlider (object):
         boltr.Label = "bolt_hole_r"
         boltr.Placement.Base =  FreeCAD.Vector (-bolt_left_pos_x,
                                                 self.length/2 + y_offs,
-                                               -self.partheight)
+                                               -slid_z)
         boltr.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
         cutlist.append (boltr)
 
@@ -425,7 +425,7 @@ class EndShaftSlider (object):
         boltlu.Label = "bolt_hole_lu"
         boltlu.Placement.Base =  FreeCAD.Vector (bolt_left_pos_x,
                                                 bolt_low_pos_y,
-                                               -self.partheight)
+                                               -slid_z)
         boltlu.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
         cutlist.append (boltlu)
         
@@ -434,7 +434,7 @@ class EndShaftSlider (object):
         boltld.Label = "bolt_hole_ld"
         boltld.Placement.Base =  FreeCAD.Vector (bolt_left_pos_x,
                                                 bolt_high_pos_y,
-                                               -self.partheight)
+                                               -slid_z)
         boltld.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
         cutlist.append (boltld)
 
@@ -443,7 +443,7 @@ class EndShaftSlider (object):
         boltru.Label = "bolt_hole_ru"
         boltru.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
                                                 bolt_high_pos_y,
-                                               -self.partheight)
+                                               -slid_z)
         boltru.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
         cutlist.append (boltru)
 
@@ -452,7 +452,7 @@ class EndShaftSlider (object):
         boltrd.Label = "bolt_hole_rd"
         boltrd.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
                                                 bolt_low_pos_y,
-                                               -self.partheight)
+                                               -slid_z)
         boltrd.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
         cutlist.append (boltrd)
 
@@ -461,7 +461,7 @@ class EndShaftSlider (object):
         boltrmu.Label = "bolt_hole_rmu"
         boltrmu.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
                                                   bolt_highmid_pos_y,
-                                                 -self.partheight)
+                                                 -slid_z)
         boltrmu.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
         cutlist.append (boltrmu)
 
@@ -470,14 +470,14 @@ class EndShaftSlider (object):
         boltrmd.Label = "bolt_hole_rmd"
         boltrmd.Placement.Base =  FreeCAD.Vector (bolt_right_pos_x,
                                                 bolt_lowmid_pos_y,
-                                               -self.partheight)
+                                               -slid_z)
         boltrmd.Placement.Rotation = FreeCAD.Rotation (VZ, 0)
         cutlist.append (boltrmd)
 
         # Hole for the upper Pulley bolt       
         boltpull0 = addBolt (
                             r_shank   = self.BOLTPUL_SHANK_R_TOL,
-                            l_bolt    = 2 * self.partheight,
+                            l_bolt    = 2 * slid_z,
                             r_head    = self.BOLTPUL_NUT_R_TOL,
                             l_head    = self.BOLTPUL_NUT_L,
                             hex_head  = 1, extra=1,
@@ -486,7 +486,7 @@ class EndShaftSlider (object):
 
         boltpull0.Placement.Base =  FreeCAD.Vector (bolt_pull_pos_x,
                                                     bolt_pulhigh_pos_y,
-                                                   -self.partheight)
+                                                   -slid_z)
         boltpull0.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
         cutlist.append (boltpull0)
 
@@ -497,7 +497,7 @@ class EndShaftSlider (object):
                                    name = 'idlepull_0',
                                    normal = VZ,
                                    pos = boltpull0.Placement.Base + 
-                                         FreeCAD.Vector(0,0,2*self.partheight))
+                                         FreeCAD.Vector(0,0,2*slid_z))
         idlepull0 = h_idlepull0.fco
 
         # separation between the axis iddle pulleys
@@ -513,7 +513,7 @@ class EndShaftSlider (object):
         boltpull1.Label = "boltpul_hole_1"
         boltpull1.Placement.Base =  FreeCAD.Vector (bolt_pull_pos_x,
                                                     bolt_pullow_pos_y,
-                                                   -self.partheight)
+                                                   -slid_z)
         boltpull1.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
         cutlist.append (boltpull1)
 
@@ -531,16 +531,16 @@ class EndShaftSlider (object):
 
         pdent_ur = FreeCAD.Vector ( self.width + slid_posx + 1,
                                     bolt_highmid_pos_y - 1,
-                                   -self.partheight - 1)
+                                   -slid_z - 1)
         pdent_ul = FreeCAD.Vector ( bolt_pull_pos_x + 1,
                                     bolt_pulhigh_pos_y - self.OUT_SEP_L ,
-                                   -self.partheight - 1)
+                                   -slid_z - 1)
         pdent_dr = FreeCAD.Vector ( self.width + slid_posx + 1,
                                     bolt_lowmid_pos_y +1,
-                                   -self.partheight - 1)
+                                   -slid_z - 1)
         pdent_dl = FreeCAD.Vector ( bolt_pull_pos_x + 1,
                                     bolt_pullow_pos_y + self.OUT_SEP_L ,
-                                   -self.partheight - 1)
+                                   -slid_z - 1)
 
         # dent dimensions
         # the length is actually shorter, because it is 1 mm inside.
@@ -585,7 +585,7 @@ class EndShaftSlider (object):
         dent_plane.ViewObject.Visibility = False
         dent = doc.addObject("Part::Extrusion", "dent")
         dent.Base = dent_plane
-        dent.Dir = (0,0, 2*self.partheight +2)
+        dent.Dir = (0,0, 2*slid_z +2)
         dent.Solid = True
         cutlist.append (dent)
 
@@ -868,26 +868,43 @@ class CentralSlider (object):
         #    |---------| length
         #   
         # separation from the end of the linear bearing to the end
-        self.OUT_SEP_MOV = 4.0
-        if self.BOLT_D == 3:
-            self.OUT_SEP_MOVPP = 10.0
-        elif self.BOLT_D == 4:
-            self.OUT_SEP_MOVPP = 10.0
-        else:
-            print "Bolt Size not defined in CentralSlider"
+        self.SEP = 3.
+        #self.OUT_SEP_MOV = 4.0
+        #if self.BOLT_D == 3:
+        #    self.OUT_SEP_MOVPP = 10.0
+        #elif self.BOLT_D == 4:
+        #    self.OUT_SEP_MOVPP = 10.0
+        #else:
+        #    print "Bolt Size not defined in CentralSlider"
 
+        # the thickness of the support for the linear guide
+        lg_sup_t = 6
 
-        self.length = rod_sep + 2 * bearing_r + 2 * self.OUT_SEP_MOVPP
+        # length: rod separation
+        # + twice(both sides) of radius of bearing, bolts and separation)
+        self.length = ( rod_sep
+                    + 2 *(bearing_r + 2 * self.SEP + 2 * self.BOLT_NUT_R_TOL))
+        # linear guides on the Y ends
         lg_y_w = 0
         lg_ny_w = 0
+        tot_lg_y_w = 0
+        tot_lg_ny_w = 0
         if lg_y != 0:
             lg_y_w = lg_y['rail']['rw']
+            # total width including the bolts and space between them and
+            # linear guide 
+            tot_lg_y_w = lg_y_w +  2 * self.BOLT_NUT_R_TOL + 4 * self.SEP
         if lg_ny !=0:
             lg_ny_w = lg_ny['rail']['rw']
+            tot_lg_ny_w = lg_ny_w +  2 * self.BOLT_NUT_R_TOL + 4 * self.SEP
+        if lg_y != 0 or lg_ny != 0:
+            # add space for the support and the nut
+            self.length = self.length + lg_sup_t 
+       
         # check the max value of the linearguides, and then, the max
         # value of the bearing compared with the linear guide
-        self.width  = (max([bearing_l,lg_y_w,lg_ny_w])
-                       + 2 * self.OUT_SEP_MOV)
+        self.width  = (max([bearing_l,tot_lg_y_w,tot_lg_ny_w])
+                       + 2 * self.SEP )
         self.partheight  = bearing_r + self.OUT_SEP_H
         self.totwidth  = self.width + 2*self.dent_w
 
@@ -902,7 +919,7 @@ class CentralSlider (object):
         botcenslid_box = fcfun.addBox_cen (slid_x, slid_y, slid_z,
                                  "botcenslid_box",
                                   cx=True, cy=True, cz= False)
-        botcenslid_box.Placement.Base = FreeCAD.Vector(0, 0, -self.partheight)
+        botcenslid_box.Placement.Base = FreeCAD.Vector(0, 0, -slid_z)
 
         # fillet
         topcenslid_fllt = fillet_len (box = topcenslid_box,
@@ -963,7 +980,7 @@ class CentralSlider (object):
             #p_dent_t  = FreeCAD.Vector(  0            , dent_l/2.0, 0)
             p_dent_tr = FreeCAD.Vector(  slid_x/2. -1 , ovdent_l/2., 0)
             p_dent_rt = FreeCAD.Vector(  slid_x/2. + dent_w , dent_sl/2., 0)
-            #p_dent_r  = FreeCAD.Vector(  slid_x/2. -1 + dent_w , 0          , 0)
+            #p_dent_r  = FreeCAD.Vector(  slid_x/2. -1 + dent_w , 0 , 0)
             dentwire = fcfun.wire_sim_xy([p_dent_tr, p_dent_rt])
             dentface = Part.Face(dentwire)
             shp_topdent = dentface.extrude(FreeCAD.Vector(0,0, slid_z))
@@ -1031,7 +1048,7 @@ class CentralSlider (object):
             fbclt_pos_x =  self.totwidth/2. - fbcl_w/2. - b
         fbclt_pos = FreeCAD.Vector(fbclt_pos_x,
                                    fbclt_pos_y,
-                                   self.partheight )
+                                   slid_z )
         #fco_fbclt = beltcl.fco_topbeltclamp (railaxis = '-y', bot_norm = '-z',
         #                 pos = fbclt_pos, extra = 1, name = "fbclt")
         shp_fbclt = beltcl.shp_topbeltclamp (railaxis = '-y', bot_norm = '-z',
@@ -1056,7 +1073,7 @@ class CentralSlider (object):
                                           bs_fbclt_p0])
         bs_fbclt_face = Part.Face(bs_fbclt_wire)
         shp_bs_fbclt_box = bs_fbclt_face.extrude(
-                                     FreeCAD.Vector(0,0,self.partheight+1))
+                                     FreeCAD.Vector(0,0,slid_z+1))
         shp_bs_fbclt = shp_bs_fbclt_box.common(topcenslid_dent.Shape)
         #all: base with the beltclt
         shp_afbclt = shp_bs_fbclt.fuse(shp_fbclt)
@@ -1079,7 +1096,7 @@ class CentralSlider (object):
                                           cbs_fbclt_p0])
         cbs_fbclt_face = Part.Face(cbs_fbclt_wire)
         shp_cbs_fbclt = cbs_fbclt_face.extrude(
-                                     FreeCAD.Vector(0,0,self.partheight+2))
+                                     FreeCAD.Vector(0,0,slid_z+2))
         cbs_fbclt = doc.addObject("Part::Feature", "cbs_cfbclt")
         cbs_fbclt.Shape = shp_cbs_fbclt
 
@@ -1089,7 +1106,7 @@ class CentralSlider (object):
         # bottom belt clamp
         fbclb_pos = FreeCAD.Vector( fbclt_pos_x,
                                    -fbclt_pos_y,
-                                   self.partheight )
+                                   slid_z )
         shp_fbclb = beltcl.shp_topbeltclamp (railaxis = 'y', bot_norm = '-z',
                          pos = fbclb_pos, extra = 1)
 
@@ -1103,7 +1120,7 @@ class CentralSlider (object):
                                           bs_fbclb_p0])
         bs_fbclb_face = Part.Face(bs_fbclb_wire)
         shp_bs_fbclb_box = bs_fbclb_face.extrude(
-                                     FreeCAD.Vector(0,0,self.partheight+1))
+                                     FreeCAD.Vector(0,0,slid_z+1))
         shp_bs_fbclb = shp_bs_fbclb_box.common(topcenslid_dent.Shape)
         #all: base with the beltclt
         shp_afbclb = shp_bs_fbclb.fuse(shp_fbclb)
@@ -1127,7 +1144,7 @@ class CentralSlider (object):
                                           cbs_fbclb_p0])
         cbs_fbclb_face = Part.Face(cbs_fbclb_wire)
         shp_cbs_fbclb = cbs_fbclb_face.extrude(
-                                     FreeCAD.Vector(0,0,self.partheight+2))
+                                     FreeCAD.Vector(0,0,slid_z+2))
         cbs_fbclb = doc.addObject("Part::Feature", "cbs_cfbclb")
         cbs_fbclb.Shape = shp_cbs_fbclb
 
@@ -1144,7 +1161,7 @@ class CentralSlider (object):
 #                                   holcyl_list = kcomp.idlepull_name_list,
 #                                   name = 'csidlepull_0',
 #                                   normal = VZ,
-#                                   pos = FreeCAD.Vector(0,0,self.partheight))
+#                                   pos = FreeCAD.Vector(0,0,slid_z))
 #        csidlepull0 = h_csidlepull0.fco
 #        # 0.5 is for the thickness of the belt
 #        bolt_pull_pos_y = self.belt_sep /2.0 - h_csidlepull0.r_maxbear -0.5 
@@ -1170,7 +1187,7 @@ class CentralSlider (object):
 #        # Hole for the Idle Pulley bolt       
 #        csboltpull0 = addBolt (
 #                            r_shank   = EndShaftSlider.BOLTPUL_SHANK_R_TOL,
-#                            l_bolt    = 2 * self.partheight,
+#                            l_bolt    = 2 * slid_z,
 #                            r_head    = EndShaftSlider.BOLTPUL_NUT_R_TOL,
 #                            l_head    = EndShaftSlider.BOLTPUL_NUT_L,
 #                            hex_head  = 1, extra=1,
@@ -1180,7 +1197,7 @@ class CentralSlider (object):
 #        csboltpull0.Placement.Base =  FreeCAD.Vector (
 #                                                   slid_x/2.,
 #                                                   bolt_pull_pos_y,
-#                                                   -self.partheight)
+#                                                   -slid_z)
 #        csboltpull0.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
 #
 #        cutlist.append (csboltpull0)
@@ -1190,11 +1207,9 @@ class CentralSlider (object):
 #        csboltpull1.Placement.Base =  FreeCAD.Vector (
 #                                                   -slid_x/2.,
 #                                                   bolt_pull_pos_y,
-#                                                   -self.partheight)
+#                                                   -slid_z)
 #        csboltpull1.Placement.Rotation = FreeCAD.Rotation (VZ, 30)
 #        cutlist.append (csboltpull1)
-#
-#
 
         # --------------------- Linear Bearings -------------------
         h_lmuu_0 = comps.LinBearing (
@@ -1219,7 +1234,7 @@ class CentralSlider (object):
         # ---------- Belt tensioner
 
         h_bclten0 =  beltcl.Gt2BeltClamp (base_h = slid_z,
-                                            midblock =0, name="bclten0")
+                                          midblock =0, name="bclten0")
         bclten0 = h_bclten0.fco   # the FreeCad Object
         parts_list.append(bclten0)
         bclten0_cont = h_bclten0.fco_cont   # the container
@@ -1318,15 +1333,14 @@ class CentralSlider (object):
         cutlist.append (beltholes_t)
         cutlist.append (beltholes_b)
 
-
         # --------------------- Motor -------------------
         h_nema14 = comps.NemaMotor(size=14, length=26.0, shaft_l=24.,
                circle_r = 0, circle_h=2.,
                name="nema14_my5602", chmf=2., rshaft_l = 0,
-               bolt_depth = 3.5, bolt_out = 2 + self.partheight/2.,
+               bolt_depth = 3.5, bolt_out = 2 + slid_z/2.,
                normal= FreeCAD.Vector(0,0,1),
-               #pos = FreeCAD.Vector(0,0,-self.partheight))
-               pos = FreeCAD.Vector(0,0,self.partheight/2.))
+               #pos = FreeCAD.Vector(0,0,-slid_z))
+               pos = FreeCAD.Vector(0,0,slid_z/2.))
 
         parts_list.append (h_nema14.fco)
         shp_contnema14 = h_nema14.shp_cont  # this is a shape, not a fco
@@ -1334,10 +1348,10 @@ class CentralSlider (object):
         h_nema17 = comps.NemaMotor(size=17, length=33.5, shaft_l=24.,
                circle_r = 12., circle_h=2.,
                name="nema17_ST4209S1006B", chmf=2., rshaft_l = 10.,
-               bolt_depth = 4.5, bolt_out = 2 + self.partheight/2.,
+               bolt_depth = 4.5, bolt_out = 2 + slid_z/2.,
                normal= FreeCAD.Vector(0,0,1),
-               #pos = FreeCAD.Vector(0,0,-self.partheight))
-               pos = FreeCAD.Vector(0,0,self.partheight/2.))
+               #pos = FreeCAD.Vector(0,0,-slid_z))
+               pos = FreeCAD.Vector(0,0,slid_z/2.))
 
         parts_list.append (h_nema17.fco)
         shp_contnema17 = h_nema17.shp_cont  # this is a shape, not a fco
@@ -1360,7 +1374,7 @@ class CentralSlider (object):
         nanostf28_boltsep = 34.1
         bhole_motorstf0 = addBolt (
             r_shank =  1.5  + mtol/2., # nemabolt_d/2. + mtol/2.,
-            l_bolt = 2 + self.partheight/2.,
+            l_bolt = 2 + slid_z/2.,
             r_head = kcomp.D912_HEAD_D[3]/2. + mtol/2.,
             l_head = kcomp.D912_HEAD_L[3] + mtol,
             hex_head = 0, extra =1, support=1, headdown = 0,
@@ -1372,17 +1386,76 @@ class CentralSlider (object):
         bhole_motorstf0.Placement.Base = FreeCAD.Vector(
                                                 -nanostf28_boltsep/2.,
                                                  0,
-                                                 self.partheight/2.)
+                                                 slid_z/2.)
         bhole_motorstf1.Placement.Base = FreeCAD.Vector(
                                                  nanostf28_boltsep/2.,
                                                  0,
-                                                 self.partheight/2.)
+                                                 slid_z/2.)
         bholes_motorstf = doc.addObject("Part::Fuse", "bholes_motorstf")
         bholes_motorstf.Base = bhole_motorstf0
         bholes_motorstf.Tool = bhole_motorstf1
 
         cutlist.append (bholes_motorstf)
 
+        # -------------------- Middle Bolts -------------------------
+        # Bolts on the middle of the slider to attach one side to
+        # the other. They will be placed between the belt tensioner and
+        # the motor
+        motor_posy =  h_nema17.width/2.
+        boltmid_posy = ((fbclt_pos_y- beltclamp_w/2.) + motor_posy)/2.
+
+        # head down in case we want to have a larger bolt up to 
+        # the end of the leadscrew
+        boltmid0 = addBoltNut_hole (
+                            r_shank   = self.BOLT_SHANK_R_TOL,
+                            l_bolt    = 2 * slid_z,
+                            r_head    = self.BOLT_HEAD_R_TOL,
+                            l_head    = self.BOLT_HEAD_L,
+                            r_nut     = self.BOLT_NUT_R_TOL,
+                            l_nut     = self.BOLT_NUT_L,
+                            hex_head  = 0, extra=1,
+                            supp_head = 1, supp_nut=1,
+                            headdown  = 1, name="boltmid0")
+        boltmid0.Placement.Base = FreeCAD.Vector(0, - boltmid_posy, -slid_z)
+        boltmid1 = Draft.clone (boltmid0)
+        boltmid1.Label = 'boltmid1'
+        boltmid1.Placement.Base.y = boltmid_posy
+        cutlist.append(boltmid0)
+        cutlist.append(boltmid1)
+
+        # -------------------- End Bolts -------------------------
+        # Bolts on the end of the slider to attach one side to the other. 
+        boltend_posx = slid_x/2. - self.SEP - self.BOLT_NUT_R_TOL
+        boltend_posy = slid_y/2. - self.SEP - self.BOLT_NUT_R_TOL
+
+        boltend00 = addBoltNut_hole (
+                            r_shank   = self.BOLT_SHANK_R_TOL,
+                            l_bolt    = 2 * slid_z,
+                            r_head    = self.BOLT_HEAD_R_TOL,
+                            l_head    = self.BOLT_HEAD_L,
+                            r_nut     = self.BOLT_NUT_R_TOL,
+                            l_nut     = self.BOLT_NUT_L,
+                            hex_head  = 0, extra=1,
+                            supp_head = 1, supp_nut=1,
+                            headdown  = 0, name="boltend00")
+        boltend00.Placement.Base = FreeCAD.Vector(-boltend_posx,
+                                                  -boltend_posy,
+                                                  -slid_z)
+        boltend10 = Draft.clone (boltend00)
+        boltend10.Label = 'boltend10'
+        boltend10.Placement.Base.x = boltend_posx
+        boltend01 = Draft.clone (boltend00)
+        boltend01.Label = 'boltend01'
+        boltend01.Placement.Base.y = boltend_posy
+        boltend11 = Draft.clone (boltend01)
+        boltend11.Label = 'boltend11'
+        boltend11.Placement.Base.x = boltend_posx
+
+        cutlist.append(boltend00)
+        cutlist.append(boltend10)
+        cutlist.append(boltend01)
+        cutlist.append(boltend11)
+        doc.recompute()
 
         # ------ Linear guide supports for the vertical movement
         #
@@ -1414,9 +1487,6 @@ class CentralSlider (object):
         #            |
         #            |
         #            |
-
-        # the thickness of the support
-        lg_sup_t = 6
 
         # list of objects to be cut to the bottom slider
         cutbotlist = []
@@ -1560,6 +1630,148 @@ class CentralSlider (object):
                 cutbotlist.append(fco_lgsuphole)
             
 
+        # Linear Guides on Y side. sg is the sign (positive or negative side)
+        for sg, lg in (-1, lg_ny), (1, lg_y):
+            if lg != 0:
+                lg_b = lg['block']
+                lg_r = lg['rail']
+                if sg == -1:
+                    suf = 'ny' # sufix for the names
+                else:
+                    suf = 'y' # sufix for the names
+                # Making a hole just the size of:
+                # the total linear guide height - block height - TOL 
+                lg_hole_in = lg_b['lh'] - lg_b['bh'] - TOL
+                # the width of the linear guide
+                lg_w = lg_r['rw']
+                #lg_hole_w = lg_r['rw'] + 1.5*TOL # both sides: 1.5 TOL
+                # Position of the center of the linear guide hole
+                lg_posy_c = sg * (self.length/2 - lg_hole_in/2.)
+                lg_pos_c = FreeCAD.Vector(0,lg_posy_c,0)
+                if sg == -1:
+                    xtr_ny = 1
+                    xtr_y  = 0
+                else:
+                    xtr_ny = 0
+                    xtr_y  = 1
+                shp_lg_hole = fcfun.shp_boxcenxtr (
+                                       lg_w, lg_hole_in, 2*slid_z,
+                                       cx=1, cy=1, cz=1,
+                                       xtr_nx = .8 * TOL, xtr_x = .8 * TOL,
+                                       xtr_ny = xtr_ny,  xtr_y = xtr_y,
+                                       xtr_nz = 1, xtr_z = 1,
+                                       pos=lg_pos_c)
+                fco_lg_hole=doc.addObject("Part::Feature", 'lgy_hole_'+suf)
+                fco_lg_hole.Shape = shp_lg_hole
+                cutlist.append(fco_lg_hole)
+
+                #Making the support on the top slider, supports goes down
+                lgsup_posy = sg * (self.length/2 - lg_hole_in)
+                lgsup_posy_c = lgsup_posy - sg * lg_sup_t/2.
+                lgsup_pos_c = FreeCAD.Vector(0, lgsup_posy_c,
+                                             -lg_r['boltlsep'])
+                shp_lgsup = fcfun.shp_boxcenxtr(
+                                                lg_w,
+                                                lg_sup_t,
+                                                lg_r['boltlsep'],
+                                                cx=1, cy=1, cz=0,
+                                                xtr_z = 1,
+                                                pos=lgsup_pos_c)
+                fco_lgsup = doc.addObject("Part::Feature", 'lgysup_'+suf)
+                fco_lgsup.Shape = shp_lgsup
+                addtoplist.append(fco_lgsup)
+                # bolt holes on the support
+                lg_bolt_list = []
+                # bolt on top, negative Y, or centered if only one
+                lgbolt_t0_pos_c = FreeCAD.Vector(
+                                              -lg_r['boltwsep']/2.,
+                                              lgsup_posy_c,
+                                               slid_z/2.)
+                lgbolt_t0 = fcfun.shp_cylcenxtr (
+                                           r=lg_r['boltd']/2.,
+                                           h = lg_sup_t, 
+                                           normal = VY,  ch=1,
+                                           xtr_top=1, xtr_bot=1,
+                                           pos= lgbolt_t0_pos_c)
+                # bolt at bottom, negative Y, or centered if only one
+                lgbolt_b0_pos_c = FreeCAD.Vector(
+                                              -lg_r['boltwsep']/2.,
+                                              lgsup_posy_c,
+                                              slid_z/2. - lg_r['boltlsep'])
+                lgbolt_b0 = fcfun.shp_cylcenxtr (
+                                           r=lg_r['boltd']/2.,
+                                           h = lg_sup_t, 
+                                           normal = VY,  ch=1,
+                                           xtr_top=1, xtr_bot=1,
+                                           pos= lgbolt_b0_pos_c)
+
+                lgbolt0 = lgbolt_t0.fuse(lgbolt_b0)
+                # nut hole to introduce the nut
+                lgbolt_d = lg_r['boltd']
+                lgbolt_d_int = int(lgbolt_d)
+                lgnut_d = kcomp.NUT_D934_D[lgbolt_d_int]
+                lgnut_l = kcomp.NUT_D934_L[lgbolt_d_int]
+                lgnut_r_tol = lgnut_d/2. + 1.5*TOL
+                lgnut_2apot_tol = 2* lgnut_r_tol * kcomp.APOT_R
+                lgnuthole_h = lgnut_l * 1.5
+                h_lgnuthole0 = fcfun.NutHole(nut_r = lgnut_r_tol,
+                                         nut_h = lgnuthole_h,
+                                         hole_h = slid_z /2. + TOL,
+                                         name = 'lgynuthole0_' + suf,
+                                         extra = 1,
+                                         nuthole_x = 0,
+                                         cx = 1,
+                                         cy = 1,
+                                         holedown = 0)
+                doc.recompute()
+                lgnuthole0 = h_lgnuthole0.fco
+                lgsup_nuthole_posy = lgsup_posy - sg * lg_sup_t
+                lgsup_nuthole_posy_c = lgsup_nuthole_posy - sg * lgnuthole_h/2.
+                lgnuthole0.Placement.Base = FreeCAD.Vector(
+                                                    lgbolt_t0_pos_c.x ,
+                                                    lgsup_nuthole_posy_c,
+                                                    lgbolt_t0_pos_c.z-TOL)
+                doc.recompute()
+                cuttoplist.append(lgnuthole0)
+                if lg_r['boltwsep'] != 0: # there are 2 bolts in a row
+                    lgbolt1 = lgbolt0.copy()
+                    lgbolt1.Placement.Base.x = lg_r['boltwsep']
+                    lgbolts = lgbolt0.fuse(lgbolt1)
+                    # clone the nut hole
+                    lgnuthole1 = Draft.clone(lgnuthole0)
+                    lgnuthole1.Label = 'lgynuthole1' + suf
+                    lgnuthole1.Placement.Base.x = lg_r['boltwsep']/2.
+                    cuttoplist.append(lgnuthole1)
+                else:
+                    lgbolts = lgbolt0
+
+                fco_lgbolts = doc.addObject("Part::Feature", 'lgybolts'+suf)
+                fco_lgbolts.Shape = lgbolts
+                cuttoplist.append(fco_lgbolts)
+                # the hole on the bottom slide to make space for the support
+                # that is on the top slide and goes down
+                lgsuphole_pos = FreeCAD.Vector(0,lgsup_posy_c,-slid_z)
+                if sg == -1:
+                    xtr_ny = 1;
+                    xtr_y  = TOL
+                else:
+                    xtr_ny = TOL
+                    xtr_y  = 1
+                shp_lgsuphole = fcfun.shp_boxcenxtr(
+                                             lg_w,
+                                             lg_sup_t,
+                                             slid_z,
+                                             cx=1, cy=1, cz=0,
+                                             xtr_nx = TOL, xtr_x = TOL,
+                                             xtr_ny = xtr_ny, xtr_y = xtr_y,
+                                             xtr_nz = 1, xtr_z = 1,
+                                             pos=lgsuphole_pos)
+                fco_lgsuphole = doc.addObject("Part::Feature",
+                                              'lgysuphole_'+ suf)
+                fco_lgsuphole.Shape = shp_lgsuphole
+                cutbotlist.append(fco_lgsuphole)
+
+
         # ----------- final fusion of holes
         #holes = doc.addObject("Part::MultiFuse", "censlid_holes")
         #holes.Shapes = cutlist
@@ -1630,4 +1842,6 @@ cs = CentralSlider (rod_r = 6, rod_sep = 150.0, name="central_slider",
                     dent_l = 122,
                     dent_sl = 68,
                     lg_nx = kcomp.SEBWM16,
-                    lg_x = kcomp.SEBWM16 )
+                    lg_x = kcomp.SEBWM16,
+                    lg_ny = kcomp.SEB15A,
+                    lg_y = kcomp.SEB15A )
