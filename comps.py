@@ -548,7 +548,7 @@ class RectRndBar (object):
             
 # ----------- NEMA MOTOR
 # Creates NEMA motor including its hole to cut the piece where is going
-# to be embebbed
+# to be embebbed. 
 
 # ARGUMENTS:
 # size: size of the motor: 11, 14, 17, 23, 34 or 42
@@ -560,7 +560,7 @@ class RectRndBar (object):
 #           if 0, not defined, I will take the half of the bolt separation 
 # circle_h: the height of the circle. If cero, no circle
 # rshaft_l: length of the motor the rear shaft. 0 if it doesn't have
-# bolt_depth: depth of the bolts holes inside the motor
+# bolt_depth: depth of the bolts holes inside the motor. 
 # bolt_out: length of the bolts holes outside the motor
 # container: 1: if you want to have a container to make a hole to fit it in
 #               a piece
@@ -582,6 +582,17 @@ class RectRndBar (object):
 #             It is (0,0,0) when initialized, it has to be changed using the
 #             function base_place
 
+#  Bolts need to be debugged, for some cases they don't work properly
+#                _____     ______
+#               |_____|    ______+ extra: 1 mm
+#               |     |         |
+#               |_____|         + bolt_out
+#                 | |           |
+#               __|_|_____ _____j
+#              |  : :           + bolt_depth 
+#              |  :_:      _____|
+#              |  
+#
 
 class NemaMotor (object):
 
@@ -841,7 +852,6 @@ class NemaMotor (object):
 
 
 
-
 # ---------- class LinBearing ----------------------------------------
 # Creates a cylinder with a thru-hole object
 # it also creates a copy of the cylinder without the hole, but a little
@@ -977,15 +987,16 @@ class T8Nut (object):
     LeadScrewD = kcomp.T8N_D_T8
     LeadScrewR = LeadScrewD / 2.0
 
-    # Hole for the nut and the screw
+    # Hole for the nut and the lead screw
     ShaftD = kcomp.T8N_D_SHAFT_EXT 
     ShaftR = ShaftD / 2.0
     FlangeD = kcomp.T8N_D_FLAN 
     FlangeR = FlangeD / 2.0
     # hole for the M3 bolts to attach the nut to the housing
-    FlangeScrewHoleD = kcomp.T8N_SCREW_D
+    FlangeBoltHoleD = kcomp.T8N_BOLT_D
+    FlangeBoltDmetric = int(kcomp.T8N_BOLT_D)
     # Diameter where the Flange Screws are located
-    FlangeScrewPosD = kcomp.T8N_D_SCREW_POS
+    FlangeBoltPosD = kcomp.T8N_D_BOLT_POS
 
     def __init__ (self, name, nutaxis = 'x'):
         doc = FreeCAD.ActiveDocument
@@ -1013,37 +1024,37 @@ class T8Nut (object):
                                       h_disp = - self.NutL + self.ShaftOut -1)
         holes_list.append (leadscrew_hole)
 
-        flangescrew_hole1 = addCyl_pos ( r = self.FlangeScrewHoleD/2.0,
+        flangebolt_hole1 = addCyl_pos ( r = self.FlangeBoltHoleD/2.0,
                                          h = self.FlangeL + 2,
-                                         name = "flangescrew_hole1",
+                                         name = "flangebolt_hole1",
                                          axis = 'z',
                                          h_disp = - self.FlangeL -1)
-        flangescrew_hole1.Placement.Base.x = self.FlangeScrewPosD /2.0
-        holes_list.append (flangescrew_hole1)
+        flangebolt_hole1.Placement.Base.x = self.FlangeBoltPosD /2.0
+        holes_list.append (flangebolt_hole1)
        
-        flangescrew_hole2 = addCyl_pos ( r = self.FlangeScrewHoleD/2.0,
+        flangebolt_hole2 = addCyl_pos ( r = self.FlangeBoltHoleD/2.0,
                                          h = self.FlangeL + 2,
-                                         name = "flangescrew_hole2",
+                                         name = "flangebolt_hole2",
                                          axis = 'z',
                                          h_disp = - self.FlangeL -1)
-        flangescrew_hole2.Placement.Base.x = - self.FlangeScrewPosD /2.0
-        holes_list.append (flangescrew_hole2)
+        flangebolt_hole2.Placement.Base.x = - self.FlangeBoltPosD /2.0
+        holes_list.append (flangebolt_hole2)
        
-        flangescrew_hole3 = addCyl_pos ( r = self.FlangeScrewHoleD/2.0,
+        flangebolt_hole3 = addCyl_pos ( r = self.FlangeBoltHoleD/2.0,
                                          h = self.FlangeL + 2,
-                                         name = "flangescrew_hole3",
+                                         name = "flangebolt_hole3",
                                          axis = 'z',
                                          h_disp = - self.FlangeL -1)
-        flangescrew_hole3.Placement.Base.y = self.FlangeScrewPosD /2.0
-        holes_list.append (flangescrew_hole3)
+        flangebolt_hole3.Placement.Base.y = self.FlangeBoltPosD /2.0
+        holes_list.append (flangebolt_hole3)
        
-        flangescrew_hole4 = addCyl_pos ( r = self.FlangeScrewHoleD/2.0,
+        flangebolt_hole4 = addCyl_pos ( r = self.FlangeBoltHoleD/2.0,
                                          h = self.FlangeL + 2,
-                                         name = "flangescrew_hole4",
+                                         name = "flangebolt_hole4",
                                          axis = 'z',
                                          h_disp = - self.FlangeL -1)
-        flangescrew_hole4.Placement.Base.y = - self.FlangeScrewPosD /2.0
-        holes_list.append (flangescrew_hole4)
+        flangebolt_hole4.Placement.Base.y = - self.FlangeBoltPosD /2.0
+        holes_list.append (flangebolt_hole4)
 
         nut_holes = doc.addObject("Part::MultiFuse", "nut_holes")
         nut_holes.Shapes = holes_list
@@ -1084,7 +1095,7 @@ class T8Nut (object):
 # Housing for a T8 Nut of a leadscrew
 # nutaxis: where the nut is going to be facing
 #          'x', '-x', 'y', '-y', 'z', '-z'
-# screwface_axis: where the screws are going to be facing
+# boltface_axis: where the bolts are going to be facing
 #          it cannot be the same axis as the nut
 #          'x', '-x', 'y', '-y', 'z', '-z'
 # cx, cy, cz, if it is centered on any of the axis
@@ -1095,30 +1106,30 @@ class T8NutHousing (object):
     Width  = kcomp.T8NH_W
     Height = kcomp.T8NH_H
 
-    # separation between the screws that attach to the moving part
-    ScrewLenSep  = kcomp.T8NH_ScrLSep
-    ScrewWidSep  = kcomp.T8NH_ScrWSep
+    # separation between the bolts that attach to the moving part
+    BoltLenSep  = kcomp.T8NH_BoltLSep
+    BoltWidSep  = kcomp.T8NH_BoltWSep
 
-    # separation between the screws to the end
-    ScrewLen2end = (Length - ScrewLenSep)/2
-    ScrewWid2end = (Width  - ScrewWidSep)/2
+    # separation between the bolts to the end
+    BoltLen2end = (Length - BoltLenSep)/2
+    BoltWid2end = (Width  - BoltWidSep)/2
 
-    # Screw dimensions, that attach to the moving part: M4 x 7
-    ScrewD = kcomp.T8NH_ScrD
-    ScrewR = ScrewD / 2.0
-    ScrewL = kcomp.T8NH_ScrL + kcomp.TOL
+    # Bolt dimensions, that attach to the moving part: M4 x 7
+    BoltD = kcomp.T8NH_BoltD
+    BoltR = BoltD / 2.0
+    BoltL = kcomp.T8NH_BoltL + kcomp.TOL
 
-    # Hole for the nut and the screw
+    # Hole for the nut and the leadscrew
     ShaftD = kcomp.T8N_D_SHAFT_EXT + kcomp.TOL # I don't know the tolerances
     ShaftR = ShaftD / 2.0
     FlangeD = kcomp.T8N_D_FLAN + kcomp.TOL # I don't know the tolerances
     FlangeR = FlangeD / 2.0
     FlangeL = kcomp.T8N_FLAN_L + kcomp.TOL
-    FlangeScrewD = kcomp.T8NH_FlanScrD
-    FlangeScrewR = FlangeScrewD / 2.0
-    FlangeScrewL = kcomp.T8NH_FlanScrL + kcomp.TOL
-    # Diameter where the Flange Screws are located
-    FlangeScrewPosD = kcomp.T8N_D_SCREW_POS
+    FlangeBoltD = kcomp.T8NH_FlanBoltD
+    FlangeBoltR = FlangeBoltD / 2.0
+    FlangeBoltL = kcomp.T8NH_FlanBoltL + kcomp.TOL
+    # Diameter where the Flange Bolts are located
+    FlangeBoltPosD = kcomp.T8N_D_BOLT_POS
   
     def __init__ (self, name, nutaxis = 'x', screwface_axis = 'z',
                   cx = 1, cy= 1, cz = 0):
@@ -1147,70 +1158,70 @@ class T8NutHousing (object):
                                    axis = 'x',
                                    h_disp = self.Length/2.0 - self.FlangeL)
         hole_list.append(nutflange_hole)
-        # screws to attach the nut flange to the housing
+        # bolts to attach the nut flange to the housing
         # M3 x 10
-        screwflange_l = addCyl_pos (r = self.FlangeScrewR,
-                                    h = self.FlangeScrewL + 1,
-                                    name = "screwflange_l",
+        boltflange_l = addCyl_pos (r = self.FlangeBoltR,
+                                    h = self.FlangeBoltL + 1,
+                                    name = "boltflange_l",
                                     axis = 'x',
                                     h_disp =   self.Length/2.0
                                              - self.FlangeL
-                                             - self.FlangeScrewL)
-        screwflange_l.Placement.Base = FreeCAD.Vector(0,
-                                    - self.FlangeScrewPosD / 2.0,
+                                             - self.FlangeBoltL)
+        boltflange_l.Placement.Base = FreeCAD.Vector(0,
+                                    - self.FlangeBoltPosD / 2.0,
                                    )
-        hole_list.append(screwflange_l)
-        screwflange_r = addCyl_pos (r = self.FlangeScrewR,
-                                    h = self.FlangeScrewL + 1,
-                                    name = "screwflange_r",
+        hole_list.append(boltflange_l)
+        boltflange_r = addCyl_pos (r = self.FlangeBoltR,
+                                    h = self.FlangeBoltL + 1,
+                                    name = "boltflange_r",
                                     axis = 'x',
                                     h_disp =   self.Length/2.0
                                              - self.FlangeL
-                                             - self.FlangeScrewL)
-        screwflange_r.Placement.Base = FreeCAD.Vector (0,
-                                   self.FlangeScrewPosD / 2.0,
+                                             - self.FlangeBoltL)
+        boltflange_r.Placement.Base = FreeCAD.Vector (0,
+                                   self.FlangeBoltPosD / 2.0,
                                    0)
-        hole_list.append(screwflange_r)
+        hole_list.append(boltflange_r)
 
 
-        # screws to attach the housing to the moving part
+        # bolts to attach the housing to the moving part
         # M4x7
-        screwface_1 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
-                                        name="screwface_1",
+        boltface_1 = fcfun.addCyl_pos (r = self.BoltR, h = self.BoltL + 1,
+                                        name="boltface_1",
                                         axis = 'z',
                                         h_disp = -self.Height/2 -1)
-        screwface_1.Placement.Base = FreeCAD.Vector (
-                                    - self.Length/2.0 + self.ScrewLen2end,
-                                    - self.Width/2.0 + self.ScrewWid2end,
+        boltface_1.Placement.Base = FreeCAD.Vector (
+                                    - self.Length/2.0 + self.BoltLen2end,
+                                    - self.Width/2.0 + self.BoltWid2end,
                                       0)
-        hole_list.append (screwface_1)
-        screwface_2 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
-                                        name="screwface_2",
+        hole_list.append (boltface_1)
+        boltface_2 = fcfun.addCyl_pos (r = self.BoltR, h = self.BoltL + 1,
+                                        name="boltface_2",
                                         axis = 'z',
                                         h_disp = -self.Height/2 -1)
-        screwface_2.Placement.Base = FreeCAD.Vector(
-                                      self.ScrewLenSep /2.0,
-                                    - self.Width/2.0 + self.ScrewWid2end,
+        boltface_2.Placement.Base = FreeCAD.Vector(
+                                      self.BoltLenSep /2.0,
+                                    - self.Width/2.0 + self.BoltWid2end,
                                       0)
-        hole_list.append (screwface_2)
-        screwface_3 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
-                                        name="screwface_3",
+        hole_list.append (boltface_2)
+        boltface_3 = fcfun.addCyl_pos (r = self.BoltR, h = self.BoltL + 1,
+                                        name="boltface_3",
                                         axis = 'z',
                                         h_disp = -self.Height/2 -1)
-        screwface_3.Placement.Base = FreeCAD.Vector (
-                                    - self.Length/2.0 + self.ScrewLen2end,
-                                      self.ScrewWidSep /2.0,
+        boltface_3.Placement.Base = FreeCAD.Vector (
+                                    - self.Length/2.0 + self.BoltLen2end,
+                                      self.BoltWidSep /2.0,
                                       0)
-        hole_list.append (screwface_3)
-        screwface_4 = fcfun.addCyl_pos (r = self.ScrewR, h = self.ScrewL + 1,
-                                        name="screwface_4",
+        hole_list.append (boltface_3)
+        boltface_4 = fcfun.addCyl_pos (r = self.BoltR, h = self.BoltL + 1,
+                                        name="boltface_4",
                                         axis = 'z',
                                         h_disp = -self.Height/2 -1)
-        screwface_4.Placement.Base = FreeCAD.Vector(
-                                      self.ScrewLenSep /2.0,
-                                      self.ScrewWidSep /2.0,
+        boltface_4.Placement.Base = FreeCAD.Vector(
+                                      self.BoltLenSep /2.0,
+                                      self.BoltWidSep /2.0,
                                       0)
-        hole_list.append (screwface_4)
+        hole_list.append (boltface_4)
         nuthouseholes = doc.addObject ("Part::MultiFuse", "nuthouse_holes")
         nuthouseholes.Shapes = hole_list
        
@@ -1321,10 +1332,6 @@ class FlexCoupling (object):
 
 # ---------------------- LinGuide -----------------------------------
 
-#class LinGuide (object):
-
-#   def __init__ (self, 
-
 # ---------------------- LinGuideRail -------------------------------
 # Makes the Rail of a linear guide
 # Arguments:
@@ -1372,6 +1379,7 @@ class LinGuideRail (object):
                   bolthole_d = 0, bolthole_l = 0, bolthole_dir = 0,
                   bolthole_nutd = 0, bolthole_nuth = 0):
 
+        self.base_place = (0,0,0)
         self.rail_l = rail_l
         self.rail_w = rail_w
         self.rail_h = rail_h
@@ -1490,7 +1498,12 @@ class LinGuideRail (object):
         doc.recompute()
         fco_rail = doc.addObject("Part::Feature", name)
         fco_rail.Shape = shp_rail
-        fco = fco_rail
+        self.fco = fco_rail
+
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        self.fco.Placement.Base = FreeCAD.Vector(position)
+
 
         
 # a dictionary is used with the constants. Defined in kcomp.py
@@ -1608,6 +1621,9 @@ class LinGuideBlock (object):
                         block_pos_l,
                         name):
 
+        doc = FreeCAD.ActiveDocument
+
+        self.base_place = (0,0,0)
         self.block_l  = block_l
         self.block_ls = block_ls
         self.block_w  = block_w
@@ -1700,9 +1716,15 @@ class LinGuideBlock (object):
 
         shp_bl = shp_bl_box.cut(shp_plainrail)
 
+        doc.recompute()
+        fco_bl = doc.addObject("Part::Feature", name + '_block')
+        fco_bl.Shape = shp_bl
+        self.fco = fco_bl
 
-        Part.show(shp_bl)
 
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        self.fco.Placement.Base = FreeCAD.Vector(position)
 
     
 
@@ -1710,19 +1732,19 @@ class LinGuideBlock (object):
         
 # Arguments:
 # rail_l: length of the linear guide
-# d_linguide: a dictionary is used for the constants. Defined in kcomp.py
+# dlg: a dictionary is used for the constants. Defined in kcomp.py
 # axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
 # axis_b : the axis where the base of the rail is pointing:
 # boltend_sep : separation on one end, from the bolt to the end
 # bl_pos : Position of the block, relative to the length: 0. to 1.
 # hl = f_linguiderail(200, kcomp.SEBWM16_R, 'y', '-z')
-def f_linguide (rail_l, d_linguide, axis_l, axis_b, boltend_sep = 0,
+def f_linguide (rail_l, dlg, axis_l, axis_b, boltend_sep = 0,
                 bl_pos = 0.,
-                name ='linguiderail'):
+                name ='linguide'):
 
     print axis_l
 
-    d_rail = d_linguide['rail']
+    d_rail = dlg['rail']
     if boltend_sep == 0:
         boltends =  d_rail['boltend_sep']
     else:
@@ -1741,7 +1763,7 @@ def f_linguide (rail_l, d_linguide, axis_l, axis_b, boltend_sep = 0,
                             axis_b    = axis_b,
                             name      = name)
 
-    d_block = d_linguide['block']
+    d_block = dlg['block']
 
     # position of the block refered to the rail
     # rail_l - d_block['b'] : the length of the rail - length of the block
@@ -1765,6 +1787,89 @@ def f_linguide (rail_l, d_linguide, axis_l, axis_b, boltend_sep = 0,
     return h_lgrail
 
 
+# ---------------------- class LinGuide -------------------------------
+        
+# Arguments:
+# rail_l: length of the linear guide
+# dlg: a dictionary is used for the constants. Defined in kcomp.py
+# axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
+# axis_b : the axis where the base of the rail is pointing:
+# boltend_sep : separation on one end, from the bolt to the end
+# bl_pos : Position of the block, relative to the length: 0. to 1.
+# hl = f_linguiderail(200, kcomp.SEBWM16_R, 'y', '-z')
+
+class LinGuide(object):
+
+    def __init__ (self, rail_l, dlg,
+                   axis_l,
+                  axis_b, boltend_sep = 0,
+                  bl_pos = 0.,
+                  name ='linguide'):
+
+        self.base_place = (0,0,0)
+        self.rail_l = rail_l
+        self.dlg = dlg
+        self.axis_l = axis_l
+        self.axis_b = axis_b
+        self.bl_pos = bl_pos
+
+        d_rail = dlg['rail']
+        self.d_rail = d_rail
+        d_block = dlg['block']
+        self.d_block = dlg['block']
+
+        if boltend_sep == 0:
+            boltend_sep =  d_rail['boltend_sep']
+        else:
+            boltend_sep =  boltend_sep
+        self.boltend_sep =  boltend_sep
+
+        h_lgrail = LinGuideRail(rail_l    = rail_l,
+                            rail_w    = d_rail['rw'],
+                            rail_h    = d_rail['rh'],
+                            bolt_lsep = d_rail['boltlsep'],
+                            bolt_wsep = d_rail['boltwsep'],
+                            bolt_d    = d_rail['boltd'],
+                            bolth_d   = d_rail['bolthd'],
+                            bolth_h   = d_rail['bolthh'],
+                            boltend_sep = boltend_sep,
+                            axis_l    = axis_l,
+                            axis_b    = axis_b,
+                            name      = name)
+
+        self.h_lgrail = h_lgrail
+
+
+        # position of the block refered to the rail
+        # rail_l - d_block['b'] : the length of the rail - length of the block
+        block_pos_l = bl_pos * (rail_l - d_block['bl'])
+        self.block_pos_l = block_pos_l
+
+        h_brail = LinGuideBlock (
+                                 block_l  = d_block['bl'],
+                                 block_ls = d_block['bls'],
+                                 block_w  = d_block['bw'],
+                                 block_ws = d_block['bws'],
+                                 block_h  = d_block['bh'],
+                                 linguide_h = d_block['lh'],
+                                 bolt_lsep = d_block['boltlsep'],
+                                 bolt_wsep = d_block['boltwsep'],
+                                 bolt_d   = d_block['boltd'],
+                                 bolt_l   = d_block['boltl'],
+                                 h_lgrail = h_lgrail,
+                                 block_pos_l = block_pos_l,
+                                 name     = name)
+
+        self.h_brail = h_brail
+
+    def BasePlace (self,position = (0,0,0)):
+        self.base_place = position
+        self.h_brail.BasePlace(position)
+        self.h_lgrail.BasePlace(position)
+
+
+
+
 #hl = f_linguide(200, kcomp.SEB15A, 'y', '-z',
 #hl = f_linguide(200, kcomp.SEBWM16, 'y', '-z',
 #                         boltend_sep = 0,
@@ -1775,4 +1880,11 @@ def f_linguide (rail_l, d_linguide, axis_l, axis_b, boltend_sep = 0,
 #                         #bolthole_nutd = 2 * kcomp.M3_NUT_R_TOL, 
 #                         #bolthole_nuth = 2 * kcomp.M3_NUT_L,
 #                         name = 'linguiderail' )
+
+
+#lg_nx = LinGuide (rail_l= 136.,
+#                    dlg= kcomp.SEBWM16,
+#                    axis_l = 'z', 
+#                    axis_b='x',
+#                    boltend_sep = 8., bl_pos=0.5, name='lg_nx')
 

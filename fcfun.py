@@ -1351,6 +1351,7 @@ def filletchamfer (fco, e_len, name, fillet = 1, radius=1, axis='x',
                     ):
     # we have to bring the active document
     doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
     edgelist = []
     #logger.debug('filletchamfer: elen: %s',  e_len)
     for edge_ind, edge in enumerate(fco.Shape.Edges):
