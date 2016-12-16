@@ -438,6 +438,29 @@ SEB15A_R = { 'rw'     : 15., 'rh': 9.5,
               'boltd'   : 3.5, 'bolthd'   : 6. , 'bolthh': 4.5,
               'boltend_sep' : 15.   }
 
+# ------------------ Misumi SEB8
+SEB8_R = { 'rw': 7.,  # W1
+           'rh': 4.7, # H1
+           'boltlsep' : 15.,  # F
+           'boltwsep' : 0,   # in case there are 2 bolt holes
+           'boltd'    : 2.4, # d1
+           'bolthd'   : 4.2, # d2
+           'bolthh'   : 2.3, # h
+           'boltend_sep': 5. #G
+         }
+
+# ------------------ Misumi SEB10
+SEB10_R = {'rw': 5.,  # W1
+           'rh': 5.5, # H1
+           'boltlsep' : 20.,  # F
+           'boltwsep' : 0,   # in case there are 2 bolt holes
+           'boltd'    : 3.5, # d1
+           'bolthd'   : 6.0, # d2
+           'bolthh'   : 3.5, # h
+           'boltend_sep': 7.5 #G
+         }
+
+
 #BLOCK DIMENSIONS
 
 # bl: block Length
@@ -477,6 +500,32 @@ SEB15A_B = {  'bl'  : 42.,
               'boltl'  : 4.  # 
             }
 
+# ------------------ Misumi SEB8 
+SEB8_B = { 'bl'  : 23.6,    # L1
+           'bls' : 13.6, # L2
+           'bw'  : 17.,  # W
+           'bws' : 17.,  # not on the specifications
+           'bh'  : 6.5,  # K: block height, just the block
+           'lh'  : 8.,   # H: linear guide height, with the rail
+           'boltlsep' : 8.,  # C: Bolt separation on the length dimension
+           'boltwsep' : 12.,  # B: Bolt separation on the width dimension
+           'boltd'  : 2.,  # S: Bolt diameter M2
+           'boltl'  : 2.5  # l 
+            }
+
+# ------------------ Misumi SEB10 
+SEB10_B = { 'bl'  : 30.,  # L1
+            'bls' : 19.,  # L2
+            'bw'  : 20.,  # W
+            'bws' : 20.,  # not on the specifications
+            'bh'  : 7.8,  # K: block height, just the block
+            'lh'  : 10.,  # H: linear guide height, with the rail
+            'boltlsep' : 10.,  # C: Bolt separation on the length dimension
+            'boltwsep' : 15.,  # B: Bolt separation on the width dimension
+            'boltd'  : 3.,  # S: Bolt diameter M2
+            'boltl'  : 3.   # l 
+            }
+
 
 SEBWM16 = { 'rail'  : SEBWM16_R,
             'block' : SEBWM16_B}
@@ -484,6 +533,8 @@ SEBWM16 = { 'rail'  : SEBWM16_R,
 SEB15A = { 'rail'  : SEB15A_R,
            'block' : SEB15A_B}
 
+SEB8 = { 'rail'  : SEB8_R,
+         'block' : SEB8_B}
 
 # mechanical end stop dimensions
 #
@@ -506,10 +557,18 @@ SEB15A = { 'rail'  : SEB15A_R,
 #     :......L:19.6.......:
 #              
 
-ENDSTOP = { 'L': 19.6,
+ENDSTOP_A = { 'L': 19.6,
             'H': 10.0,
             'D':  6.9,
             'HT': 14.0,
             'BOLT_SEP' : 9.5,
             'BOLT_H' : 2.5,
             'BOLT_D' : 2.5 }
+
+ENDSTOP_B = { 'L': 12.7,
+            'H': 6.4,
+            'D':  5.6,
+            'HT': 9.5,
+            'BOLT_SEP' : 6.5,
+            'BOLT_H' : 1.5,
+            'BOLT_D' : 1.8 }

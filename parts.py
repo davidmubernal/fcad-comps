@@ -31,6 +31,7 @@ import fcfun
 import comps
 
 from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, addCyl_pos, fillet_len
+from fcfun import VXN, VYN, VZN
 from fcfun import addBolt, addBoltNut_hole, NutHole
 from kcomp import TOL
 
@@ -128,14 +129,14 @@ class IdlePulleyHolder (object):
         depth = max(pulleydepth, mindepth)
         if endstop_side != 0:
             extra_endstop = 3.
-            endstop_l =  kcomp.ENDSTOP['L']
-            endstop_ht =  kcomp.ENDSTOP['HT']
-            endstop_h =  kcomp.ENDSTOP['H']
+            endstop_l =  kcomp.ENDSTOP_B['L']
+            endstop_ht =  kcomp.ENDSTOP_B['HT']
+            endstop_h =  kcomp.ENDSTOP_B['H']
             endstopdepth = endstop_ht + extra_endstop + extra_w
             depth = max (endstopdepth, depth)
-            endstop_boltsep = kcomp.ENDSTOP['BOLT_SEP']
-            endstop_bolt_h = kcomp.ENDSTOP['BOLT_H']
-            endstop_bolt_d = kcomp.ENDSTOP['BOLT_D']
+            endstop_boltsep = kcomp.ENDSTOP_B['BOLT_SEP']
+            endstop_bolt_h = kcomp.ENDSTOP_B['BOLT_H']
+            endstop_bolt_d = kcomp.ENDSTOP_B['BOLT_D']
             # distance of the bolt to the end
             endstop_bolt2lend = (endstop_l - endstop_boltsep)/2.
             # distance of the bolt to the topend
@@ -160,7 +161,7 @@ class IdlePulleyHolder (object):
         self.width = width
 
         # ----------------- Height calculation
-        base_h = .8 * profile_size # no need to go all the way down
+        base_h = .9 * profile_size # no need to go all the way down
         height = base_h + above_h
         self.height = height
 
@@ -203,7 +204,8 @@ class IdlePulleyHolder (object):
         pulleynut_h = kcomp.NUT_D934_L[int(pulleybolt_d)]
         pulleynut_hole_h = kcomp.NUT_HOLE_MULT_H * pulleynut_h
         # height inside the piece of the pulley bolt
-        pulleybolt_h = 2 * extra_w + pulleynut_hole_h
+        # adding 1 to give enough space to the 25mm bolt, it was to tight
+        pulleybolt_h = 2 * extra_w + pulleynut_hole_h +1
 
         if attach_dir == '-y':
             if endstop_side == 0:
@@ -225,12 +227,13 @@ class IdlePulleyHolder (object):
             shp_box = shp_face_base.extrude(FreeCAD.Vector(0,0,height))
 
 
+
             hbolt_p0x = p0x + sg * hbolt_endsep
             #shank of holding bolt
             pos_shank_hbolt0 = FreeCAD.Vector(hbolt_p0x,
                                               -1,
                                              -profile_size/2.)
-            shp_shank_hbolt0 = fcfun.shp_cyl ( r = holdbolt_d/2 + TOL,
+            shp_shank_hbolt0 = fcfun.shp_cyl ( r = holdbolt_d/2. + TOL,
                                                h= bolt_shank + 2, normal = VY,
                                                pos = pos_shank_hbolt0)
             if depth > bolt_shank :
@@ -238,7 +241,7 @@ class IdlePulleyHolder (object):
                                                  bolt_shank,
                                                  -profile_size/2.)
                 shp_head_hbolt0 = fcfun.shp_cyl (
-                                           r = holdbolthead_d/2 + TOL,
+                                           r = holdbolthead_d/2. + TOL,
                                            h = depth - bolt_shank + 1,
                                            normal = VY,
                                            pos = pos_head_hbolt0)
@@ -295,13 +298,28 @@ class IdlePulleyHolder (object):
                 shp_endstopbolt1 = shp_endstopbolt0.copy()
                 shp_endstopbolt1.Placement.Base.x = endstop_boltsep
                 holes_list.append(shp_endstopbolt1)
-                                        
 
             shp_holes = shp_pulleybolt.multiFuse(holes_list)
             shp_pulleyhold = shp_box.cut(shp_holes)
 
             pulleyhold_aux = doc.addObject("Part::Feature", name + '_aux')
             pulleyhold_aux.Shape = shp_pulleyhold
+
+            # fillet the top part if it has no endstop. So the belt doesnt
+            # hit the corner
+            if endstop_side == 0:
+                fillet_r = (width - pulleynut_d_tol - 2 * extra_w) / 2.
+                pulleyhold_aux = fcfun.filletchamfer(
+                                       fco = pulleyhold_aux,
+                                       e_len = depth,
+                                       name = name + '_chmf',
+                                       fillet = 1,
+                                       radius = fillet_r,
+                                       axis = 'y',
+                                       zpos_chk = 1,
+                                       zpos = above_h)
+                                          
+
 
             h_nuthole = fcfun.NutHole (nut_r = pulleynut_d_tol/2.,
                                        nut_h = pulleynut_hole_h,
@@ -340,4 +358,105 @@ idp = IdlePulleyHolder( profile_size=30.,
                         name = "idlepulleyhold")
 """
 
+
+
+
+# Holder for the endstop to be attached to the rail of SEB15A_R
+# Made fast and with hardcoded constants, no parametric
+
+
+def endstopholder_rail ():
+
+    in_w = kcomp.SEB15A_R['rw']
+    add_w = 4.
+    #out_w = in_w + 2 * add_w
+    out_w = 36.
+
+    ends_d = 6.  #endstop depth
+    supp_d = 12.5 # support depth
+
+    total_d = supp_d - ends_d + add_w
+
+    bolt_h = 18.
+    extra_h = 5.
+
+    total_h = bolt_h + extra_h + add_w
+    obox = fcfun.shp_boxcenfill(out_w, total_d, total_h, 1,
+                                cx=1, cy=0, cz=0)
+
+
+    ibox = fcfun.shp_boxcen(in_w + 1.5 * TOL, add_w + 1, total_h + 2,
+                            cx=1, cy=0, cz=0, pos = FreeCAD.Vector(0, -1,-1))
+
+
+    endsbolt2top = 7. # distance of the endstop bolt to the top
+    endsboltsep = 9.6 # distance between endstop bolts
+    endsbolt_depth = 5.5 # depth of the holes
+    endsbolt_diam = 2.5 # diameter
+
+    ends_bolt_pos0 = FreeCAD.Vector ( endsboltsep/2., total_d +1,
+                                      total_h - endsbolt2top)
+    ends_bolt0 = fcfun.shp_cyl (r=endsbolt_diam/2.+TOL/2.,
+                                h = endsbolt_depth +1,
+                                normal = VYN,
+                                pos = ends_bolt_pos0) 
+    ends_bolt_pos1 = FreeCAD.Vector ( -endsboltsep/2.,
+                                       total_d +1,
+                                       total_h - endsbolt2top)
+    ends_bolt1 = fcfun.shp_cyl (r=endsbolt_diam/2.+TOL/2.,
+                                h = endsbolt_depth +1,
+                                normal = VYN,
+                                pos = ends_bolt_pos1) 
+
+    ends_bolt_pos00 = FreeCAD.Vector ( endsboltsep*1.5,
+                                       total_d +1,
+                                       total_h - endsbolt2top)
+    ends_bolt00 = fcfun.shp_cyl (r=endsbolt_diam/2.+TOL/2.,
+                                 h = endsbolt_depth +1,
+                                 normal = VYN,
+                                 pos = ends_bolt_pos00) 
+    ends_bolt_pos11 = FreeCAD.Vector ( -endsboltsep*1.5,
+                                        total_d +1,
+                                        total_h - endsbolt2top)
+
+    ends_bolt11 = fcfun.shp_cyl (r=endsbolt_diam/2.+TOL/2.,
+                                 h = endsbolt_depth +1,
+                                 normal = VYN,
+                                 pos = ends_bolt_pos11) 
+
+
+
+    railbolt_d = 3.
+
+    railbolt = fcfun.shp_boxcenfill ( x=railbolt_d + 0.8*TOL,
+                                      y= total_d + 2,
+                                      z = railbolt_d + extra_h,
+                                      fillrad = railbolt_d/2.,
+                                      fx = 0, fy=1, fz=0,
+                                      cx=1, cy=0, cz=0,
+                                      pos = FreeCAD.Vector(0, -1, add_w))
+
+
+    railbolthead_d = kcomp.D912_HEAD_D[int(railbolt_d)]
+
+    railbolt_head_pos =  FreeCAD.Vector(
+                                     0,
+                                     add_w+3,
+                                     add_w-railbolthead_d/2. + railbolt_d/2. )
+
+    railbolt_head = fcfun.shp_boxcenfill (x=railbolthead_d + TOL,
+                                          y= total_d + 2,
+                                          z = railbolthead_d + extra_h,
+                                          fillrad = railbolthead_d/2.,
+                                          fx = 0, fy=1, fz=0,
+                                          cx=1, cy=0, cz=0,
+                                          pos = railbolt_head_pos)
+
+    shp_fusecut = ibox.multiFuse([ends_bolt0, ends_bolt1,
+                                  ends_bolt00, ends_bolt11,
+                                  railbolt, railbolt_head])
+
+    box = obox.cut(shp_fusecut)
+    #Part.show (box)
+    return (box)
             
