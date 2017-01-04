@@ -411,6 +411,37 @@ FLEXSC_RB_L = {
 # Housing: FL(08)
 # Bearing Number: SU(08)
 
+# ------------------------ Aluminum Extrusion Profiles
+# Values and shape may be approximate
+#      :----- width ----:
+#      :       slot     :
+#      :      :--:      :
+#      :______:  :______:
+#      |    __|  |__    |
+#      | |\ \      / /| |
+#      |_| \ \____/ / |_| ...........
+#          |        | ......        insquare
+#          |  (  )  | ......indiam  :
+#       _  |  ____  | ..............:
+#      | | / /    \ \ | |
+#      | |/ /_    _\ \| | .... 
+#      |______|  |______| ....thick
+#
+#
+# width:  w:    the Width of the profile, it is squared
+# thick:  t:   the thickness of the side
+# slot:   slot: the width of the rail 
+# insquare: insq: the width of the inner square
+# indiam:   ind :the diameter of the inner hole
+
+ALU_MOTEDIS_20I5 = {'w' : 20.,
+                    't' : 1.8, # aprox measured
+                    'slot' : 5., 
+                    'insq' : 7.30, # 20 - 2*6.35
+                    'indiam' : 4.3 }
+           
+
+
 
 # ------------------------ Linear Guides 
 

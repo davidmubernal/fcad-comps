@@ -545,6 +545,236 @@ class RectRndBar (object):
         self.fco = rndbar
         
 # ----------- end class RectRndBar ----------------------------------------
+
+
+# ----------- class GenAluProf ---------------------------------------------
+# Creates a generic aluminum profile 
+#      :----- width ----:
+#      :       slot     :
+#      :      :--:      :
+#      :______:  :______:
+#      |    __|  |__    |
+#      | |\ \      / /| |
+#      |_| \ \____/ / |_| ...........
+#          |        | ......        insquare
+#          |  (  )  | ......indiam  :
+#       _  |  ____  | ..............:
+#      | | / /    \ \ | |
+#      | |/ /_    _\ \| | .... 
+#      |______|  |______| ....thick
+#
+# width:    the Width of the profile, it is squared
+# length:   the length of the bar, the extrusion 
+# thick: the thickness of the side
+# slot: the width of the rail 
+# insquare: the width of the inner square
+# indiam: the diameter of the inner hole
+# axis      'x', 'y' or 'z'
+#           direction of the bar
+#           'x' will be along the x axis
+#           'y' will be along the y axis
+#           'z' will be vertical
+# cx:     1 if you want the coordinates referenced to the x center of the piece
+#         it can be done because it is a new shape formed from the union
+# cy:     1 if you want the coordinates referenced to the y center of the piece
+# cz:     1 if you want the coordinates referenced to the z center of the piece
+# attributes:
+# the arguments and
+# ax_center : 1 if the profile is centered along its axis. 0 if not
+# face     : the face that has been extruded
+# shp      : the shape
+# fco      : the freecad object
+
+# How rotation y movement works
+
+#  Initial
+#             Y
+#             :
+#             :
+#          _  :  _
+#         |_|_:_|_|
+#   ........|.:.|........ X
+#          _|_:_|_
+#         |_| : |_|
+#             :
+#             :
+#             :
+#
+#
+#  Final                    axis = 'x'  -> Rotation -90 on axis Y: pitch -90
+#             Z             cx = 0      
+#             :             cy = 0      -> Translation Y: width/2
+#             :             cz = 1      -> Translation Z: 0
+#             :  
+#             :_     _ 
+#             |_|___|_|
+#   ..........:.|...|........ Y
+#             :_|___|_
+#             |_|   |_|
+#             :
+#             :
+#             :
+#
+#
+#  Final                    axis = 'x'  -> Rotation -90 on axis Y: pitch -90
+#             Z             cx = 0      
+#             :             cy = 0      -> Translation Y: width/2
+#             :             cz = 0      -> Translation Z: width/2
+#             :  
+#             :_     _ 
+#             |_|___|_|
+#             : |   |
+#             :_|___|_
+#   ..........|_|...|_|.......Y
+#             :
+#             :
+#             :
+#
+#
+#
+#
+
+
+class GenAluProf (object):
+
+    def __init__ (self, width, length, thick, slot, insquare, 
+                  indiam, axis = 'x',
+                  name = "genaluprof",
+                  cx=False, cy=False, cz=False):
+        doc = FreeCAD.ActiveDocument
+        self.width  = width
+        self.length = length
+        self.thick  = thick
+        self.slot   = slot
+        self.name   = name
+        self.insquare = insquare
+        self.indiam = indiam
+        self.name   = name
+        self.axis = axis
+        self.fcvec_axis = fcfun.getfcvecofname(axis)
+        self.cx = cx
+        self.cy = cy
+        self.cz = cz
+
+        fcvec_axis = self.fcvec_axis
+        
+        # vectors of the points
+        vecpoints = fcfun.aluprof_vec (width, thick, slot, insquare)
+        doc.recompute()
+
+        # wire Face
+        wire_aluprof = fcfun.wire_sim_xy (vecpoints)
+
+
+        # if it is not centered on X, and the axis doesn't go along X
+        if cx == 0 and axis != 'x':
+            posx = width/2.
+        else:
+            posx = 0
+
+        if cy == 0 and axis != 'y':
+            posy = width/2.
+        else:
+            posy = 0
+
+        if cz == 0 and axis != 'z':
+            posz = width/2.
+        else:
+            posz = 0
+
+        if axis == 'x':
+            ax_center = cx
+        elif axis == 'y':
+            ax_center = cy
+        elif axis == 'z':
+            ax_center = cz
+        else:
+            ax_center = 0
+            logger.error("axis not defined. Supported: 'x', 'y', 'z'")
+
+        self.ax_center = ax_center
+
+        doc.recompute()
+            
+        pos = FreeCAD.Vector(posx,posy,posz)  # Position
+        vec_axis =  fcfun.getfcvecofname(axis)
+       
+        face_ext = Part.Face(wire_aluprof)
+        # since vec2 of calc_rot is referenced to VNZ, vec_facenomal is negated
+        vec_naxis = DraftVecUtils.neg(vec_axis)
+        vrot = fcfun.fc_calc_rot(V0, vec_naxis)
+        face_ext.Placement.Rotation = vrot
+        face_ext.Placement.Base = pos
+
+        # inner hole
+        hole =  Part.makeCircle (indiam/2.,   # Radius
+                                 pos,  # Position
+                                 vec_axis)  # direction
+        wire_hole = Part.Wire(hole)
+        face_hole = Part.Face(wire_hole)
+
+        face_profile = face_ext.cut(face_hole)
+
+        shp_profile = fcfun.shp_extrud_face (
+                                 face = face_profile,
+                                 length = length,
+                                 vec_extr_axis = vec_axis,
+                                 centered = ax_center)
+        self.shp = shp_profile
+        fco_profile = doc.addObject("Part::Feature", name)
+        fco_profile.Shape = shp_profile
+        
+        self.fco = fco_profile
+        
+# ----------- end class GenAluProf ----------------------------------------
+
+# Function that having a dictionary of the aluminum profile, just calls
+# the class GenAluProf, 
+def getaluprof ( aludict, length, 
+                 axis = 'x',
+                 name = "genaluprof",
+                 cx=False, cy=False, cz=False):
+
+    cls_aluprof = GenAluProf ( width=aludict['w'],
+                               length = length, 
+                               thick = aludict['t'],
+                               slot  = aludict['slot'],
+                               insquare = aludict['insq'], 
+                               indiam   = aludict['indiam'],
+                               axis = axis,
+                               name = name,
+                               cx=cx, cy=cy, cz=cz)
+
+    return (cls_aluprof)
+
+
+#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#                         length=80) 
+#
+#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#                         axis = 'z',
+#                         length=100) 
+#
+#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#                         length=40, 
+#                         axis = 'y',
+#                 cx=True, cy=False, cz=False)
+##
+#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#                         length=60, 
+#                         axis = 'y',
+#                 cx=True, cy=False, cz=True)
+#
+#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#                         length=50, 
+#                         axis = 'x',
+#                 cx=True, cy=True, cz=True)
+#
+#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#                         length=50, 
+#                         axis = 'y',
+#                 cx=False, cy=True, cz=False)
+
             
 # ----------- NEMA MOTOR
 # Creates NEMA motor including its hole to cut the piece where is going

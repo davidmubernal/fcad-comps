@@ -925,9 +925,94 @@ def wire_sim_xy (vecList):
 
 # ------------------- end def wire_sim_xy
 
-            
+
+# ------------------ shp_extrud_face
+# extrudes a face on any plane
+# returns a shape
+# 
+#  Arguments:
+# face: face to be extruded. 
+# length: extrusion length
+# centered: 1 if the extrusion is centered (simetrical) 0 if it is not
+# vec_extr_axis: Typically, it will be the same as vec_facenormal.
+#                by default, if it is 0, it will be equal to vec_facenormal
+#    It doesn't have to be on an axis, it can be diagonally
+
+def shp_extrud_face (face, length, vec_extr_axis, centered=0):
+
+    
+    # Normalize the extrusion vector
+    vec_extr = DraftVecUtils.scaleTo(vec_extr_axis,length)
+
+    if centered == 1:
+        #we have to move it back half the lenght of the extrusion
+        # either this or DrafVecUtils.neg( )
+        pos = V0 - DraftVecUtils.scaleTo(vec_extr_axis,length/2.)
+        face.Placement.Base = pos
+ 
+    shp_extrusion = face.extrude(vec_extr)
+
+    return (shp_extrusion)
 
             
+
+# ------------------ shp_extrud_face_rot
+# extrudes a face that is on plane XY, includes a rotation
+# returns a shape
+# 
+#             Y
+#             :
+#         ____:___           
+#         \   :   |
+#          \  :...|...... X
+#           \     |
+#            \____|
+#
+#
+#
+# face: face to be extruded. On plane XY
+# 
+# vec_facenormal: FreeCAD vector that indicates where the normal of the 
+#    face will point. The normal of the original face is VZ, but this 
+#    function may rotate it depending on this argument
+#    It has to be on an axis: 'x', 'y', ..
+# vec_edgx: FreeCAD vector that indicates where the edge X will be after
+#    the rotation
+#    It has to be on an axis: 'x', 'y', ..
+# length: extrusion length
+# centered: 1 if the extrusion is centered (simetrical) 0 if it is not
+# vec_extr_axis: Typically, it will be the same as vec_facenormal.
+#                by default, if it is 0, it will be equal to vec_facenormal
+#    It doesn't have to be on an axis, it can be diagonally
+
+def shp_extrud_face_rot (face, vec_facenormal, vec_edgx, length, centered=0,
+                     vec_extr_axis = 0):
+
+    
+    # since vec2 of calc_rot is referenced to VNZ, vec_facenomal is negated
+    vec_nfacenormal = DraftVecUtils.neg(vec_facenormal)
+    vrot = fc_calc_rot(vec_edgx, vec_nfacenormal)
+    face.Placement.Rotation = vrot
+    if vec_extr_axis == 0: # default case
+        vec_extr_axis = vec_facenormal
+    # Normalize the extrusion vector
+    vec_extr = DraftVecUtils.scaleTo(vec_extr_axis,length)
+
+    if centered == 1:
+        #we have to move it back half the lenght of the extrusion
+        # either this or DrafVecUtils.neg( )
+        pos = V0 - DraftVecUtils.scaleTo(vec_extr_axis,length/2.)
+        face.Placement.Base = pos
+ 
+    shp_extrusion = face.extrude(vec_extr)
+
+    # Reset the rotation of the original face
+    # I am not sure, but I think it is necessary if I want to use it again
+    # outside of the function
+    face.Placement.Rotation = V0ROT
+    face.Placement.Base = V0
+
+    return (shp_extrusion)
 
 
 """  -------------------- addBolt  ---------------------------------
@@ -1139,6 +1224,84 @@ def addBoltNut_hole (r_shank,        l_bolt,
     boltnut.Shapes = elements
     return boltnut
       
+
+
+
+# ------------------- def shpAluProfWire
+# Creates a wire (shape), that is an approximation of a generic alum
+# profile extrusion 
+# width: the total width of the profile, it is a square
+# thick: the thickness of the side
+# slot: the width of the rail 
+# insquare: the width of the inner square
+# indiam: the diameter of the inner hole
+#
+#                   Y
+#                   |_ X
+#      :----- width ----:
+#      :       slot     :
+#      :      :--:      :
+#      :______:  :______:
+#      |    __|  |__    |
+#      | |\ \      / /| |
+#      |_| \ \____/ / |_| ...........
+#          |        | ......        insquare
+#          |  (  )  | ......indiam  :
+#       _  |  ____  | ..............:
+#      | | / /    \ \ | |
+#      | |/ /_    _\ \| | .... 
+#      |______|  |______| ....thick
+
+#                                   Y values:
+#   :  3 _____ 4
+#   :   |_1  7| ................... 1,2: width/2 - thick
+#   :  2 / /|_| ....................7: width/2- (thick+thick*cos45)
+#   :___/ / 6  5 .....................              5,6: slot/2.
+#   :  0  |8     :8:insquare/2-thick*cos45  0:insquare/2  :
+#   :.....|......:..........................:.............:
+
+
+# obtains the points of the aluminum profile positive quadrant
+
+def aluprof_vec (width, thick, slot, insquare):
+
+    cos45 = 0.707
+
+    y = []
+    y.append(insquare/2)               # y0, x8
+    y.append(width/2. - thick)         # y1, x7
+    y.append(y[-1])                    # y2, x6,  y2==y1
+    y.append(width/2.)                 # y3, x5
+    y.append(y[-1])                    # y4, x4,  y4==y3
+    y.append(slot/2.)                  # y5, x3
+    y.append(y[-1])                    # y6, x2   y6==y5
+    y.append(width/2.-thick*(1+cos45))  # y7, x1
+    y.append(insquare/2.-thick*cos45)        # y8, x0
+
+    n = len(y)-1
+
+    vec = []
+    for ind in range(len(y)):
+        vec.append(FreeCAD.Vector(y[n-ind], y[ind], 0))
+
+    return (vec)
+
+    
+
+"""
+    y1 = insquare/2          # x9
+    y2 = width/2. - thick    # x8
+    y3 = y2                  # x7
+    y4 = width/2.            # x6
+    y5 = y4                  # x5
+    y6 = width/2. - slot/2.  # x4
+    y7 = y6                  # x3
+    y8 = width/2.-2*thick    # x2
+    y9 = insquare/2.-thick   # x1
+"""
+
+    
+
   
 # -------------------- NutHole -----------------------------
 # adding a Nut hole (hexagonal) with a prism attached to introduce the nut
@@ -1423,100 +1586,206 @@ def filletchamfer (fco, e_len, name, fillet = 1, radius=1, axis='x',
 #  ---------------- calc_rot -----------------------------
 #  ---------------- Yaw, Pitch and Roll transfor
 #  Having an object with an orientation defined by 2 vectors
-#  First vector direction (x,y,z) is (1,0,0) 
-#  Second vector direction (x,y,z) is (0,0,-1) 
+#  the vectors a tuples, nor FreeCAD.Vectors
+#  use the wrapper fc_calc_rot to have FreeCAD.Vector arguments
+#  First vector original direction (x,y,z) is (1,0,0) 
+#  Second vector original direction (x,y,z) is (0,0,-1) 
 #  we want to rotate the object in an ortoghonal direction. The vectors
 #  will be in -90, 180, or 90 degrees.
 #  this function returns the Rotation given by yaw, pitch and roll
+#  In case vec1 is (0,0,0), means that it doesn't matter that vector.
+#  Yaw is the rotation of Z axis. Positive Yaw is like screwing up
+#
+#   Y         Y                   Y
+#   |_X       :   yaw=0           :     yaw=60
+#   /         :                   :   /
+#  Z          :                   :  /
+#             :                   : /
+#             :________....  X    :/............ X
+#
+#
+#  Z  Y       Z                   Z
+#  |/_ X      :   pitch=0         :     pitch=-60
+#             :                   :   /
+#             :                   :  /
+#             :                   : /
+#             :________....  X    :/............ X
+#
+#
+#             Z                   Z
+#   Z         :   roll=0          :     roll=-60
+#   |_Y       :                   :   /
+#  /          :                   :  /
+# X           :                   : /
+#             :________....  Y    :/............ Y
+#
+
+#
 
 def calc_rot (vec1, vec2):
            
     # rotation calculation
     if vec1 == (1,0,0):
-       yaw = 0
-       pitch = 0
-       if vec2 == (0,1,0):
-           roll  = 90
-       elif vec2 == (0,-1,0):
-           roll  = -90
-       elif vec2 == (0,0,1):
-           roll  = 180
-       elif vec2 == (0,0,-1):
-           roll  = 0
-       else:
-           print "error 1 in yaw-pitch-roll"
+        yaw = 0
+        pitch = 0
+        if vec2 == (0,1,0):
+            roll  = 90
+        elif vec2 == (0,-1,0):
+            roll  = -90
+        elif vec2 == (0,0,1):
+            roll  = 180
+        elif vec2 == (0,0,-1):
+            roll  = 0
+        else:
+            print "error 1 in yaw-pitch-roll"
     elif vec1 == (-1,0,0):
-       yaw = 180
-       pitch = 0
-       if vec2 == (0,1,0):
-           roll  = -90 #negative because of the yaw
-       elif vec2 == (0,-1,0):
-           roll  = 90 # positive because of the yaw = 180
-       elif vec2 == (0,0,1):
-           roll = 180
-       elif vec2 == (0,0,-1):
-           roll  = 0
-       else:
-           print "error 2 in yaw-pitch-roll"
+        yaw = 180
+        pitch = 0
+        if vec2 == (0,1,0):
+            roll  = -90 #negative because of the yaw
+        elif vec2 == (0,-1,0):
+            roll  = 90 # positive because of the yaw = 180
+        elif vec2 == (0,0,1):
+            roll = 180
+        elif vec2 == (0,0,-1):
+            roll  = 0
+        else:
+            print "error 2 in yaw-pitch-roll"
     elif vec1 == (0,1,0):
-       yaw = 90
-       pitch = 0
-       if vec2 == (1,0,0):
-           roll  = -90
-       elif vec2 == (-1,0,0):
-           roll  = 90
-       elif vec2 == (0,0,1):
-           roll  = 180
-       elif vec2 == (0,0,-1):
-           roll  = 0
-       else:
-           print "error 3 in yaw-pitch-roll"
+        yaw = 90
+        pitch = 0
+        if vec2 == (1,0,0):
+            roll  = -90
+        elif vec2 == (-1,0,0):
+            roll  = 90
+        elif vec2 == (0,0,1):
+            roll  = 180
+        elif vec2 == (0,0,-1):
+            roll  = 0
+        else:
+            print "error 3 in yaw-pitch-roll"
     elif vec1 == (0,-1,0):
-       yaw = -90
-       pitch = 0
-       if vec2 == (1,0,0):
-           roll  = 90 
-       elif vec2 == (-1,0,0):
-           roll  = -90 
-       elif vec2 == (0,0,1):
-           roll  = 180
-       elif vec2 == (0,0,-1):
-           roll  = 0
-       else:
-           print "error 4 in yaw-pitch-roll"
+        yaw = -90
+        pitch = 0
+        if vec2 == (1,0,0):
+            roll  = 90 
+        elif vec2 == (-1,0,0):
+            roll  = -90 
+        elif vec2 == (0,0,1):
+            roll  = 180
+        elif vec2 == (0,0,-1):
+            roll  = 0
+        else:
+            print "error 4 in yaw-pitch-roll"
     elif vec1 == (0,0,1):
-       pitch = -90
-       yaw = 0
-       if vec2 == (1,0,0):
-           roll  = 0 
-       elif vec2 == (-1,0,0):
-           roll  = 180 
-       elif vec2 == (0,1,0):
-           roll  = 90
-       elif vec2 == (0,-1,0):
-           roll  = -90
-       else:
-           print "error 5 in yaw-pitch-roll"
+        pitch = -90
+        yaw = 0
+        if vec2 == (1,0,0):
+            roll  = 0 
+        elif vec2 == (-1,0,0):
+            roll  = 180 
+        elif vec2 == (0,1,0):
+            roll  = 90
+        elif vec2 == (0,-1,0):
+            roll  = -90
+        else:
+            print "error 5 in yaw-pitch-roll"
     elif vec1 == (0,0,-1):
-       pitch = 90
-       yaw = 0
-       if vec2 == (1,0,0):
-           roll  = 180 
-       elif vec2 == (-1,0,0):
-           roll  = 0 
-       elif vec2 == (0,1,0):
-           roll  = 90
-       elif vec2 == (0,-1,0):
-           roll  = -90
-       else:
-           print "error 6 in yaw-pitch-roll"
+        pitch = 90
+        yaw = 0
+        if vec2 == (1,0,0):
+            roll  = 180 
+        elif vec2 == (-1,0,0):
+            roll  = 0 
+        elif vec2 == (0,1,0):
+            roll  = 90
+        elif vec2 == (0,-1,0):
+            roll  = -90
+        else:
+            print "error 6 in yaw-pitch-roll"
+    elif vec1 == (0,0,0): # it doesn't matter the direction of vec1
+        yaw = 0
+        if vec2 == (1,0,0):
+            pitch = -90
+            roll  = 0 
+        elif vec2 == (-1,0,0):
+            pitch = 90
+            roll  = 0 
+        elif vec2 == (0,1,0):
+            pitch = 0
+            roll  = 90
+        elif vec2 == (0,-1,0):
+            pitch = 0
+            roll  = -90
+        elif vec2 == (0,0,1):
+            pitch = 0
+            roll  = 180
+        elif vec2 == (0,0,-1):
+            pitch = 0
+            roll  = 0 # the same position
+        else:
+            print "error 7 in yaw-pitch-roll"
+
+
 
     vrot = FreeCAD.Rotation(yaw,pitch,roll)
     return vrot
 
+
+#  ---------------- fc_calc_rot -----------------------------
+# same as calc_rot but using FreeCAD.Vectors arguments
+
+def fc_calc_rot (fc_vec1, fc_vec2):
+
+    ##vec1 = (fc_vec1.X, fc_vec1.Y, fc_vec1.Z)
+    ##vec2 = (fc_vec2.X, fc_vec2.Y, fc_vec2.Z)
+    vrot = calc_rot(DraftVecUtils.tup(fc_vec1),DraftVecUtils.tup(fc_vec2))
+    return vrot
+
+
 #  ---------------- calc_desp_ncen ------------------------
 #  similar to calc_rot, but calculates de displacement, when we don't want
-#  to have any of the dimensions centered
+#  to have akll of the dimensions centered
+#  First vector original direction (x,y,z) is (1,0,0) 
+#  Second vector original direction (x,y,z) is (0,0,-1) 
+#  The arguments vec1, vec2 are tuples (x,y,z) but they may be also
+#   FreeCAD.Vectors
+#  vec1, vec2 have to be on the axis: x, -x, y, -y, z, -z
+#  vec1 can be (0,0,0): it means that it doesn't matter how it is rotated
+#  Length: original dimension on X
+#  Width:  original dimension on Y
+#  Height: original dimension on Z
+# 
+#  the picture is wrong, because originally it is centered, that's
+#  why the position is moved only half of the dimension. But the concept
+#  is valid 
+#  
+#      Z          . Y       length (x) = 1
+#      :   _    .           width  (y) = 2
+#      : /  /|              heigth (z) = 3
+#      :/_ / |
+#      |  |  |              vec1 original (before rotation) = VX
+#      |  | /               vec2 original (before rotation) = -VZ
+#      |__|/..............X
+#
+#
+#    Example after rotation and change position
+#
+#      Z         . Y       length (x) = 3
+#      :   ____.           width  (y) = 2
+#      : /    /|           heigth (z) = 1
+#      :/___ //                  vec1 = VZ
+#      |____|/..............X    vec2 = VX
+#
+#    So we have to move X its original heith (3), otherwise it would
+#       be on the negative side, like this
+#
+#           Z 
+#           :    . Y       length (x) = 3
+#          _:__.           width  (y) = 2
+#        /  : /|           heigth (z) = 1
+#       /___://                  vec1 = VZ
+#      |____|/..............X    vec2 = VX
 
 def calc_desp_ncen (Length, Width, Height, 
                      vec1, vec2, cx=False, cy=False, cz=False, H_extr = False):
@@ -1576,12 +1845,56 @@ def calc_desp_ncen (Length, Width, Height,
                 z = Length / 2.0
         else:
             print "error 3 in calc_desp_ncen"
+    elif (vec1[0]==0 and vec1[1]==0 and vec1[2]==0): 
+        #It doesnt matter vec1. Probably it is symetrical on plane XY.
+        # So Length and Width are the same
+        if Width != Length:
+            logger.error('Check rotation vec1=(0,0,0), and Length!=Width')
+        if abs(vec2[0]) == 1:   # X. Pitch = -90. in calc_rot
+            if cx == False:
+                x = Height / 2.0
+            if cy == False:
+                y = Width / 2.0
+            if cz == False:
+                z = Length / 2.0
+        elif abs(vec2[1]) == 1:   # Y. Roll = +-90. in calc_rot
+            if cx == False:
+                x = Length / 2.0
+            if cy == False:
+                y = Height / 2.0
+            if cz == False:
+                z = Width / 2.0
+        elif abs(vec2[2]) == 1:    # Z. Nothing. Roll 0 or 180
+            if cx == False:
+                x = Width / 2.0
+            if cy == False:
+                y = Length / 2.0
+            if cz == False:
+                z = Height / 2.0
+        else:
+            print "error 4 in calc_desp_ncen"
     else:
-        print "error 3 in calc_desp_ncen"
+        print "error 5 in calc_desp_ncen"
 
 
     vdesp = FreeCAD.Vector(x,y,z)
     return vdesp
+
+
+
+#  ---------------- fc_calc_desp_ncen -----------------------------
+# same as calc_desp_ncen but using FreeCAD.Vectors arguments
+
+def fc_calc_desp_ncen (Length, Width, Height,
+                       fc_vec1, fc_vec2,
+                       cx=False, cy=False, cz=False, H_extr = False ):
+
+    vec1 = DraftVecUtils.tup(fc_vec1)
+    vec2 = DraftVecUtils.tup(fc_vec2)
+    vdesp = calc_desp_ncen(Length, Width, Height,
+                           vec1, vec2, cx, cy, cz, H_extr)
+    return vdesp
+
 
 
 def getvecofname(axis):
@@ -1601,6 +1914,7 @@ def getvecofname(axis):
 
     return vec
 
+#VX, VY, VZ,...
 def getfcvecofname(axis):
 
     fc_vec = FreeCAD.Vector(getvecofname(axis))
