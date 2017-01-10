@@ -19,8 +19,8 @@ STOL = TOL / 2.0       # smaller tolerance
 LAYER3D_H = 0.3  
 
 # ---------------------- Bearings
-LMEUU_L = { 10: 29.0, 12: 32.0 }; #the length of the bearing
-LMEUU_D = { 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
+LMEUU_L = { 8: 25., 10: 29.0, 12: 32.0 }; #the length of the bearing
+LMEUU_D = { 8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
 
 
 
@@ -295,13 +295,64 @@ NEMA_BOLT_D  = {
              34:   5.5,
              42:   8.5 }
 
-
+#        _______ .....................................  
+#       |  ___  |                                     :
+#       | / d.\.|.................                    :
+#       | \___/ |  __            :                    + H
+#     __|       |__ /| ...       + h                  :
+#    |_____________|/ ...+L......:....................:
+#    :             :
+#    :......W......:
+#
+#       ....I....
+#       :_______:      _______________________________  
+#       |  ___  |                                     :
+#       | /   \ |      __________                     :
+#       | \___/ |                :                    + H
+#    ___|       |___ ......       + h                  :
+#   |_:___________:_|.....+g ____:____________________:
+#     :           :
+#     :......B....: S: diameter of the 2 thruholes
 
 # ----------------------------- shaft holder SK dimensions --------
+# there are different brands, and are not all the same,
+# Also valid for dold SH
+# A is not necessary, it is just the half of W
+# b is not necessary, it is just (W-B)/2
+# mbolt: is the metric of the mounting bolt
+# tbolt: is the metric of the tightening bolt
+
+SK8 =  { 'd':8.0,  'H':32.8, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
+         'h':20.0,
+         #'A':21.0,
+         #'b': 5.0,
+         'g':6.0,
+         'I':18.0,
+         'mbolt': 5,
+         'tbolt': 4} 
+
+SK10 = { 'd':10.0, 'H':32.8, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
+         'h':20.0,
+         #'A':21.0,
+         #'b': 5.0,
+         'g': 6.0,
+         'I': 18.0,
+         'mbolt': 5,
+         'tbolt': 4} 
 
 SK12 = { 'd':12.0, 'H':37.5, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
-         'h':23.0, 'A':21.0, 'b': 5.0, 'g':6.0,  'I':20.0,
-         'mbolt': 5, 'tbolt': 4} 
+         'h':23.0,
+         #'A':21.0,
+         #'b': 5.0,
+         'g': 6.0,
+         'I': 20.0,
+         'mbolt': 5,  
+         'tbolt': 4} 
+
+
+SK = {    8: SK8,
+         10: SK10,
+         12: SK12 }
 
 # ------------------------- T8 Nut for leadscrew ---------------------
 #   
@@ -434,14 +485,42 @@ FLEXSC_RB_L = {
 # insquare: insq: the width of the inner square
 # indiam:   ind :the diameter of the inner hole
 
-ALU_MOTEDIS_20I5 = {'w' : 20.,
-                    't' : 1.8, # aprox measured
+ALU_MOTEDIS_20I5 = {'w'    : 20.,
+                    't'    : 1.8, # aprox measured
                     'slot' : 5., 
                     'insq' : 7.30, # 20 - 2*6.35
                     'indiam' : 4.3 }
-           
 
+# Makerbeam XL. The section differs a lot from the figure
+# Openbeam is also 15, but also very different, even more
+ALU_MAKERBEAM_15 = {'w'    : 15.,
+                    't'    : 1.1, 
+                    'slot' : 3., 
+                    'insq' : 5.7, # It has an inner square of 3
+                    'indiam' : 2.55 }
 
+ALU_MAKERBEAM_10 = {'w'    : 10.,
+                    't'    : 1., 
+                    'slot' : 3., 
+                    'insq' : 4., # 10 - 2*3.
+                    'indiam' : 2.5 }
+
+# NanoBeam 5. The section differs a lot from the figure
+# and it has no inner circle.
+# Maybe later I will make good one, but not for now
+ALU_OPENBEAM_5 = {'w'    : 5.,
+                  't'    : 0.44,  # actually is a triangle (2.479 - 1.605)/2
+                  'slot' : 1.605, 
+                  'insq' : 1.8, # 5 - 2*1.583
+                  'indiam' : 0 }  # No inner circle
+
+# Selection of the profile depending on the width
+
+ALU_PROF = {
+              5: ALU_OPENBEAM_5,
+             10: ALU_MAKERBEAM_10,
+             15: ALU_MAKERBEAM_15,
+             20: ALU_MOTEDIS_20I5 }
 
 # ------------------------ Linear Guides 
 

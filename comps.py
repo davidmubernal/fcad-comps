@@ -76,7 +76,6 @@ class Sk (object):
              'h':23.0, 'A':21.0, 'b': 5.0, 'g':6.0,  'I':20.0,
               'mbolt': 5, 'tbolt': 4} 
     """
-    SK12 = kcomp.SK12
 
     # separation of the upper side (it is not defined). Change it
     # measured for sk12 is 1.2
@@ -91,61 +90,60 @@ class Sk (object):
         self.cx = cx
         self.cy = cy
 
-        if size != 12:
-            logging.warning("only size 12 supported")
-            print ("only size 12 supported")
-            
+        skdict = kcomp.SK.get(size)
+        if skdict == None:
+            logger.warning("Sk size %d not supported", size)
         else:
             doc = FreeCAD.ActiveDocument
             # Total height:
-            sk_z = kcomp.SK12['H'];
+            sk_z = skdict['H'];
             self.TotH = sk_z
             # Total width (Y):
-            sk_y = kcomp.SK12['W'];
-            self.TotW = sk_y
+            sk_w = skdict['W'];
+            self.TotW = sk_w
             # Total depth (x):
-            sk_x = kcomp.SK12['L'];
-            self.TotD = sk_x
+            sk_d = skdict['L'];
+            self.TotD = sk_d
             # Base height
-            sk_base_z = 6;
+            sk_base_h = skdict['g'];
             # center width
-            sk_center_y = 20;
+            sk_center_w = skdict['I'];
             # Axis height:
-            sk_axis_z = 23;
-            self.HoleH = sk_axis_z;
+            sk_axis_h = skdict['h'];
+            self.HoleH = sk_axis_h;
     
             # tightening bolt with added tolerances:
             # Bolt's head radius
             tbolt_head_r = (self.holtol
-                            * kcomp.D912_HEAD_D[kcomp.SK12['tbolt']])/2.0
+                            * kcomp.D912_HEAD_D[skdict['tbolt']])/2.0
             # Bolt's head lenght
             tbolt_head_l = (self.holtol
-                            * kcomp.D912_HEAD_L[kcomp.SK12['tbolt']] )
+                            * kcomp.D912_HEAD_L[skdict['tbolt']] )
             # Mounting bolt radius with added tolerance
-            mbolt_r = self.holtol * kcomp.SK12['mbolt']/2
+            mbolt_r = self.holtol * skdict['mbolt']/2.
     
             # the total dimensions: LxWxH
             # we will cut it
-            total_box = addBox(x = sk_x,
-                               y = sk_y,
+            total_box = addBox(x = sk_d,
+                               y = sk_w,
                                z = sk_z,
                                name = "total_box",
                                cx = False, cy=True)
 
             # what we have to cut from the sides
-            side_box_y = (sk_y - kcomp.SK12['I'])/2
-            side_box_z = sk_z - kcomp.SK12['g']
+            side_box_y = (sk_w - skdict['I'])/2.
+            side_box_z = sk_z - skdict['g']
     
-            side_cut_box_r = addBox (sk_x, side_box_y, side_box_z,
+            side_cut_box_r = addBox (sk_d, side_box_y, side_box_z,
                                      "side_box_r")
             side_cut_pos_r = FreeCAD.Vector(0,
-                                            kcomp.SK12['I']/2,
-                                            kcomp.SK12['g'])
+                                            skdict['I']/2.,
+                                            skdict['g'])
             side_cut_box_r.Placement.Base = side_cut_pos_r
 
-            side_cut_box_l= addBox (sk_x, side_box_y, side_box_z,
+            side_cut_box_l= addBox (sk_d, side_box_y, side_box_z,
                                      "side_box_l")
-            side_cut_pos_l = FreeCAD.Vector(0,-sk_y/2,kcomp.SK12['g'])
+            side_cut_pos_l = FreeCAD.Vector(0,-sk_w/2.,skdict['g'])
             side_cut_box_l.Placement.Base = side_cut_pos_l
 
             # union 
@@ -159,8 +157,8 @@ class Sk (object):
             sk_shape.Tool = side_boxes
 
             # Shaft hole, its height has +2 to make it throughl L all de way
-            shaft_hole = addCyl(kcomp.SK12['d']/2,
-                                sk_x+2,
+            shaft_hole = addCyl(skdict['d']/2.,
+                                sk_d+2,
                                 "shaft_hole")
 
             """
@@ -171,49 +169,47 @@ class Sk (object):
             axis at the base of the cylinder 
             """
             shaft_hole.Placement = FreeCAD.Placement(
-                                         FreeCAD.Vector(-1,0,kcomp.SK12['h']),
+                                         FreeCAD.Vector(-1,0,skdict['h']),
                                          FreeCAD.Rotation(VY,90),
                                          V0)
 
             # the upper sepparation
-            up_sep = addBox( sk_x +2,
+            up_sep = addBox( sk_d +2,
                              self.up_sep_dist,
-                             sk_z-kcomp.SK12['h'] +1,
+                             sk_z-skdict['h'] +1,
                              "up_sep")
             up_sep_pos = FreeCAD.Vector(-1,
                                         -self.up_sep_dist/2,
-                                         kcomp.SK12['h']+1)
+                                         skdict['h']+1)
             up_sep.Placement.Base = up_sep_pos
 
-            """
-             Tightening bolt shaft hole, its height has +2 to make it
-             throughl L all de way
-             kcomp.SK12['tbolt'] is the diameter of the bolt: (M..) M4, ...
-             tbolt_head_r: is the radius of the tightening bolt's head
-             (including tolerance), which its bottom either
-             - is at the middle point between
-               - A: the total height :sk_z
-               - B: the top of the shaft hole: kcomp.SK12['h']+kcomp.SK12['d']/2
-               - so the result will be (A + B)/2
-             or it is aligned with the top of the 12mm shaft, whose height is: 
-                 kcomp.SK12['h']+kcomp.SK12['d']/2
-            """
-            tbolt_shaft = addCyl(kcomp.SK12['tbolt']/2,kcomp.SK12['I']+2,
+            #Tightening bolt shaft hole, its height has +2 to make it
+            #throughl L all de way
+            #skdict['tbolt'] is the diameter of the bolt: (M..) M4, ...
+            #tbolt_head_r: is the radius of the tightening bolt's head
+            #(including tolerance), which its bottom either
+            #- is at the middle point between
+            #  - A: the total height :sk_z
+            #  - B: the top of the shaft hole: skdict['h']+skdict['d']/2
+            #  - so the result will be (A + B)/2
+            #or it is aligned with the top of the 12mm shaft, whose height is: 
+            #    skdict['h']+skdict['d']/2
+            tbolt_shaft = addCyl(skdict['tbolt']/2,skdict['I']+2,
                                       "tbolt_shaft")
-            tbolt_shaft_pos = FreeCAD.Vector(sk_x/2,
-                    kcomp.SK12['I']/2+1,
-                    kcomp.SK12['h']+kcomp.SK12['d']/2+tbolt_head_r/self.holtol)
-                    #(sk_z + kcomp.SK12['h']+kcomp.SK12['d']/2)/2)
+            tbolt_shaft_pos = FreeCAD.Vector(sk_d/2.,
+                            skdict['I']/2.+1,
+                            skdict['h']+skdict['d']/2.+tbolt_head_r/self.holtol)
+                            #(sk_z + skdict['h']+skdict['d']/2.)/2.)
             tbolt_shaft.Placement = FreeCAD.Placement(tbolt_shaft_pos,
                                                  FreeCAD.Rotation(VX,90),
                                                  V0)
 
             # Head of the thigthening bolt
             tbolt_head = addCyl(tbolt_head_r,tbolt_head_l+1, "tbolt_head")
-            tbolt_head_pos = FreeCAD.Vector(sk_x/2,
-                   kcomp.SK12['I']/2+1,
-                   kcomp.SK12['h']+kcomp.SK12['d']/2+tbolt_head_r/self.holtol)
-                   #(sk_z + kcomp.SK12['h']+kcomp.SK12['d']/2)/2)
+            tbolt_head_pos = FreeCAD.Vector(sk_d/2.,
+                           skdict['I']/2.+1,
+                           skdict['h']+skdict['d']/2+tbolt_head_r/self.holtol)
+                           #(sk_z + skdict['h']+skdict['d']/2.)/2.)
             tbolt_head.Placement = FreeCAD.Placement(tbolt_head_pos,
                                          FreeCAD.Rotation(VX,90),
                                          V0)
@@ -234,15 +230,15 @@ class Sk (object):
             sk_shape_w_holes.Tool = fuse_shaft_holes
 
             #Mounting bolts
-            mbolt_sh_r = addCyl(mbolt_r,kcomp.SK12['g']+2, "mbolt_sh_r")
-            mbolt_sh_l = addCyl(mbolt_r,kcomp.SK12['g']+2, "mbolt_sh_l")
+            mbolt_sh_r = addCyl(mbolt_r,skdict['g']+2., "mbolt_sh_r")
+            mbolt_sh_l = addCyl(mbolt_r,skdict['g']+2., "mbolt_sh_l")
 
-            mbolt_sh_r_pos = FreeCAD.Vector(sk_x/2,
-                                            kcomp.SK12['B']/2,
+            mbolt_sh_r_pos = FreeCAD.Vector(sk_d/2,
+                                            skdict['B']/2.,
                                             -1)
 
-            mbolt_sh_l_pos = FreeCAD.Vector(sk_x/2,
-                                            -kcomp.SK12['B']/2,
+            mbolt_sh_l_pos = FreeCAD.Vector(sk_d/2,
+                                            -skdict['B']/2.,
                                             -1)
 
             mbolt_sh_r.Placement.Base = mbolt_sh_r_pos
@@ -265,7 +261,7 @@ class Sk (object):
                 # this is how it is, no rotation
                 rot = FreeCAD.Rotation(VZ,0)
                 if cx == 1: #we want centered on X,bring back the half of depth
-                    xpos = -self.TotD/2.0
+                    xpos = -self.TotD/2.
                 else:
                     xpos = 0 # how it is
                 if cy == 1: # centered on Y, how it is
@@ -547,7 +543,7 @@ class RectRndBar (object):
 # ----------- end class RectRndBar ----------------------------------------
 
 
-# ----------- class GenAluProf ---------------------------------------------
+# ----------- class AluProf ---------------------------------------------
 # Creates a generic aluminum profile 
 #      :----- width ----:
 #      :       slot     :
@@ -568,7 +564,7 @@ class RectRndBar (object):
 # thick: the thickness of the side
 # slot: the width of the rail 
 # insquare: the width of the inner square
-# indiam: the diameter of the inner hole
+# indiam: the diameter of the inner hole. If 0, there is no hole
 # axis      'x', 'y' or 'z'
 #           direction of the bar
 #           'x' will be along the x axis
@@ -635,7 +631,7 @@ class RectRndBar (object):
 #
 
 
-class GenAluProf (object):
+class AluProf (object):
 
     def __init__ (self, width, length, thick, slot, insquare, 
                   indiam, axis = 'x',
@@ -690,7 +686,7 @@ class GenAluProf (object):
             ax_center = cz
         else:
             ax_center = 0
-            logger.error("axis not defined. Supported: 'x', 'y', 'z'")
+            logger.error("axis %s not defined. Supported: 'x', 'y', 'z', axis")
 
         self.ax_center = ax_center
 
@@ -707,13 +703,16 @@ class GenAluProf (object):
         face_ext.Placement.Base = pos
 
         # inner hole
-        hole =  Part.makeCircle (indiam/2.,   # Radius
-                                 pos,  # Position
-                                 vec_axis)  # direction
-        wire_hole = Part.Wire(hole)
-        face_hole = Part.Face(wire_hole)
+        if indiam > 0 :
+            hole =  Part.makeCircle (indiam/2.,   # Radius
+                                     pos,  # Position
+                                     vec_axis)  # direction
+            wire_hole = Part.Wire(hole)
+            face_hole = Part.Face(wire_hole)
 
-        face_profile = face_ext.cut(face_hole)
+            face_profile = face_ext.cut(face_hole)
+        else:
+            face_profile = face_ext
 
         shp_profile = fcfun.shp_extrud_face (
                                  face = face_profile,
@@ -726,16 +725,16 @@ class GenAluProf (object):
         
         self.fco = fco_profile
         
-# ----------- end class GenAluProf ----------------------------------------
+# ----------- end class AluProf ----------------------------------------
 
 # Function that having a dictionary of the aluminum profile, just calls
-# the class GenAluProf, 
+# the class AluProf, 
 def getaluprof ( aludict, length, 
                  axis = 'x',
                  name = "genaluprof",
                  cx=False, cy=False, cz=False):
 
-    cls_aluprof = GenAluProf ( width=aludict['w'],
+    h_aluprof = AluProf ( width=aludict['w'],
                                length = length, 
                                thick = aludict['t'],
                                slot  = aludict['slot'],
@@ -745,7 +744,7 @@ def getaluprof ( aludict, length,
                                name = name,
                                cx=cx, cy=cy, cz=cz)
 
-    return (cls_aluprof)
+    return (h_aluprof)
 
 
 #cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
@@ -760,17 +759,17 @@ def getaluprof ( aludict, length,
 #                         axis = 'y',
 #                 cx=True, cy=False, cz=False)
 ##
-#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#h_aluprof = getaluprof(aludict= kcomp.ALU_MAKERBEAM_10,
 #                         length=60, 
 #                         axis = 'y',
 #                 cx=True, cy=False, cz=True)
 #
-#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#h_aluprof = getaluprof(aludict= kcomp.ALU_MAKERBEAM_15,
 #                         length=50, 
 #                         axis = 'x',
 #                 cx=True, cy=True, cz=True)
 #
-#cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
+#h_aluprof = getaluprof(aludict= kcomp.ALU_OPENBEAM_5,
 #                         length=50, 
 #                         axis = 'y',
 #                 cx=False, cy=True, cz=False)

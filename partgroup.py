@@ -121,6 +121,30 @@ class BearWashGroup (object):
 
 # ----------- end class BearWashGroup ----------------------------------------
             
+# From a group of bearings and washers to make idle pulleys, obtains
+# the diameter of the larger washer
+
+def getmaxwashdiam (holcyl_list):
+
+    maxwashdiam = 0
+    for elem in holcyl_list:
+        if elem.part == 'washer':
+            if maxwashdiam < elem.d_out :
+                maxwashdiam = elem.d_out
+    return maxwashdiam
+
+# From a group of bearings and washers to make idle pulleys, obtains
+# the diameter of the larger bearing
+
+def getmaxbeardiam (holcyl_list):
+
+    maxbeardiam = 0
+    for elem in holcyl_list:
+        if elem.part == 'bearing':
+            if maxbeardiam < elem.d_out :
+                maxbeardiam = elem.d_out
+    return maxbeardiam
+
 
 #doc = FreeCAD.newDocument()
 #hcyl0 = kcomp.HollowCyl (part = 'washer', size = 6, kind= 'large')

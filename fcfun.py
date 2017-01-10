@@ -1745,9 +1745,9 @@ def fc_calc_rot (fc_vec1, fc_vec2):
 
 #  ---------------- calc_desp_ncen ------------------------
 #  similar to calc_rot, but calculates de displacement, when we don't want
-#  to have akll of the dimensions centered
-#  First vector original direction (x,y,z) is (1,0,0) 
-#  Second vector original direction (x,y,z) is (0,0,-1) 
+#  to have all of the dimensions centered
+#  First vector original direction (x,y,z) is (1,0,0)
+#  Second vector original direction (x,y,z) is (0,0,-1)
 #  The arguments vec1, vec2 are tuples (x,y,z) but they may be also
 #   FreeCAD.Vectors
 #  vec1, vec2 have to be on the axis: x, -x, y, -y, z, -z
