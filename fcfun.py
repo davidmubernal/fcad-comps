@@ -248,7 +248,7 @@ def shp_boxcenxtr(x, y, z, cx= False, cy=False, cz=False,
     
     return shp_box
 
-# same as shp_bxcen but with a filleted dimension
+# same as shp_boxcen but with a filleted dimension
 def shp_boxcenfill (x, y, z, fillrad,
                    fx=False, fy=False, fz=True,
                    cx= False, cy=False, cz=False, pos=V0):
@@ -269,6 +269,28 @@ def shp_boxcenfill (x, y, z, fillrad,
             edg_list.append(edge)
     shp_boxfill = shp_box.makeFillet(fillrad, edg_list)
     return (shp_boxfill)
+
+# same as shp_boxcen but with a chamfered dimension
+def shp_boxcenchmf (x, y, z, chmfrad,
+                   fx=False, fy=False, fz=True,
+                   cx= False, cy=False, cz=False, pos=V0):
+
+    shp_box = shp_boxcen (x=x, y=y, z=z, cx=cx, cy=cy, cz=cz, pos=pos)
+    edg_list = []
+    for ind, edge in enumerate(shp_box.Edges):
+        vertex0 = edge.Vertexes[0]
+        vertex1 = edge.Vertexes[1]
+        p0 = vertex0.Point
+        p1 = vertex1.Point
+        vdif = p1 - p0
+        if vdif.x != 0 and fx==True:
+            edg_list.append(edge)
+        elif vdif.y != 0 and fy==True:
+            edg_list.append(edge)
+        elif vdif.z != 0 and fz==True:
+            edg_list.append(edge)
+    shp_boxchmf = shp_box.makeChamfer(chmfrad, edg_list)
+    return (shp_boxchmf)
 
 # Makes a box with width, depth, heigth.
 # Originally:
@@ -345,15 +367,16 @@ def shp_face_lgrail (rail_w, rail_h, axis_l = 'x', axis_b = '-z'):
     return (shp_face_rail)
 
 
-# def shp_face_rail 
-# adds a shape of the profile (face) of a linear guide rail, the dent is just
-# rough, to be able to see that it is a profile
+# ------------------------ def shp_face_rail 
+# adds a shape of the profile (face) of a rail
 # Arguments:
 # rail_w : width of the rail
 # rail_ws : small width of the rail
 # rail_h : height of the rail
 # rail_h_plus : above the rail can be some height to attach, o whatever
 #               it is not inluded on rail_h
+# offs_w : offset on the width, to make the hole
+# offs_h : offset on the heigth, to make the hole
 # axis_l : the axis where the lenght of the rail is: 'x', 'y', 'z'
 # axis_b : the axis where the base of the rail is poingint:
 #           'x', 'y', 'z', '-x', '-y', '-z',
@@ -1492,6 +1515,87 @@ def edgeonaxis (edge, axis):
             return False
     else:
         return False
+
+
+#  --- Fillet or chamfer edges of a certain length, on a certain axis
+#  --- and a certain coordinate
+#  For a shape
+#   shp:   is the original shape we want to fillet or chamfer
+#   fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+#   e_len: the length of the edges that we want to fillet or chamfer
+#   radius: the radius of the fillet or chamfer
+#   axis  : the axis where the fillet will be
+#   xpos_chk,ypos_chk,zpos_chk  :  if the position will be checked
+#   if axis = 'x', x_pos_check will not make sense
+#   xpos,ypos,zpos  : the position
+
+def shp_filletchamfer (shp, e_len, fillet = 1, radius=1, axis='x', 
+                   xpos_chk = 0, ypos_chk = 0, zpos_chk=0,
+                   xpos = 0, ypos = 0, zpos = 0
+                    ):
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
+    edgelist = []
+    #logger.debug('filletchamfer: elen: %s',  e_len)
+    for edge_ind, edge in enumerate(shp.Edges):
+        #logger.debug('filletchamfer: edge Length: %s ind %s',
+        #             edge.Length, edge_ind)
+        # using equ because float number can be not exactly the same
+        if equ(edge.Length, e_len): # same length
+            if edgeonaxis (edge, axis) == True:
+                #logger.debug('edgeonaxis: Length: %s' % str(edge.Length))
+                v0 = edge.Vertexes[0]
+                v1 = edge.Vertexes[1]
+                if axis == 'x' or axis == '-x':
+                    if ypos_chk == True and zpos_chk == True:
+                        # its on the axis, so just checking one edge
+                        if equ(v0.Y, ypos) and equ(v0.Z, zpos):
+                            edgelist.append(edge)
+                    elif ypos_chk == True:
+                        if equ(v0.Y, ypos):
+                            edgelist.append(edge)
+                    elif zpos_chk == True:
+                        if equ(v0.Z, zpos):
+                            edgelist.append(edge)
+                    else: # all the edges on axis x with e_len are appended
+                        edgelist.append(edge)
+                elif axis == 'y' or axis == '-y':
+                    if xpos_chk == True and zpos_chk == True:
+                        if equ(v0.X, xpos) and equ(v0.Z, zpos):
+                            edgelist.append(edge)
+                    elif xpos_chk == True:
+                        if equ(v0.X, xpos):
+                            edgelist.append(edge)
+                    elif zpos_chk == True:
+                        if equ(v0.Z, zpos):
+                            edgelist.append(edge)
+                    else:
+                        edgelist.append(edge)
+                elif axis == 'z' or axis == '-z':
+                    if xpos_chk == True and ypos_chk == True:
+                        if equ(v0.X, ypos) and equ(v0.Y, ypos):
+                            edgelist.append(edge)
+                    elif xpos_chk == True:
+                        if equ(v0.X, xpos):
+                            edgelist.append(edge)
+                    elif ypos_chk == True:
+                        if equ(v0.Y, ypos):
+                            edgelist.append(edge)
+                    else:
+                        edgelist.append(edge)
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            logger.debug('%', str(edgelist))
+            shp_fillcham = shp.makeFillet(radius, edgelist)
+        else:
+            shp_fillcham = shp.makeChamfer(radius, edgelist)
+        doc.recompute()
+        return shp_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
 
 
 

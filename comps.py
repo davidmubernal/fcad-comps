@@ -1172,7 +1172,7 @@ class LinBearingClone (LinBearing):
         if namadd == 1:
             self.name       = h_bearing.name + "_" + name
         else:
-            self.name       = h_bearing.name
+            self.name       = name
         self.axis       = h_bearing.axis
         self.h_disp     = h_bearing.h_disp
         self.r_tol      = h_bearing.r_tol

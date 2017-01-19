@@ -181,18 +181,24 @@ WASH_D9021_T  = {
 
 # Inner diameter
 BEAR_DI = {
-            608:  8.0,
-            624:  4.0
+            603:  3.0,
+            673:  3.0,
+            624:  4.0,
+            608:  8.0
           }
 
 # Outer diameter
 BEAR_DO = {
-            608: 22.0,
-            624: 13.0
+            603:  9.0,
+            673:  6.0,
+            624: 13.0,
+            608: 22.0
           }
 
 # Thickness (Height)
 BEAR_T  = {
+            603:  5.0,
+            673:  2.5,
             608:  7.0,
             624:  5.0
           }
@@ -237,7 +243,8 @@ class HollowCyl(object):
 # this is a name list from botton to top that shows the component
 # order to make an idler pulley out of washers and bearings
 
-idlepull_name_list = [
+#idlepull_name_list = [
+idpull4_nlist = [
             HollowCyl (part = 'washer', size = 6, kind= 'large'),
             HollowCyl (part = 'washer', size = 4, kind= 'regular'),
             HollowCyl (part = 'bearing', size = 624), # 624ZZ
@@ -245,6 +252,20 @@ idlepull_name_list = [
             HollowCyl (part = 'washer', size = 6, kind= 'large'),
             HollowCyl (part = 'washer', size = 4, kind= 'large')
               ]
+
+idpull3_nlist = [
+            HollowCyl (part = 'washer', size = 4, kind= 'large'),
+            HollowCyl (part = 'washer', size = 3, kind= 'regular'),
+            HollowCyl (part = 'bearing', size = 603), # 603ZZ
+            HollowCyl (part = 'washer', size = 3, kind= 'regular'),
+            HollowCyl (part = 'washer', size = 4, kind= 'large'),
+            HollowCyl (part = 'washer', size = 3, kind= 'large')
+              ]
+
+# idler pulley list will be different depending on the size of the bolt that
+# holds them
+
+idpull_dict = { 3: idpull3_nlist, 4: idpull4_nlist }
 
 # from an idlepull_name_list, returns the maximum diameter of its bearings
 
