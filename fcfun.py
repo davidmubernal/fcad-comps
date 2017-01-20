@@ -712,6 +712,56 @@ def addCylHolePos (r_out, r_in, h, name, normal = VZ, pos = V0):
 
     return cyl_hole
 
+
+# ------------------- def shp_stadium_wire
+# Creates a wire (shape), that is a rectangle with semicircles at a pair of
+# opposite sides. Also called discorectangle
+# it will be centered on XY
+#                              Y
+#              _____ .. r      |_X
+#             (_____)--
+#              :   :
+#              :.l.:
+#
+# l: length of the parallels
+# r: Radius of the semicircles
+# axis_rect: 'x' the parallels are on axis X (as in the drawing)
+#             'y' the parallels are on axis Y
+# pos_z: position on the Z axis
+
+def shp_stadium_wire (l, r, axis_rect='x', pos_z=0):
+
+    # considering axis_rect == 'x', if not, later it is rotated
+    # center points of the semicircles:
+    cen   = FreeCAD.Vector (l/2., 0, pos_z)
+    cen_n = FreeCAD.Vector (-l/2., 0, pos_z)
+    arch   = Part.makeCircle (r, cen, VZ, 270, 90)
+    arch_n = Part.makeCircle (r, cen_n, VZ, 90, 270)
+    # points of the lines
+    p_x_y   = FreeCAD.Vector(l/2.,r, pos_z)
+    p_nx_y  = FreeCAD.Vector(-l/2.,r, pos_z)
+    p_x_ny   = FreeCAD.Vector(l/2.,-r, pos_z)
+    p_nx_ny  = FreeCAD.Vector(-l/2.,-r, pos_z)
+    lin_y =  Part.Line(p_x_y, p_nx_y).toShape() 
+    lin_ny = Part.Line(p_nx_ny, p_x_ny).toShape() 
+
+    list_elem = [arch, lin_y, arch_n, lin_ny]
+    if axis_rect == 'y':
+        for elem in list_elem:
+            elem.rotate(V0,VZ,90)
+
+    wire_stadium = Part.Wire (list_elem)
+
+    Part.show(wire_stadium)
+    return (wire_stadium)
+
+# same as shp_stadium_wire, but returns a face
+def shp_stadium_face (l, r, axis_rect='x', pos_z=0):
+
+    shpStadiumWire = shp_stadium_wire (l, r, axis_rect, pos_z)
+    shpStadiumFace = Part.Face (shpStadiumWire)
+    return shpStadiumFace
+
 # ------------------- def shpRndRectWire
 # Creates a wire (shape), that is a rectangle with rounded edges.
 # if r== 0, it will be a rectangle
@@ -854,8 +904,16 @@ def shpRndRectWire (x=1, y=1, r= 0.5, zpos = 0):
     return wire_rndrect
 
 
+# same as shpRndRectWire, but returns a face
+def shp_rndrect_face (x, y, r=0.5, pos_z=0):
+
+    shp_RndRectWire = shpRndRectWire (x, y, r=r, zpos= pos_z)
+    shpRndRectFace = Part.Face (shp_RndRectWire)
+    return shpRndRectFace
 
 #doc = FreeCAD.newDocument()
+
+#wire1 = shp_stadium_wire (4, 2, axis_rect='y', pos_z=2)
 
 #wire1 = shpRndRectWire (x=10, y=12,  r=0)
 
