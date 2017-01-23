@@ -18,6 +18,7 @@ import os
 import Draft;
 import DraftGeomUtils;
 import DraftVecUtils;
+import math;
 #import copy;
 #import Mesh;
 
@@ -1499,6 +1500,195 @@ class T8NutHousing (object):
         t8nuthouse.Tool = nuthouseholes
 
         self.fco = t8nuthouse  # the FreeCad Object
+
+
+
+# ---------- class MisumiMinLeadscrewNut ----------------------
+# L = lead                             :.flan_cut.
+#                                      :         :
+#           __ ..... flan_d            : _______ :
+#          |..|                        :/       \:
+#          |..| ---- bolt_pos_d        | O     O |  bolt_d
+#    ______|  | .... sh_ext_d          |   ___   |
+#   |......|..| ....                   |  /   \  |
+#   |......|..| .... T (thread_d)      | |     | |
+#   |______|  |                        |  \___/  |
+#   :      |..|                        |         |
+#   :      |..|                        | O     O |
+#   :      |__|......                  .\ _____ /.
+#   :      :  :                       .     :     .
+#   :      :  :                      .      :      .
+#   :      :  :                     .       :       .
+#   :      :  :                    .        :        .
+#   :      :  :                             :bolt_ang .
+#   :      :  :
+#   :      :  +------ this is the zero. Plane YZ=0
+#   :      :  :
+#   :      :..:
+#   :       + flan_h
+#   :...H.....:
+#
+#
+#             Z
+#             :
+#             :                           this is rounded
+#           __:                        : _______ :
+#          |..|   Y                    :/       \:
+#          |..|  /                     | O     O |
+#    ______|  | /                      |   ___   | This is flat
+#   |      |  |/                       |  /   \  |
+#  -|------|--|----- nutaxis (X)       | |  x--|-|------ Y
+#   |______|  |                        |  \_:_/  |
+#          |..|                        |    :    |
+#          |..|                        | O  :  O |
+#          |__|                         \ __:__ /
+#             :                             :
+#             :                             :
+#             + Zero. Plane YZ=0            -Z roundflan_axis (-Z) (also (Z)
+#             :
+#             -Z (roundflan_axis
+#
+# Parameters
+# - thread_d: thread diameter
+# - sh_ext_d: exterior diameter of the nut shaft
+# - flan_d :  diameter of flange
+# - H :       height (or length) of the nut
+# - flan_cut: Cut of the flange (compact nut)
+# - bolt_pos_d: Diameter of the position of the bolt holes
+# - bolt_d: Diameter of the position of the bolt holes
+# - bolt_ang: Angle of the position of the bolts, referred to the vertical
+
+
+class MisMinLScrNut (object):
+
+    def __init__ (self, thread_d, sh_ext_d,
+                  flan_d, H, flan_h, flan_cut, 
+                  bolt_pos_d, bolt_d, bolt_ang = 30,
+                  nutaxis='x',
+                  cutaxis = '-z',
+                  name='lscrew_nut'):
+
+        self.thread_d = thread_d
+        self.sh_ext_d = sh_ext_d
+        self.flan_d = flan_d
+        self.H = H
+        self.flan_h = flan_h
+        self.flan_cut = flan_cut
+        self.bolt_pos_d = bolt_pos_d 
+        self.bolt_d = bolt_d
+        self.bolt_ang = bolt_ang
+        self.bolt_ang_rad = math.radians(bolt_ang)
+        self.nutaxis = nutaxis
+        self.cutaxis = cutaxis
+
+        doc = FreeCAD.ActiveDocument
+
+        # Flange Cylinder
+        flange_cyl = fcfun.shp_cyl (r= flan_d/2.,
+                                    h= flan_h,
+                                    normal = VXN, 
+                                    pos = V0)
+        #Part.show(flange_cyl)
+        # Box that will make the intersection with the flange to make the cut
+        # Since the nut axis is on X, that will be the flan_h
+        # the Cut is on Y
+        flange_box = fcfun.shp_boxcen (x = flan_h,
+                                       y = flan_cut,
+                                       z = flan_d,
+                                       cx=0, cy=1, cz=1,
+                                       pos = FreeCAD.Vector(-flan_h,0,0))
+        #Part.show(flange_box)
+        flange_cut = flange_cyl.common(flange_box)
+        #Part.show(flange_cut)
+        # Nut Cylinder
+        nut_cyl = fcfun.shp_cyl (r = sh_ext_d/2,
+                                 h = H,
+                                 normal = VXN, 
+                                 pos = V0)
+        nut_shape = nut_cyl.fuse(flange_cut)
+        # ----------------- Hole for the thread
+        thread_hole = fcfun.shp_cylcenxtr (
+                                 r = thread_d/2,
+                                 h = H ,
+                                 normal = VXN, 
+                                 ch = 0,
+                                 xtr_top = 1,
+                                 xtr_bot = 1,
+                                 pos = V0)
+
+        #  -------- Holes in the flange for the bolts
+        # Position on Axis Z, It will be rotated 30 degrees
+        bolthole_pos_z = FreeCAD.Vector(0,0,bolt_pos_d/2.)
+        # the 4 angles that rotate bolthole_pos_z :
+        angle = self.bolt_ang_rad
+        rot_angles = [angle, -angle, angle + math.pi, -angle + math.pi]
+        bolthole_list = []
+        for angle_i in rot_angles:
+            bolthole_pos_i = DraftVecUtils.rotate(bolthole_pos_z,
+                                                    angle_i,
+                                                    VX)
+            bolthole_i = fcfun.shp_cylcenxtr (r=bolt_d/2.,
+                                              h=flan_h,
+                                              normal= VXN,
+                                              ch=0,
+                                              xtr_top=1,
+                                              xtr_bot=1,
+                                              pos = bolthole_pos_i)
+            #Part.show(bolthole_i)
+            bolthole_list.append(bolthole_i) 
+
+        # fusion of holes
+        nutholes = thread_hole.multiFuse(bolthole_list)
+
+        # rotation of the nut and the holes before the cut
+        vrot = fcfun.calc_rot(fcfun.getvecofname(nutaxis),
+                              fcfun.getvecofname(cutaxis))
+        nutholes.Placement.Rotation = vrot
+        nut_shape.Placement.Rotation = vrot
+        shp_lscrewnut = nut_shape.cut(nutholes)
+        shp_lscrewnut = shp_lscrewnut.removeSplitter()
+        #Part.show(shp_lscrewnut)
+
+        # Creation of the FreeCAD Object
+
+        fco_lscrewnut = doc.addObject("Part::Feature", name)
+        fco_lscrewnut.Shape = shp_lscrewnut
+        self.fco = fco_lscrewnut
+        self.shp = shp_lscrewnut
+        
+
+        
+
+# creates a misumi miniature leadscrew nut using a dictionary from kcomp
+
+
+def get_mis_min_lscrnut (nutdict,
+                         nutaxis='x',
+                         cutaxis='-z',
+                         name='lscrew_nut'):
+
+    h_lscrew = MisMinLScrNut (
+                              thread_d = nutdict['T'],
+                              sh_ext_d = nutdict['sh_ext_d'],
+                              flan_d   = nutdict['flan_d'],
+                              H        = nutdict['H'],
+                              flan_h   = nutdict['flan_h'],
+                              flan_cut = nutdict['flan_cut'], 
+                              bolt_pos_d = nutdict['bolt_pos_d'],
+                              bolt_d     = nutdict['bolt_d'],
+                              bolt_ang   = nutdict['bolt_ang'],
+                              nutaxis    = nutaxis,
+                              cutaxis    = cutaxis,
+                              name       = name)
+
+    return h_lscrew
+
+
+get_mis_min_lscrnut (kcomp.MIS_LSCRNUT_C_L1_T4, 
+                     nutaxis = 'y',
+                     cutaxis = '-x',
+                     name = 'lscrew_nut') 
+
 
 #  -------------------- FlexCoupling
 # Creates a flexible Shaft Coupling

@@ -748,6 +748,7 @@ def shp_stadium_wire (l, r, axis_rect='x', pos_z=0):
     list_elem = [arch, lin_y, arch_n, lin_ny]
     if axis_rect == 'y':
         for elem in list_elem:
+            # arguments of rotate: rotation center, rotation axis, angle
             elem.rotate(V0,VZ,90)
 
     wire_stadium = Part.Wire (list_elem)

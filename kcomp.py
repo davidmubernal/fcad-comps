@@ -418,6 +418,85 @@ T8N_L           = 15.0
 T8N_FLAN_L      = 3.5
 T8N_SHAFT_OUT   = 1.5
 
+
+
+# ---------- CompactLeadScrewNut ----------------------
+# L = lead                             :.flan_cut.
+#                                      :         :
+#           __ ..... flan_d            : _______ :
+#          |..|                        :/       \:
+#          |..| ---- bolt_pos_d        | O     O |  bolt_d
+#    ______|  | .... sh_ext_d          |   ___   |
+#   |......|..| ....                   |  /   \  | 
+#   |......|..| .... T (thread_d)      | |     | |
+#   |______|  |                        |  \___/  |
+#   :      |..|                        |         |
+#   :      |..|                        | O     O |
+#   :      |__|......                  .\ _____ /.                       
+#   :      :  :                       .     :     .
+#   :      :  :                      .      :      .
+#   :      :  :                     .       :       .
+#   :      :  :                    .        :        .
+#   :      :  :                             :bolt_ang .
+#   :      :  :
+#   :      :  +------ this is the zero. Plane YZ=0
+#   :      :  :
+#   :      :..:
+#   :       + flan_h
+#   :...H.....:
+#
+# Misumi Miniature Lead Screw. compact nut: MSSR
+#
+MIS_LSCRNUT_C_L1_T4 = {
+           'L'         :  1. ,  # lead
+           'T'         :  4. ,  # thread diameter
+           'sh_ext_d'  : 10. ,  # exterior diameter of the nut shaft
+           'flan_d'    : 23. ,  # diameter of flange
+           'H'         : 11.5,  # height (or length) of the nut
+           'flan_h'    :  3.5,  # height (or length) of the flange
+           'flan_cut'  : 15. ,  # Cut of the flange (compact nut)
+           'bolt_pos_d': 15. ,  # Diameter of the position of the bolt holes
+           'bolt_d'    :  2.9,  # Diameter of the bolt holes
+           'bolt_ang'  : 30.    # Angle of the bolts, referred to the vertical
+                       }
+
+MIS_LSCRNUT_C_L1_T6 = {
+           'L'         :  1. ,  # lead
+           'T'         :  6. ,  # thread
+           'sh_ext_d'  : 12. ,  # exterior diameter of the nut shaft
+           'flan_d'    : 26. ,  # diameter of flange
+           'H'         : 14.5,  # height (or length) of the nut
+           'flan_h'    :  3.5,  # height (or length) of the flange
+           'flan_cut'  : 17. ,  # Cut of the flange (compact nut)
+           'bolt_pos_d': 18. ,  # Diameter of the position of the bolt holes
+           'bolt_d'    :  3.4,  # Diameter of the position of the bolt holes
+           'bolt_ang'  : 30.    # Angle of the bolts, referred to the vertical
+                       }
+
+MIS_LSCRNUT_C_L1_T8 = {
+           'L'         :  1. ,  # lead
+           'T'         :  8. ,  # thread
+           'sh_ext_d'  : 14. ,  # exterior diameter of the nut shaft
+           'flan_d'    : 29. ,  # diameter of flange
+           'H'         : 18. ,  # height (or length) of the nut
+           'flan_h'    :  4. ,  # height (or length) of the flange
+           'flan_cut'  : 18. ,  # Cut of the flange (compact nut)
+           'bolt_pos_d': 21. ,  # Diameter of the position of the bolt holes
+           'bolt_d'    :  3.4,  # Diameter of the position of the bolt holes
+           'bolt_ang'  : 30.    # Angle of the bolts, referred to the vertical
+                       }
+
+# MIS: Misumi
+# LSCRNUT: LeadScrew Nue
+# C: Compact
+# Index: Thread diameter
+MIS_LSCRNUT_C  = {
+              4: MIS_LSCRNUT_C_L1_T4,
+              6: MIS_LSCRNUT_C_L1_T6,
+              8: MIS_LSCRNUT_C_L1_T8
+                 }
+
+
 # ------------------------- T8 Nut Housing ---------------------
 
 # Box dimensions:
