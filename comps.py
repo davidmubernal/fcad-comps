@@ -1538,7 +1538,7 @@ class T8NutHousing (object):
 #    ______|  | /                      |   ___   | This is flat
 #   |      |  |/                       |  /   \  |
 #  -|------|--|----- nutaxis (X)       | |  x--|-|------ Y
-#   |______|  |                        |  \_:_/  |
+#   |______|  |                        |  \_:_/  |  cutaxis (z)
 #          |..|                        |    :    |
 #          |..|                        | O  :  O |
 #          |__|                         \ __:__ /
@@ -1557,6 +1557,39 @@ class T8NutHousing (object):
 # - bolt_pos_d: Diameter of the position of the bolt holes
 # - bolt_d: Diameter of the position of the bolt holes
 # - bolt_ang: Angle of the position of the bolts, referred to the vertical
+#             in degrees
+# - nutaxis: 'x', '-x', 'y', '-y', 'z', '-z': axis of the leadscrew.
+#             Positive or negative will change the orientation:
+#                                   ___
+#               nutaxis = 'z'      |   |
+#                     :          __|   |__
+#                 ____:____ . . |_________| . . .  z = 0
+#                |__     __|         :
+#                   |   |            :
+#                   |___|          nutaxis = '-z'
+#
+#
+# - cutaxis: 'x', 'y', 'z' : axis parallel the cut of the flange.
+#            it doesn't matter positive or negative, because it is symmetrical
+#            But it would not be an error
+#
+#             Z
+#             :
+#             :
+#           / : \
+#          |  :  |   cutaxis = 'z'
+#          |  :  |
+#          |  :..|...... Y
+#          |     |
+#          |     |
+#          |     |
+#           \ _ /
+#            
+#            
+# - axis_pos: position of the nut along its axis. The position is independent
+#             on the sign of nutaxis. So the sign it is not referenced to
+#             the sign of nutaxis
+
 
 
 class MisMinLScrNut (object):
@@ -1566,7 +1599,8 @@ class MisMinLScrNut (object):
                   bolt_pos_d, bolt_d, bolt_ang = 30,
                   nutaxis='x',
                   cutaxis = '-z',
-                  name='lscrew_nut'):
+                  name='lscrew_nut',
+                  axis_pos = 0):
 
         self.thread_d = thread_d
         self.sh_ext_d = sh_ext_d
@@ -1581,22 +1615,32 @@ class MisMinLScrNut (object):
         self.nutaxis = nutaxis
         self.cutaxis = cutaxis
 
+        # to make it independent on the orientation of the nut
+        if nutaxis == '-x' or nutaxis == '-y' or nutaxis == '-z':
+            ax_pos_sign = - axis_pos
+        else:
+            ax_pos_sign = axis_pos
+
+        self.ax_pos_sign = ax_pos_sign
+
         doc = FreeCAD.ActiveDocument
+        basepos = FreeCAD.Vector(ax_pos_sign, 0,0)
 
         # Flange Cylinder
         flange_cyl = fcfun.shp_cyl (r= flan_d/2.,
                                     h= flan_h,
                                     normal = VXN, 
-                                    pos = V0)
+                                    pos = basepos)
         #Part.show(flange_cyl)
         # Box that will make the intersection with the flange to make the cut
         # Since the nut axis is on X, that will be the flan_h
         # the Cut is on Y
-        flange_box = fcfun.shp_boxcen (x = flan_h,
-                                       y = flan_cut,
-                                       z = flan_d,
-                                       cx=0, cy=1, cz=1,
-                                       pos = FreeCAD.Vector(-flan_h,0,0))
+        flange_box = fcfun.shp_boxcen (
+                               x = flan_h,
+                               y = flan_cut,
+                               z = flan_d,
+                               cx=0, cy=1, cz=1,
+                               pos = FreeCAD.Vector(-flan_h+ax_pos_sign,0,0))
         #Part.show(flange_box)
         flange_cut = flange_cyl.common(flange_box)
         #Part.show(flange_cut)
@@ -1604,7 +1648,7 @@ class MisMinLScrNut (object):
         nut_cyl = fcfun.shp_cyl (r = sh_ext_d/2,
                                  h = H,
                                  normal = VXN, 
-                                 pos = V0)
+                                 pos = basepos)
         nut_shape = nut_cyl.fuse(flange_cut)
         # ----------------- Hole for the thread
         thread_hole = fcfun.shp_cylcenxtr (
@@ -1614,7 +1658,7 @@ class MisMinLScrNut (object):
                                  ch = 0,
                                  xtr_top = 1,
                                  xtr_bot = 1,
-                                 pos = V0)
+                                 pos = basepos)
 
         #  -------- Holes in the flange for the bolts
         # Position on Axis Z, It will be rotated 30 degrees
@@ -1633,7 +1677,7 @@ class MisMinLScrNut (object):
                                               ch=0,
                                               xtr_top=1,
                                               xtr_bot=1,
-                                              pos = bolthole_pos_i)
+                                              pos = bolthole_pos_i + basepos)
             #Part.show(bolthole_i)
             bolthole_list.append(bolthole_i) 
 
@@ -1665,7 +1709,8 @@ class MisMinLScrNut (object):
 def get_mis_min_lscrnut (nutdict,
                          nutaxis='x',
                          cutaxis='-z',
-                         name='lscrew_nut'):
+                         name='lscrew_nut',
+                         axis_pos = 0):
 
     h_lscrew = MisMinLScrNut (
                               thread_d = nutdict['T'],
@@ -1679,15 +1724,17 @@ def get_mis_min_lscrnut (nutdict,
                               bolt_ang   = nutdict['bolt_ang'],
                               nutaxis    = nutaxis,
                               cutaxis    = cutaxis,
-                              name       = name)
+                              name       = name,
+                              axis_pos   = axis_pos)
 
     return h_lscrew
 
 
-get_mis_min_lscrnut (kcomp.MIS_LSCRNUT_C_L1_T4, 
-                     nutaxis = 'y',
-                     cutaxis = '-x',
-                     name = 'lscrew_nut') 
+#get_mis_min_lscrnut (kcomp.MIS_LSCRNUT_C_L1_T4, 
+#                     nutaxis = 'y',
+#                     cutaxis = 'x',
+#                     name = 'lscrew_nut',
+#                     axis_pos = 10) 
 
 
 #  -------------------- FlexCoupling

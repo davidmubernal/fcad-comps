@@ -74,6 +74,10 @@ V0ROT = FreeCAD.Rotation(VZ,0)
 
 EQUAL_TOL = 0.001 # less than a micron is the same
 
+
+COS30 = 0.866   
+COS45 = 0.707   
+
 # to compare numbers that they are almost the same, but because of 
 # floating point calculations they are not exactly the same
 def equ (x,y):
@@ -1008,6 +1012,158 @@ def wire_sim_xy (vecList):
 # ------------------- end def wire_sim_xy
 
 
+def regpolygon_vecl (n_sides, radius, x_angle=0):
+
+    """
+    calculates the vertexes of a regular polygon. Returns a list of 
+    FreeCAD vectors with the vertexes. The first vertex will be repeated
+    at the end, this is needed to close the wire to make the shape
+    The polygon will be on axis XY (z=0). 
+
+    Args:
+        n_sides: number of sides of the polygon
+        radius: Circumradius of the polygon
+        x_angle: if zero, the first vertex will be on axis x (y=0)
+                 if x_angle != 0, it will rotated some angle
+
+    Returns:
+        a list of FreeCAD.Vector of the vertexes
+
+    """
+
+    v = FreeCAD.Vector(radius, 0, 0)
+    if x_angle != 0:
+        # rotate the polygon
+        x_angle_rad = math.radians(x_angle)
+        # uses radians, rotates around Z axis
+        # It seems that the angle of the function is wrong, changing the sign
+        v = DraftVecUtils.rotate2D(v,-x_angle_rad)
+    vec_vertex_list = [v]
+    # divide the 360 degrees by the number of sides
+    polygon_angle = 2*math.pi / n_sides
+    for i in xrange(n_sides):
+        v = DraftVecUtils.rotate2D(v,polygon_angle)
+        # the first vertex will be also the last one
+        vec_vertex_list.append(v)
+    return (vec_vertex_list)
+
+
+def shp_regpolygon_face (n_sides, radius,
+                         n_axis='z', v_axis='x',
+                         edge_rot=0, pos=V0):
+    """
+    makes the shape of a face of a regular polygon
+
+    Args:
+        n_sides: number of sides of the polygon
+        radius: Circumradius of the polygon
+        n_axis: Axis of the normal: 'x', '-x', 'y', '-y', 'z', '-z'
+        v_axis : perpendicular to n_axis, pointing to the first vertex,
+                 unless, x_angle is != 0. the vertex will be rotated
+                 x_angle degrees for v_axis
+        x_angle: if zero, the first vertex will be on axis v_axis 
+                 if x_angle != 0, it will rotated some angle
+        pos:  FreeCAD.Vector of the position of the center. Default (0,0,0)
+
+    Returns:
+        a shape (TopoShape) of the face
+
+    """
+
+    rpolygon_vlist = regpolygon_vecl (n_sides, radius, x_angle=edge_rot)
+    rpolygon_wire = Part.makePolygon(rpolygon_vlist)
+    vrot = calc_rot_z(getvecofname(n_axis), getvecofname(v_axis))
+    rpolygon_wire.Placement.Rotation = vrot
+    rpolygon_wire.Placement.Base = pos
+    shp_rpolygon_face = Part.Face(rpolygon_wire)
+    return shp_rpolygon_face
+    
+
+
+def shp_regprism (n_sides, radius, length,
+                    n_axis='z', v_axis='x',
+                    centered = 0,
+                    edge_rot=0, pos=V0):
+    """
+    makes a shape of a face of a regular polygon
+
+    Args:
+        n_sides: number of sides of the polygon
+        radius: Circumradius of the polygon
+        length: length of the polygon
+        n_axis: Axis of the normal: 'x', '-x', 'y', '-y', 'z', '-z'
+        v_axis : perpendicular to n_axis, pointing to the first vertex,
+                 unless, x_angle is != 0. the vertex will be rotated
+                 x_angle degrees for v_axis
+        centered: 1 if the extrusion is centered on pos (symmetrical)
+        x_angle: if zero, the first vertex will be on axis v_axis 
+                 if x_angle != 0, it will rotated some angle
+        pos:  FreeCAD.Vector of the position of the center. Default (0,0,0)
+
+    Returns:
+        a shape (TopoShape) of the regular prism
+
+    """
+
+    shp_rpolygon_face = shp_regpolygon_face (n_sides,
+                                             radius,
+                                             n_axis = n_axis,
+                                             v_axis = v_axis,
+                                             edge_rot=edge_rot,
+                                             pos = pos)
+    vec_n_axis = getfcvecofname(n_axis)
+    shp_rprism = shp_extrud_face(shp_rpolygon_face, length, vec_n_axis,centered)
+    return shp_rprism
+
+
+def shp_regprism_xtr (n_sides, radius, length,
+                    n_axis='z', v_axis='x',
+                    centered = 0,
+                    xtr_top = 0,
+                    xtr_bot = 0,
+                    edge_rot=0, pos=V0):
+    """
+    makes a shape of a face of a regular polygon.
+    Includes the posibility to add extra length on top and bottom.
+    On top is easy, but at the bottom, the reference will be no counting that
+    extra lenght added. This is useful to make boolean difference
+
+    Args:
+        n_sides: number of sides of the polygon
+        radius: Circumradius of the polygon
+        length: length of the polygon
+        n_axis: Axis of the normal: 'x', '-x', 'y', '-y', 'z', '-z'
+        v_axis : perpendicular to n_axis, pointing to the first vertex,
+                 unless, x_angle is != 0. the vertex will be rotated
+                 x_angle degrees for v_axis
+        centered: 1 if the extrusion is centered on pos (symmetrical)
+        xtr_top: add an extra lenght on top. If 0, nothing added
+        xtr_bot: add an extra lenght at the bottom. If 0, nothing added
+        x_angle: if zero, the first vertex will be on axis v_axis 
+                 if x_angle != 0, it will rotated some angle
+        pos:  FreeCAD.Vector of the position of the center. Default (0,0,0)
+
+    Returns:
+        a shape (TopoShape) of the regular prism
+
+    """
+
+    vec_n_axis = getfcvecofname(n_axis)
+    if xtr_bot > 0:
+        # bring back the extra distance
+        pos = pos - DraftVecUtils.scaleTo(vec_n_axis,xtr_bot)
+
+    shp_rpolygon_face = shp_regpolygon_face (n_sides,
+                                             radius,
+                                             n_axis = n_axis,
+                                             v_axis = v_axis,
+                                             edge_rot=edge_rot,
+                                             pos = pos)
+    totlen = length + xtr_bot + xtr_top
+    shp_rprism = shp_extrud_face(shp_rpolygon_face,
+                                 totlen, vec_n_axis,centered)
+    return shp_rprism
+
 # ------------------ shp_extrud_face
 # extrudes a face on any plane
 # returns a shape
@@ -1028,7 +1184,7 @@ def shp_extrud_face (face, length, vec_extr_axis, centered=0):
 
     if centered == 1:
         #we have to move it back half the lenght of the extrusion
-        # either this or DrafVecUtils.neg( )
+        # either this or DraftVecUtils.neg( )
         pos = V0 - DraftVecUtils.scaleTo(vec_extr_axis,length/2.)
         face.Placement.Base = pos
  
@@ -1082,7 +1238,7 @@ def shp_extrud_face_rot (face, vec_facenormal, vec_edgx, length, centered=0,
 
     if centered == 1:
         #we have to move it back half the lenght of the extrusion
-        # either this or DrafVecUtils.neg( )
+        # either this or DraftVecUtils.neg( )
         pos = V0 - DraftVecUtils.scaleTo(vec_extr_axis,length/2.)
         face.Placement.Base = pos
  
@@ -1097,28 +1253,31 @@ def shp_extrud_face_rot (face, vec_facenormal, vec_edgx, length, centered=0,
     return (shp_extrusion)
 
 
-"""  -------------------- addBolt  ---------------------------------
-   the hole for the bolt shank and the head or the nut
-   Tolerances have to be included
-   r_shank: Radius of the shank (tolerance included)
-   l_bolt: total length of the bolt: head & shank
-   r_head: radius of the head (tolerance included)
-   l_head: length of the head
-   hex_head: inidicates if the head is hexagonal or rounded
-              1: hexagonal
-              0: rounded
-   h_layer3d: height of the layer for printing, if 0, means that the support
-              is not needed
-   extra: 1 if you want 1 mm on top and botton to avoid cutting on the same
-               plane pieces after making cuts (boolean difference) 
-   support: 1 if you want to include a triangle between the shank and the head
-              to support the shank and not building the head on the air
-              using kcomp.LAYER3D_H
-   headdown: 1 if the head is down. 0 if it is up
-"""
+
 
 def addBolt (r_shank, l_bolt, r_head, l_head,
              hex_head = 0, extra=1, support=1, headdown = 1, name="bolt"):
+    """ 
+    Creates the hole for the bolt shank and the head or the nut
+    Tolerances have to be included
+
+    Args:
+        r_shank: Radius of the shank (tolerance included)
+        l_bolt: total length of the bolt: head & shank
+        r_head: radius of the head (tolerance included)
+        l_head: length of the head
+        hex_head: inidicates if the head is hexagonal or rounded
+              1: hexagonal
+              0: rounded
+        h_layer3d: height of the layer for printing, if 0, means that the
+                   support is not needed
+        extra: 1 if you want 1 mm on top and botton to avoid cutting on the same
+               plane pieces after making cuts (boolean difference) 
+        support: 1 if you want to include a triangle between the shank and the
+                 head to support the shank and not building the head on the
+                 air using kcomp.LAYER3D_H
+        headdown: 1 if the head is down. 0 if it is up
+    """
 
     # we have to bring the active document
     doc = FreeCAD.ActiveDocument
@@ -1207,29 +1366,170 @@ def addBolt (r_shank, l_bolt, r_head, l_head,
     bolt.Tool = head
 """
 
-"""  -------------------- addBoltNut_hole  ------------------------------
-   the hole for the bolt shank, the head and the nut. The bolt head will be
-   at the botton, and the nut will be on top
-   Tolerances have to be already included in the argments values
-   r_shank: Radius of the shank (tolerance included)
-   l_bolt: total length of the bolt: head & shank
-   r_head: radius of the head (tolerance included)
-   l_head: length of the head
-   r_nut : radius of the nut (tolerance included)
-   l_nut : length of the nut. It doesn't have to be the length of the nut
-           but how long you want the nut to be inserted
-   hex_head: inidicates if the head is hexagonal or rounded
+
+
+
+
+def shp_bolt (r_shank, l_bolt, r_head, l_head,
+              hex_head = 0,
+              xtr_head=1,
+              xtr_shank=1,
+              support=1,
+              axis = 'z',
+              hex_ref = 'x',
+              hex_rot_angle = 0,
+              pos = V0):
+    """ 
+    Similar to addBolt, but creates a shape instead of a FreeCAD Object
+    Creates a shape of the bolt shank and head or the nut
+    Tolerances have to be included if you want it for making a hole
+
+    It is referenced at the end of the head
+
+    Args:
+        r_shank: Radius of the shank (tolerance included)
+        l_bolt: total length of the bolt: head & shank
+        r_head: radius of the head (tolerance included)
+        l_head: length of the head
+        hex_head: inidicates if the head is hexagonal or rounded
               1: hexagonal
               0: rounded
-   zpos_nut: inidicates the height position of the nut, the lower part     
-   h_layer3d: height of the layer for printing, if 0, means that the support
-              is not needed
-   extra: 1 if you want 1 mm on top and botton to avoid cutting on the same
-               plane pieces after makeing differences 
-   support: 1 if you want to include a triangle between the shank and the head
-              to support the shank and not building the head on the air
-              using kcomp.LAYER3D_H
-"""
+        h_layer3d: height of the layer for printing, if 0, means that the
+                   support is not needed
+        xtr_head: 1 if you want 1 mm on the head to avoid cutting on the same
+               plane pieces after making cuts (boolean difference) 
+        xtr_shank: 1 if you want 1 mm at the opposite side of the head to
+               avoid cutting on the same plane pieces after making cuts
+               (boolean difference) 
+        support: 1 if you want to include a triangle between the shank and the
+                 head to support the shank and not building the head on the
+                 air using kcomp.LAYER3D_H
+        axis: 'x', '-x', 'y', '-y', 'z', '-z': defines the orientation
+           for example:
+           axis = '-z':              Z
+                                     :
+                         ....... ____:____
+             xtr_head=1  .......|    :....|...... X
+                                |         |
+                                |__     __|
+                                   |   |
+                                   |   |
+                                   |   |
+                                   |___|
+
+           axis = 'z':               Z
+                                     :
+                                     :
+                                    _:_
+                                   | : |
+                                   | : |
+                                   | : |
+                                 __| : |__
+                                |    :    |
+             xtr_head=1  .......|    :....|...... X
+                         .......|____:____|
+
+        hex_ref: In case of a hexagonal head, this will indicate the
+                 axis that the first vertex of the nut will point
+                 hex_ref has to be perpendicular to axis, if not, it will be
+                 changed
+        hex_rot_angle: Angle in degrees. In case of a hexagonal head, it will
+           indicate the angle of rotation of the hexagon referenced to hex_ref.
+
+        pos: FreeCAD.Vector of the position of the center of the head of the
+              bolt
+
+
+
+    """
+
+    elements = []
+    v_axis = getfcvecofname(axis)
+    # It is built as its orientation is 'z', it will be rotated at the end
+    # shank
+    # In shp_cylcenxtr, xtr_bot is where pos is (0). The head
+    #   and xtr_bot is the other end (-z) if axis '-z'. The end of the shank
+    shp_shank = shp_cylcenxtr (r_shank, l_bolt, v_axis,
+                                ch=0,
+                                # the shank end is top
+                                xtr_top = xtr_shank,
+                                # the head end is bottom
+                                # No need to add extra, the head will do
+                                xtr_bot = 0,
+                                pos = pos)
+    elements.append (shp_shank)
+    # head:
+    if hex_head == 0:
+        shp_head = shp_cylcenxtr (r_head, l_head, v_axis,
+                                   ch=0,
+                                   # no extra on top, the shank will be there
+                                   xtr_top = 0,
+                                   xtr_bot = xtr_head,
+                                   pos = pos)
+    else:
+        # check if axis and hex_ref are the same vector (wrong)
+        if vecname_paral (axis, hex_ref):
+            hex_ref = get_vecname_perpend(axis)
+        shp_head = shp_regprism_xtr (n_sides=6,
+                                     radius = r_head,
+                                     length = l_head,
+                                     n_axis=axis,
+                                     v_axis=hex_ref,
+                                     centered = 0,
+                                     # no extra on top, the shank will be there
+                                     xtr_top = 0,
+                                     xtr_bot = xtr_head,
+                                     edge_rot = hex_rot_angle,
+                                     pos=pos)
+
+    # Dont append the head, because multifuse requieres one outside
+    #elements.append (shp_head)
+    # support for the shank:
+    if support==1 and kcomp.LAYER3D_H > 0:
+        # we could put it just on top of the head, but since we are going to 
+        # make an union, we put it from the bottom (no need to include extra)
+        shp_sup1 = shp_regprism (n_sides=3,
+                                 radius = 2*r_shank,
+                                 length = l_head + kcomp.LAYER3D_H,
+                                 n_axis=axis,
+                                 v_axis=hex_ref,
+                                 centered = 0,
+                                 edge_rot = hex_rot_angle + 30,
+                                 pos=pos)
+        # take vertexes away:
+        sup1away_l = l_head + kcomp.LAYER3D_H
+        if hex_head == 0:
+            shp_sup1away = shp_cyl(r_head, sup1away_l, v_axis, pos)
+        else:
+            shp_sup1away = shp_regprism(n_sides=6,
+                                        radius= r_head,
+                                        length= sup1away_l,
+                                        n_axis = axis,
+                                        v_axis = hex_ref,
+                                        centered = 0,
+                                        edge_rot = hex_rot_angle,
+                                        pos = pos)
+        shp_sup1cut = shp_sup1.common(shp_sup1away)
+        elements.append (shp_sup1cut)
+        # another support
+        # 1.15 is the relationship between the Radius and the Apothem
+        # of the hexagon: sqrt(3)/2 . I make it slightly smaller
+        shp_sup2 = shp_regprism (n_sides=6,
+                                 radius = 1.15*r_shank,
+                                 length = l_head + 2* kcomp.LAYER3D_H,
+                                 n_axis=axis,
+                                 v_axis=hex_ref,
+                                 centered = 0,
+                                 edge_rot = hex_rot_angle,
+                                 pos=pos)
+        elements.append (shp_sup2)
+  
+    # union of elements
+    shp_bolt = shp_head.multiFuse(elements)
+    shp_bolt = shp_bolt.removeSplitter()
+    return shp_bolt
+
+
 
 
 def addBoltNut_hole (r_shank,        l_bolt, 
@@ -1239,7 +1539,31 @@ def addBoltNut_hole (r_shank,        l_bolt,
                      supp_head=1,    supp_nut=1,
                      headdown=1,     name="bolt"):
 
+    """
+    Creates the hole for the bolt shank, the head and the nut.
+    The bolt head will be at the botton, and the nut will be on top
+    Tolerances have to be already included in the argments values
 
+    Args:
+        r_shank: Radius of the shank (tolerance included)
+        l_bolt: total length of the bolt: head & shank
+        r_head: radius of the head (tolerance included)
+        l_head: length of the head
+        r_nut : radius of the nut (tolerance included)
+        l_nut : length of the nut. It doesn't have to be the length of the nut
+                but how long you want the nut to be inserted
+        hex_head: inidicates if the head is hexagonal or rounded
+                  1: hexagonal
+                  0: rounded
+        zpos_nut: inidicates the height position of the nut, the lower part     
+        h_layer3d: height of the layer for printing,
+                   if 0, means that the support is not needed
+        extra: 1 if you want 1 mm on top and botton to avoid cutting on the same
+                 plane pieces after makeing differences 
+        support: 1 if you want to include a triangle between the shank and the
+                 head to support the shank and not building the head on the air
+                 using kcomp.LAYER3D_H
+    """
     # we have to bring the active document
     doc = FreeCAD.ActiveDocument
     elements = []
@@ -1347,7 +1671,6 @@ def addBoltNut_hole (r_shank,        l_bolt,
 
 def aluprof_vec (width, thick, slot, insquare):
 
-    cos45 = 0.707
 
     y = []
     y.append(insquare/2)               # y0, x8
@@ -1357,8 +1680,8 @@ def aluprof_vec (width, thick, slot, insquare):
     y.append(y[-1])                    # y4, x4,  y4==y3
     y.append(slot/2.)                  # y5, x3
     y.append(y[-1])                    # y6, x2   y6==y5
-    y.append(width/2.-thick*(1+cos45))  # y7, x1
-    y.append(insquare/2.-thick*cos45)        # y8, x0
+    y.append(width/2.-thick*(1+COS45))  # y7, x1
+    y.append(insquare/2.-thick*COS45)        # y8, x0
 
     n = len(y)-1
 
@@ -1421,7 +1744,7 @@ class NutHole (object):
                  extra = 1, nuthole_x = 1, cx=0, cy=0, holedown = 0):
         self.nut_r   = nut_r
         self.nut_h   = nut_h
-        self.nut_2ap = 2 * nut_r * 0.866    #Apotheme = R * cos (30)
+        self.nut_2ap = 2 * nut_r * COS30    #Apotheme = R * cos (30)
         self.hole_h  = hole_h
         self.name    = name
         self.extra   = extra
@@ -1524,6 +1847,139 @@ def fillet_len (box, e_len, radius, name):
     if box.ViewObject != None:
       box.ViewObject.Visibility=False
     return box_fllt
+
+# Calculate Bolt separation
+# We want to know how much separation is needed for a bolt
+# The bolt (din912) head diameter is usually smaller than the nut (din934)
+# The nut max value is give by its 2*apotheme (S) (wrench size)
+#     so its max diameter is 2A x cos(30)
+#
+#     din912  din938
+#       D     S(max)   D(max)
+# M3:  5.5      5.5     6,35
+# M4:  7.0      7.0     8,08
+# M5:  8.5      8.0     9,24
+# M6: 10.0     10.0    11,55
+#
+# So it will the nut what gives the separation
+#
+#         _____    :    _______ 
+#        |     |_  :  _|    
+#        |       | : |    
+#        |       | : |  
+#        |      _| : |_ 
+#        |_____|   :   |______
+#        :     :   :        
+#        :..,..:.,.:        
+#        : sep  rad:
+#        :         :
+#        :....,....:
+#          bolt_sep 
+#
+# Arguments:
+# bolt_d: diameter of the bolt: 3, 4, ... for M3, M4,... 
+# hasnut: 1: if there is a nut
+#         0: if there is not a nut, so just the bolt head (smaller)
+# sep: separation from the outside of the nut to the end, if empty,
+#      default value 2mm
+
+def get_bolt_end_sep (bolt_d, hasnut, sep=2.):
+    """
+    Calculate Bolt separation
+
+    Calculates know how much separation is needed for a bolt
+    The bolt (din912) head diameter is usually smaller than the nut (din934)
+    The nut max value is given by its 2*apotheme (S) (wrench size)
+    so its max diameter is 2A x cos(30)
+
+    Example of nut and bolt head sizes:
+
+        din912  din938
+          D     S(max)   D(max)
+    M3:  5.5      5.5     6,35
+    M4:  7.0      7.0     8,08
+    M5:  8.5      8.0     9,24
+    M6: 10.0     10.0    11,55
+
+   Therefore, if there is a nut, the nut will be used to calculate the
+   separation
+
+          _____    :    _______ 
+         |     |_  :  _|    
+         |       | : |    
+         |       | : |  
+         |      _| : |_ 
+         |_____|   :   |______
+         :     :   :        
+         :..,..:.,.:        
+         : sep  rad:
+         :         :
+         :....,....:
+           bolt_sep 
+ 
+    Args:
+        bolt_d: diameter of the bolt: 3, 4, ... for M3, M4,... 
+        hasnut: 1: if there is a nut
+                0: if there is not a nut, so just the bolt head (smaller)
+        sep: separation from the outside of the nut to the end, if empty,
+             default value 2mm
+
+    Returns:
+        (float): Minimum separation between the center of the bolt and the end
+
+    """
+
+    if hasnut == 1:
+        diam = kcomp.NUT_D934_2A[bolt_d] / COS30 
+    else: # no nut, calculate with bolt head
+        diam = kcomp.D912_HEAD_D[bolt_d]
+
+    rad  = diam/2.
+
+    bolt_sep = rad + sep
+
+    return bolt_sep
+
+# ------------------- get_bolt_bearing_sep -------------------------
+# same as get_bolt_end_sep, but when there is a bearing. 
+# If there is a bearing, there will be more space because the nut is at
+# the bottom or top, and the widest side is on the middle
+#
+#                            lbearing_r
+#                    rad    ..+...
+#                   ..+..  :      :
+#         ______    :   :__:______:_
+#        |      |_  :  _|      .* : 
+#        |        | : |     .*    : this is the bearing section (circunference)
+#        |        | : |    (      :
+#        |       _| : |_   : *.   :
+#        |______|   :   |__:____*_:
+#                   :   :  :      :
+#                   :   :.bsep    :
+#                   :             :
+#                   :.bolt_b_sep..:
+
+#
+# Arguments:
+# bolt_d: diameter of the bolt: 3, 4, ... for M3, M4,... 
+# hasnut: 1: if there is a nut
+#         0: if there is not a nut, so just the bolt head (smaller)
+# lbearing_r: radius of the linear bearing
+# bsep: separation from the outside of the nut to the end of bearing
+#       default value 0mm
+
+def get_bolt_bearing_sep (bolt_d, hasnut, lbearing_r, bsep=0):
+
+    if hasnut == 1:
+        diam = kcomp.NUT_D934_2A[bolt_d] / COS30 
+    else: # no nut, calculate with bolt head
+        diam = kcomp.D912_HEAD_D[bolt_d]
+
+    rad  = diam/2.
+
+    bolt_b_sep = rad + bsep + lbearing_r
+
+    return bolt_b_sep
 
 
 
@@ -1895,6 +2351,19 @@ def calc_rot (vec1, vec2):
     return vrot
 
 
+def get_fcvectup (tup):
+    """ Gets the FreeCAD.Vector of a tuple
+
+    Args:
+        tup: tuple of 3 elements
+
+    Return: the FreeCAD.Vector
+    """
+
+    fcvec = FreeCAD.Vector(tup[0], tup[1], tup[2])
+    return (fcvec)
+
+
 #  ---------------- fc_calc_rot -----------------------------
 # same as calc_rot but using FreeCAD.Vectors arguments
 
@@ -1905,6 +2374,36 @@ def fc_calc_rot (fc_vec1, fc_vec2):
     vrot = calc_rot(DraftVecUtils.tup(fc_vec1),DraftVecUtils.tup(fc_vec2))
     return vrot
 
+def calc_rot_z (v_refz, v_refx):
+    """
+    calculates de rotation like calc_rot. However uses a different
+    origin axis. calc_rot uses:
+    vec1 original direction (x,y,z) is (0,0,1) 
+    vec2 original direction (x,y,z) is (1,0,0) 
+    So it makes a change of axis before calling calc_rot
+
+    Args:
+        v_refz: tuple or FreeCAD.Vector indicating the rotation from (0,0,1)
+                to v_refz
+        v_refx: tuple or FreeCAD.Vector indicating the rotation from (1,0,0)
+                to v_refx
+        these argument vectors a tuples, not FreeCAD.Vectors
+
+    Returns:
+        FreeCAD.Rotation value
+
+    """
+
+    if type(v_refz) is tuple:
+        v_refz = get_fcvectup(v_refz)
+        v_refx = get_fcvectup(v_refx)
+
+    # since arg2 of calc_rot is referenced to VNZ, v_refz is negated
+    # so v_refnz becomes referenced to VZ
+    v_refnz = DraftVecUtils.neg(v_refz)
+    vrot = fc_calc_rot(v_refx, v_refnz)
+    return vrot
+    
 
 #  ---------------- calc_desp_ncen ------------------------
 #  similar to calc_rot, but calculates de displacement, when we don't want
@@ -2082,4 +2581,51 @@ def getfcvecofname(axis):
 
     fc_vec = FreeCAD.Vector(getvecofname(axis))
     return fc_vec
+
+def vecname_paral (vec1, vec2):
+    """
+    given to vectors by name 'x', '-x', ... indicates if they are parallel
+    or not
+    """
+    paral = -1
+    if vec1 == 'x' or vec1 == '-x':
+        if vec2 == 'x' or vec2 == '-x':
+            paral = 1
+        else:
+            paral = 0
+    elif vec1 == 'y' or vec1 == '-y':
+        if vec2 == 'y' or vec2 == '-y':
+            paral = 1
+        else:
+            paral = 0
+    elif vec1 == 'z' or vec1 == '-z':
+        if vec2 == 'z' or vec2 == '-z':
+            paral = 1
+        else:
+            paral = 0
+    return paral
+    
+def get_vecname_perpend(vecname):
+
+    """ gets a perpendicular vecname
+
+    Args:
+        vec: 'x', '-x', 'y', '-y', 'z', '-z'
+    """
+
+    if vecname == 'x':
+        return 'y'
+    elif vecname == 'y':
+        return 'z'
+    elif vecname == 'z':
+        return 'x'
+    elif vecname == '-x':
+        return '-y'
+    elif vecname == '-y':
+        return '-z'
+    elif vecname == '-z':
+        return '-x'
+
+
+
 
