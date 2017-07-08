@@ -197,6 +197,29 @@ WASH_D9021_T  = {
                   8:   2.0,
                  10:   2.5 }
 
+# ------------- UNC Unified Coarse Thread
+# USA and Canada Standard Threads from Unified Thread Standard UTS
+# starts on #0 to #12 and then 1/4, 5/16, ... to 7/8, 1
+# First number is related to the diameter, the other to the pitch
+# for exampple #4-40 is 2.8448mm major diam. 40 tpi pitch
+# https://en.wikipedia.org/wiki/Unified_Thread_Standard
+
+# Major diameter in mm of a UNC thread
+
+UNC_D = {
+            '0' : 1.5240,  # #0
+            '1' : 1.8542,  # #1
+            '2' : 2.1844,
+            '3' : 2.5146,
+            '4' : 2.8448,
+            '5' : 3.1750,
+            '6' : 3.5052,
+            '8' : 4.1656
+         } # it continues to #12 and then 1/4, ...
+
+
+
+
 # ------------- Ball Bearings           -----------------------
 
 # Inner diameter

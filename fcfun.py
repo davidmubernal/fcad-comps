@@ -65,6 +65,14 @@ RED_05    = (1.0, 0.5, 0.5)
 GREEN_05  = (0.5, 1.0, 0.5)
 BLUE_05   = (0.5, 0.5, 1.0)
 
+RED_07    = (1.0, 0.7, 0.7)
+GREEN_07  = (0.7, 1.0, 0.7)
+BLUE_07   = (0.7, 0.7, 1.0)
+
+RED_D07    = (0.7, 0.0, 0.0)
+GREEN_D07  = (0.0, 0.7, 0.0)
+BLUE_D07   = (0.0, 0.0, 0.7)
+
 YELLOW_05 = (1.0, 1.0, 0.5)
 MAGENT_05 = (1.0, 0.5, 1.0)
 CIAN_05   = (0.5, 1.0, 1.0)
@@ -2605,7 +2613,7 @@ def vecname_paral (vec1, vec2):
             paral = 0
     return paral
     
-def get_vecname_perpend(vecname):
+def get_vecname_perpend1(vecname):
 
     """ gets a perpendicular vecname
 
@@ -2627,5 +2635,104 @@ def get_vecname_perpend(vecname):
         return '-x'
 
 
+def get_vecname_perpend2(vecname):
 
+    """ gets the other perpendicular vecname (see get_vecname_perpend
+
+    Args:
+        vec: 'x', '-x', 'y', '-y', 'z', '-z'
+    """
+
+    if vecname == 'x':
+        return 'z'
+    elif vecname == 'y':
+        return 'x'
+    elif vecname == 'z':
+        return 'y'
+    elif vecname == '-x':
+        return '-z'
+    elif vecname == '-y':
+        return '-x'
+    elif vecname == '-z':
+        return '-y'
+
+
+def get_nameofbasevec (fcvec):
+    """ from a base vector either:
+       (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1)
+        gets its name: 'x', 'y',....
+    """
+
+    if fcvec.x==1 and fcvec.y==0 and fcvec.z==0:
+        return 'x'
+    elif fcvec.x==0 and fcvec.y==1 and fcvec.z==0:
+        return 'y'
+    elif fcvec.x==0 and fcvec.y==0 and fcvec.z==1:
+        return 'z'
+    elif fcvec.x==-1 and fcvec.y==0 and fcvec.z==0:
+        return '-x'
+    elif fcvec.x==0 and fcvec.y==-1 and fcvec.z==0:
+        return '-y'
+    elif fcvec.x==0 and fcvec.y==0 and fcvec.z==-1:
+        return '-z'
+    else:
+        print "Not a base vector"
+
+
+def get_fclist_4perp_vecname (vecname):
+
+    """ gets a list of 4 FreCAD.Vector perpendicular to one vecname
+         for example, from 'x' -> (0,1,0), (0,0,1), (0,-1,0), (0,0,-1)
+    Args:
+        vecname:  'x', '-x', 'y', '-y', 'z', '-z'
+    """
+
+    fc_p1 = getfcvecofname(get_vecname_perpend1(vecname))
+    fc_p2 = getfcvecofname(get_vecname_perpend2(vecname))
+    fc_list = [fc_p1, fc_p2, DraftVecUtils.neg(fc_p1), DraftVecUtils.neg(fc_p2)]
+    return fc_list
+
+def get_fclist_4perp_fcvec (fcvec):
+    """ gets a list of 4 FreCAD.Vector perpendicular to one base vector
+        fcvec can only be:
+        (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1)
+        for example, from (1,0,0) -> (0,1,0), (0,0,1), (0,-1,0), (0,0,-1)
+    Args:
+        fcvec: 
+        (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1)
+    """
+    return (get_fclist_4perp_vecname(get_nameofbasevec(fcvec)))
+
+
+def get_fclist_4perp2_vecname (vecname):
+
+    """ gets a list of 4 FreCAD.Vector perpendicular to one vecname
+         different from get_fclist_4perp_vecname
+         for example, from 'x' -> (0,1,1), (0,-1,1), (0,-1,-1), (0,1,-1)
+    Args:
+        vecname:  'x', '-x', 'y', '-y', 'z', '-z'
+    """
+
+    fc_p1 = getfcvecofname(get_vecname_perpend1(vecname))
+    fc_p1_neg = DraftVecUtils.neg(fc_p1)
+    fc_p2 = getfcvecofname(get_vecname_perpend2(vecname))
+    fc_p2_neg = DraftVecUtils.neg(fc_p2)
+    fc_list = [(fc_p1     + fc_p2),
+               (fc_p1     + fc_p2_neg),
+               (fc_p1_neg + fc_p2_neg),
+               (fc_p1_neg + fc_p2)]
+    return fc_list
+
+  
+def get_fclist_4perp2_fcvec (fcvec):
+
+    """ gets a list of 4 FreCAD.Vector perpendicular to one base vector
+        fcvec can only be:
+        (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1)
+        for example, from (1,0,0) -> (0,1,1), (0,-1,1), (0,-1,-1), (0,1,-1)
+    Args:
+        fcvec: 
+        (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1)
+    """
+    return (get_fclist_4perp2_vecname(get_nameofbasevec(fcvec)))
 
