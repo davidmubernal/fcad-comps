@@ -33,3 +33,51 @@ CAGE_CUBE_60 = {
            'tap_sep_l': 66.,   # separation of the #8_32 tap, large
            'tap_sep_s': 35.8   # separation of the #8_32 tap, short
                  }
+
+
+CAGE_CUBE_HALF_60 = {
+           # 76.2 Length of each side (3 inch)
+           'L'              : CAGE_CUBE_60['L'],
+           # Thru, 2 sides
+           # 2.035*INCH ,  # SM2 (2.035"-40): d=51.689 mm
+           'thread_d'   : CAGE_CUBE_60['thru_thread_d'],
+           # internal hole after the SM2 thread
+           'thru_hole_d'     : 41.9,
+           # distance from the edge that the internal hole starts after
+           # the SM2 thread
+           'thru_hole_depth' : 8.9,
+           # Hole for the lens at 45 degrees
+           # to the center, for 2inch optics (50.8mm)
+           'lenshole_45_d'   :  49.3,  
+           'rod_d'    :  6. ,    # 4 places, 2 sides,  perpendicular sides
+           'rod_sep'  :  60. ,   # Separation between the rods
+           'rod_depth':  6.4 ,   # how deep are the holes
+           # taps to mount to posts, on the to triangular sides
+           # to diferenciate the sides, the perpendicular sides are named
+           # axis_1 and axis_2, so 12 will be the cross product of
+           # axis_1 x axis_2, and the other 21 will be axis_2 x axis_1
+           'tap12_d' :  4. ,  #M4x0.7 diameter
+           'tap12_l' :  6.4 ,  # length: depth of the M4x0.7 tap
+           'tap21_d' :  6. ,  #M6x1 diameter
+           'tap21_l' :  8.9 , # length: depth of the M6x1.0 tap
+           # the distance to the center in direction to the right angle
+           # see picture below
+           'tap_dist':  10.2  # The dis
+                 }
+
+#
+#                 /|
+#               /  |
+#             /    |
+#           /      |
+#         /   0    |---
+#       /     :    |  + 27.9 
+#     /____________|...
+#     :       :    :
+#     :       :----:
+#     :         27.9
+#     :.. 76.2 ....:  -> 76.2/2 = 38.3
+#           :      :
+#           :.38.3.:  -> the center
+#           : :
+#           : : -------> 10.2: distance to the center: 48.3-27.9 
