@@ -326,6 +326,116 @@ def shp_box_rot (box_w, box_d, box_h,
 
     return shp_box
 
+
+def shp_box_dir (box_w, box_d, box_h,
+                    fc_axis_h,
+                    fc_axis_d,
+                    cw=1, cd=1, ch=1,
+                    pos=V0):
+
+    """"
+    Makes a shape of a box given its 3 dimensions: width, depth and height
+    and the direction of the height and depth dimensions.
+    The position of the box is given and also if the position is given
+    by a corner or its center
+             ________
+            |\       \
+            | \       \  
+            |  \_______\  
+             \ |       |
+              \|_______|
+
+
+     Example of not centered on origin
+
+       Z=fc_axis_h      . Y = fc_axis_d
+             :         .     
+             :   __________
+             :  /:   .   / |
+             : / :  .   /  | h
+             :/________/   |
+             |   :.....|...|3
+             |  / 4    |  /
+             | /       | /  d
+             |/________|/.....................X
+             1          2
+                   w
+
+
+     Example of centered on origin
+
+       Z=fc_axis_h               Y  = fc_axis_d
+                    :           .     
+                 __________   .
+                /:  :    / |.
+               / :  :   / .| h
+              /__:_____/.  |
+             |   :.....|...|3
+             |  / 4 :..|../........................X
+             | /       | /  d
+             |/________|/
+             1          2
+                   w
+
+    Args:
+        box_w: width of the box
+        box_d: depth of the box
+        box_h: heiht of the box
+        fc_axis_h: FreeCAD vector that has the direction of the height
+        fc_axis_d: FreeCAD vector that has the direction of the depth
+        cw: 1 the width dimension is centered, 0 it is not
+        cd: 1 the depth is centered, 0 it is not
+        ch: 1 the height dimension is centered, 0 it is not
+        pos: FreeCAD.Vector of the position of the box, it can be the center
+             one corner, or a point centered in the dimensions given by
+             cw, cd, ch
+
+    """
+    # normalize the axis, just in case:
+    axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+    axis_d = DraftVecUtils.scaleTo(fc_axis_d,1)
+    axis_w = axis_d.cross(axis_h)
+
+    #get the points of the base: width x depth
+    # if not centered, the first vertex of the base is on V0
+    if cw == 1:
+        w_neg = DraftVecUtils.scaleTo(axis_w, -box_w/2.)
+        w_pos = DraftVecUtils.scaleTo(axis_w,  box_w/2.)
+    else:
+        w_neg = V0
+        w_pos = DraftVecUtils.scaleTo(axis_w,  box_w)
+
+    if cd == 1:
+        d_neg = DraftVecUtils.scaleTo(axis_d, -box_d/2.)
+        d_pos = DraftVecUtils.scaleTo(axis_d,  box_d/2.)
+    else:
+        d_neg = V0
+        d_pos = DraftVecUtils.scaleTo(axis_d,  box_d)
+
+    if ch == 1:
+        h_neg = DraftVecUtils.scaleTo(axis_h, -box_h/2.)
+    else:
+        h_neg = V0
+        
+
+    v1 = pos + w_neg + d_neg + h_neg
+    v2 = pos + w_pos + d_neg + h_neg
+    v3 = pos + w_pos + d_pos + h_neg
+    v4 = pos + w_neg + d_pos + h_neg
+
+    # make a wire with the points
+    wire_base = Part.makePolygon([v1,v2,v3,v4,v1])
+
+    # make the face of the wire
+    shp_facebase = Part.Face(wire_base)
+    # length of the extrusion
+    v_extr = DraftVecUtils.scaleTo(axis_h, box_h)
+    shp_box = shp_facebase.extrude(v_extr)
+
+    return(shp_box)
+
+    
+
     
 
 # def shp_face_lgrail 

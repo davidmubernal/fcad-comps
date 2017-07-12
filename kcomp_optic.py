@@ -81,3 +81,21 @@ CAGE_CUBE_HALF_60 = {
 #           :.38.3.:  -> the center
 #           : :
 #           : : -------> 10.2: distance to the center: 48.3-27.9 
+
+
+# metric bread board constant dimensions:
+
+BREAD_BOARD_M = {
+                  'thick'  : 12.7, #thickness of the board
+                  'hole_d' : 6., # tapped M6 holes
+                  'hole_sep' : 25., # separation between holes
+                  'hole_sep_edge' : 12.5, #separation from 1st hole to edge
+                  'cbored_hole_d' : 6., # M6 counterbored holes on the corners
+                  'cbored_hole_sep' : 25., # distance counterbored holes to edge
+                  'cbore_head_d' : 10., # head diameter M6
+                  'cbore_head_l' : 10., # head diameter M6
+                  'minw_cencbore': 450. # minimum width to have a counter
+                                #bored hole at the center
+                  }
+                
+

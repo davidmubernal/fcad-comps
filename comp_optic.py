@@ -462,7 +462,7 @@ class CageCubeHalf (object):
         shp_holes = shp_thread_1.multiFuse(holes)
         shp_holes = shp_holes.removeSplitter()
         doc.recompute()
-        Part.show(shp_holes)
+        #Part.show(shp_holes)
 
         shp_cage_holes = shp_cage_half.cut(shp_holes)
 
@@ -526,12 +526,10 @@ def f_cagecubehalf (d_cagecubehalf,
 
 
 
-doc = FreeCAD.newDocument()
-doc = FreeCAD.ActiveDocument
 
 
 
-cage = f_cagecubehalf(kcomp_optic.CAGE_CUBE_HALF_60)
+#cage = f_cagecubehalf(kcomp_optic.CAGE_CUBE_HALF_60)
 
 #cage = CageCube(side_l = kcomp_optic.CAGE_CUBE_60['L'],
 #                thru_hole_d = kcomp_optic.CAGE_CUBE_60['thru_hole_d'],
@@ -549,3 +547,229 @@ cage = f_cagecubehalf(kcomp_optic.CAGE_CUBE_HALF_60)
 #                name = 'cagecube')
                            
 
+
+class BreadBoard (object):
+
+
+    def __init__ (self, length,
+                        width,
+                        thick,
+                        hole_d,
+                        hole_sep,
+                        hole_sep_edge,
+                        cbored_hole_d,
+                        cbored_hole_sep,
+                        cbored_head_d,
+                        cbored_head_l,
+                        central_cbore = 0,
+                        cl= 1,
+                        cw = 1,
+                        ch = 0,
+                        fc_dir_h = VZ,
+                        fc_dir_w = VY,
+                        pos = V0,
+                        name = 'breadboard'):
+
+        shp_box = fcfun.shp_box_dir(box_w = length,
+                                    box_d = width,
+                                    box_h = thick,
+                                    fc_axis_h = fc_dir_h,
+                                    fc_axis_d = fc_dir_w,
+                                    cw=cl, cd=cw, ch=ch,
+                                    pos = pos)
+        # normalize the axis, just in case:
+        axis_h = DraftVecUtils.scaleTo(fc_dir_h,1)
+        axis_w = DraftVecUtils.scaleTo(fc_dir_w,1)
+        axis_l = axis_w.cross(axis_h)
+
+        # getting the corner coordinates
+        if cl == 1:
+           l_0 = DraftVecUtils.scaleTo(axis_l, -length/2.)
+        else:
+           l_0 = V0
+        if cw == 1:
+           w_0 = DraftVecUtils.scaleTo(axis_w, -width/2.)
+        else:
+           w_0 = V0
+        if ch == 1:
+           h_0 = DraftVecUtils.scaleTo(axis_h, -thick/2.)
+        else:
+           h_0 = V0
+
+        # the point on the edge
+        pos_corner = pos + l_0 + w_0 + h_0
+
+
+        #Counterbored holes
+        pos_1cbored = (  pos_corner 
+                       + DraftVecUtils.scaleTo(axis_l, cbored_hole_sep)
+                       + DraftVecUtils.scaleTo(axis_w, cbored_hole_sep))
+        pos_2cbored = (  pos_corner
+                       + DraftVecUtils.scaleTo(axis_l, length - cbored_hole_sep)
+                       + DraftVecUtils.scaleTo(axis_w, cbored_hole_sep))
+        pos_3cbored = (  pos_corner
+                       + DraftVecUtils.scaleTo(axis_l, length - cbored_hole_sep)
+                       + DraftVecUtils.scaleTo(axis_w, width - cbored_hole_sep))
+        pos_4cbored = (  pos_corner
+                       + DraftVecUtils.scaleTo(axis_l, cbored_hole_sep)
+                       + DraftVecUtils.scaleTo(axis_w, width - cbored_hole_sep))
+
+        extra_headcbore = DraftVecUtils.scaleTo(axis_h, thick-cbored_head_l)
+
+        cbshank1 = fcfun.shp_cylcenxtr(r=cbored_hole_d/2., h=thick,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=pos_1cbored)
+        cbholehead1 = fcfun.shp_cylcenxtr(r=cbored_head_d/2.,
+                                      h=cbored_head_l,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=0., 
+                                      pos=pos_1cbored +extra_headcbore)
+        cbore1 = cbshank1.fuse(cbholehead1)
+
+        cbshank2 = fcfun.shp_cylcenxtr(r=cbored_hole_d/2., h=thick,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=pos_2cbored)
+        cbholehead2 = fcfun.shp_cylcenxtr(r=cbored_head_d/2.,
+                                      h=cbored_head_l,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=0., 
+                                      pos=pos_2cbored +extra_headcbore)
+        cbore2 = cbshank2.fuse(cbholehead2)
+
+        cbshank3 = fcfun.shp_cylcenxtr(r=cbored_hole_d/2., h=thick,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=pos_3cbored)
+        cbholehead3 = fcfun.shp_cylcenxtr(r=cbored_head_d/2.,
+                                      h=cbored_head_l,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=0., 
+                                      pos=pos_3cbored +extra_headcbore)
+        cbore3 = cbshank3.fuse(cbholehead3)
+
+        cbshank4 = fcfun.shp_cylcenxtr(r=cbored_hole_d/2., h=thick,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=pos_4cbored)
+        cbholehead4 = fcfun.shp_cylcenxtr(r=cbored_head_d/2.,
+                                      h=cbored_head_l,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=0., 
+                                      pos=pos_4cbored +extra_headcbore)
+        cbore4 = cbshank4.fuse(cbholehead4)
+
+        cboreholes_list = [cbore2, cbore3, cbore4]
+        if central_cbore == 1:
+            poscentral = (  pos_corner
+                          + DraftVecUtils.scaleTo(axis_l, length/2.)
+                          + DraftVecUtils.scaleTo(axis_w, width/2.))
+            cbshankcentral = fcfun.shp_cylcenxtr(r=cbored_hole_d/2., h=thick,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=poscentral)
+            cbholeheadcentral = fcfun.shp_cylcenxtr(r=cbored_head_d/2.,
+                                      h=cbored_head_l,
+                                      normal=fc_dir_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=0., 
+                                      pos=poscentral +extra_headcbore)
+            cbholecentral = cbshankcentral.fuse(cbholeheadcentral)
+            cboreholes_list.append(cbholecentral)
+
+        cboresholes = cbore1.multiFuse(cboreholes_list)
+
+        pos_1st_tap = (   pos_corner
+                        + DraftVecUtils.scaleTo(axis_l, hole_sep_edge)
+                        + DraftVecUtils.scaleTo(axis_w, hole_sep_edge)
+                      )
+
+        tapholes = []
+        for li in range (int(length)//int(hole_sep)):
+            for wi in range (int(width)//int(hole_sep)):
+                # if 50/25 -> range 0,1, will make on 12,5 and 37,5
+                pos_tap = (   pos_1st_tap
+                           +  DraftVecUtils.scaleTo(axis_l, li * hole_sep)
+                           +  DraftVecUtils.scaleTo(axis_w, wi * hole_sep))
+                hole = fcfun.shp_cylcenxtr(r=hole_d/2., h=thick,
+                                           normal=fc_dir_h,
+                                           ch = 0,
+                                           xtr_top=1., xtr_bot=1., 
+                                           pos=pos_tap)
+                tapholes.append(hole)
+
+        allholes = cboresholes.multiFuse(tapholes)
+        breadboard = shp_box.cut(allholes)
+
+        Part.show(breadboard)
+                                           
+            
+
+def f_breadboard (d_breadboard,
+                  length,
+                  width,
+                  cl = 1,
+                  cw = 1,
+                  ch = 1,
+                  fc_dir_h = VZ,
+                  fc_dir_w = VY,
+                  pos = V0,
+                  name = 'breadboard'
+                   ):
+
+
+
+    if max(length,width) >= d_breadboard['minw_cencbore']:
+        central_cbore = 1
+    else:
+        central_cbore = 0
+
+    breadboard = BreadBoard(
+                        length = length,
+                        width  = width,
+                        thick  = d_breadboard['thick'],
+                        hole_d  = d_breadboard['hole_d'],
+                        hole_sep  = d_breadboard['hole_sep'],
+                        hole_sep_edge  = d_breadboard['hole_sep_edge'],
+                        cbored_hole_d  = d_breadboard['cbored_hole_d'],
+                        cbored_hole_sep  = d_breadboard['cbored_hole_sep'],
+                        cbored_head_d  = d_breadboard['cbore_head_d'],
+                        cbored_head_l  = d_breadboard['cbore_head_l'],
+                        central_cbore = central_cbore,
+                        cl= 1,
+                        cw = 1,
+                        ch = 0,
+                        fc_dir_h = fc_dir_h,
+                        fc_dir_w = fc_dir_w,
+                        pos = V0,
+                        name = 'breadboard')
+
+
+    return breadboard
+
+
+doc = FreeCAD.newDocument()
+doc = FreeCAD.ActiveDocument
+
+
+f_breadboard (kcomp_optic.BREAD_BOARD_M, 
+              length = 200.,
+              width = 500.,
+              cl = 1,
+              cw = 1,
+              ch = 1,
+              fc_dir_h = VZ,
+              fc_dir_w = VY,
+              pos = V0,
+              name = 'breadboard'
+              )
