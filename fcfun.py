@@ -715,7 +715,7 @@ def shp_cylcenxtr (r, h, normal = VZ,
                             basepos,     # Position
                             nnormal)  # direction
 
-    print "circle: %", cir.Curve
+    #print "circle: %", cir.Curve
 
     wire_cir = Part.Wire(cir)
     face_cir = Part.Face(wire_cir)
@@ -833,6 +833,89 @@ def addCylHolePos (r_out, r_in, h, name, normal = VZ, pos = V0):
     cyl_hole.Shape = shp_cyl_hole
 
     return cyl_hole
+
+def add2CylsHole (r1, h1, r2, h2, thick,
+                  normal = VZ, pos = V0):
+
+    """ Creates a piece formed by 2 hollow cylinders
+
+              :.. h1 .....+..h2..:
+              :           :      :
+           ...:___________:      :
+      thick...|.......... |      :
+              |         : |______:.....
+              |         :........|    :
+              |         :        |    + r2
+              |         :        |....:
+              |         :........|    :
+              |         :  ______|    + r1
+              |.........: |           :
+              |___________|...........:
+
+    Arguments:
+        r1: radius of the 1st cylinder. The first cylinder relative to 
+            the position pos
+        h1: height of the 1st cylinder (seen from outside)
+        r2: radius of the 2nd cylinder
+        h2: height of the 2nd cylinder (seen from outside)
+        normal: direction of the height
+        pos: position of the center
+
+    """
+
+    # normalize de axis just in case:
+    nnormal = DraftVecUtils.scaleTo(normal,1)
+
+    # the smaller radius cylinder will be larger, add thick   
+
+    if r1 < r2:
+        h1_real = h1 + thick
+        h2_real = h2
+        pos_cyl2 = pos + DraftVecUtils.scaleTo(nnormal, h1) 
+        rs = r1  # small radius
+        rl = r2  # large radius
+        pos_innercyl_large = pos + DraftVecUtils.scaleTo(nnormal, h1+thick)
+        # inner height of the large cylinder
+        innercyl_h_l = h2 - thick
+        # extra for the cut, depending which side it is
+        inncercyl_larg_xtrbot = 0
+        inncercyl_larg_xtrtop = 1
+    elif r1 > r2:
+        h1_real = h1
+        h2_real = h2 + thick        
+        pos_cyl2 = pos + DraftVecUtils.scaleTo(nnormal, h1-thick) 
+        rs = r2  # small radius
+        rl = r1  # large radius
+        pos_innercyl_large = pos
+        # inner height of the large cylinder
+        innercyl_h_l = h1 - thick
+        # extra for the cut, depending which side it is
+        inncercyl_larg_xtrbot = 1
+        inncercyl_larg_xtrtop = 0
+    else:
+        logger.debug('Cylinders have the same radius')
+
+    shp_cyl1 = shp_cyl(r1, h1_real, nnormal, pos)
+    shp_cyl2 = shp_cyl(r2, h2_real, nnormal, pos_cyl2)
+    shp_ext = shp_cyl1.fuse(shp_cyl2)
+
+    # thruhole of the smaller radius
+    shp_innercyl_s = shp_cylcenxtr (rs-thick, h = h1+h2, normal = nnormal,
+                                    ch = 0, xtr_top=1, xtr_bot=1, pos = pos)
+    # thruhole of the larger radius
+    shp_innercyl_l = shp_cylcenxtr (rl-thick, h = innercyl_h_l,
+                                    normal = nnormal,
+                                    ch = 0,
+                                    xtr_top=inncercyl_larg_xtrtop,
+                                    xtr_bot=inncercyl_larg_xtrbot,
+                                    pos = pos_innercyl_large)
+
+    shp_innercyl = shp_innercyl_s.fuse(shp_innercyl_l)
+
+    shp_2cyls = shp_ext.cut(shp_innercyl)
+    return (shp_2cyls)
+    
+
 
 
 # ------------------- def shp_stadium_wire

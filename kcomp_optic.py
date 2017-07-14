@@ -83,6 +83,23 @@ CAGE_CUBE_HALF_60 = {
 #           : : -------> 10.2: distance to the center: 48.3-27.9 
 
 
+# LB2C plate dimensions
+
+LB2C_PLATE = {
+           'L' : CAGE_CUBE_60['L'], # 76.2, 
+           'thick'  : 7.6,
+           'thruhole_d' : CAGE_CUBE_60['thru_thread_d'],
+           'sym_hole_d' : kcomp.UNC_D['4'] ,  #4-40
+           'sym_hole_sep' :  CAGE_CUBE_60['thru_rod_sep'],
+           'cbore_hole_d'  :  kcomp.UNC_D['8'],  #8-32,
+           'cbore_hole_head_d' : 6.9, #taken from a socket cap bolt
+           'cbore_hole_head_l' : 4.2, #taken from a socket cap bolt
+           'cbore_hole_sep_l' : CAGE_CUBE_60['tap_sep_l'],
+           'cbore_hole_sep_s' : CAGE_CUBE_60['tap_sep_s']
+           }
+
+
+
 # metric bread board constant dimensions:
 
 BREAD_BOARD_M = {
