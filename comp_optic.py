@@ -260,7 +260,7 @@ def f_cagecube (d_cagecube,
     return cage
 
 
-# ---------------------- CageCubeHalv -------------------------------
+# ---------------------- CageCubeHalf -------------------------------
 
 class CageCubeHalf (object):
 
@@ -546,7 +546,312 @@ def f_cagecubehalf (d_cagecubehalf,
 #                axis_thru_hole = 'y',
 #                name = 'cagecube')
                            
+def plate_thruhole_hole8 (side_l, 
+           thick,
+           thruhole_d,
+           sym_hole_d,
+           sym_hole_sep,
+           cbore_hole_d,
+           cbore_hole_head_d,
+           cbore_hole_head_l,
+           cbore_hole_sep_l,
+           cbore_hole_sep_s,
+           fc_axis_h,
+           fc_axis_l,
+           cl=1, cw=1, ch=1,
+           pos = V0,
+           name = 'plate'):
 
+    """
+    draws a square plate, with a thru-hole in the center.
+    4 sets of holes in symetrical positions for screws
+    4 sets of holes for cap-screws
+
+                   fc_axis_l: axis on the large separation
+                    |
+                    |
+            :-- sy_hole_sep -:
+            :                :
+            :cbore_hole_sep_s:
+            :    :      :    :
+          _______________________
+         |       O      O       | -------------------
+         |  0      ....      0  | ....               :
+         |       /      \       |    :               :
+         |      |        |      |    :               :
+         |      |        |      |    +sym_hole_sep   + cbore_hole_sep_s
+         |       \ .... /       |    :               :
+         |  0                0  | ....               :
+         |       O      O       | -------------------
+         |______________________|
+
+
+    Arguments:
+        side_l: length of the plate (two sides)
+        thick : thickness (height of the plate)
+        thruhole_d: diamenter of the central hole
+        sym_hole_d: diamenter of the symetrical holes
+        sym_hole_sep: distance between the centers of the symetrical holes 
+        cbore_hole_d: diameter of the shank of the counter bored hole
+        cbore_hole_head_d: diameter of the cap of the counterbored screw
+        cbore_hole_head_l: length of the cap (head) of the counterbored screw
+        cbore_hole_sep_l: large separation of the counterbored holes
+        cbore_hole_sep_s: small separation of the counterbored holes
+        fc_axis_h: FreeCAD.Vector on the direction of the vertical (thickness)
+        fc_axis_l: FreeCAD.Vector on the direction of the large distance of
+                the counterbored asymetrical holes
+        cl: 1: centered on the fc_axis_l direction
+        cw: 1: centered on the axis_small direction (perpendicular to fc_axis_l
+               and fc_axis_h)
+        ch: 1: centered on the vertical direction (thickness)
+        pos :  position of the center. FreeCAD.Vector
+        name: name 
+
+    """
+
+    doc = FreeCAD.ActiveDocument
+
+    # normalize de axis
+    axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+    axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
+    axis_s = fc_axis_l.cross(fc_axis_h)
+
+    shp_box = fcfun.shp_box_dir(side_l, side_l, thick, axis_h, axis_l,
+                                  cw = cl, cd = cw, ch = ch,
+                                  pos = pos)
+
+    # getting the offset of the center coordinates
+    if cl == 1:
+       l_0 = V0 # already centered
+    else:
+       l_0 = DraftVecUtils.scaleTo(axis_l, side_l/2.)
+    if cw == 1:
+       s_0 = V0
+    else:
+       s_0 = DraftVecUtils.scaleTo(axis_s, side_l/2.)
+    if ch == 1: # for the height, we want the lower side
+       h_0 = DraftVecUtils.scaleTo(axis_h, -thick/2.)
+    else:
+       h_0 = V0
+
+    pos_center = pos + l_0 + s_0 + h_0
+
+    shp_cenhole = fcfun.shp_cylcenxtr(r=thruhole_d/2., h=thick,
+                                      normal=axis_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=pos_center)
+
+    # symetrical holes
+    holes = []
+    for add_l in (DraftVecUtils.scaleTo(axis_l,  sym_hole_sep/2),
+                  DraftVecUtils.scaleTo(axis_l, - sym_hole_sep/2)) :
+        for add_s in (DraftVecUtils.scaleTo(axis_s,  sym_hole_sep/2),
+                      DraftVecUtils.scaleTo(axis_s, - sym_hole_sep/2)) :
+            pos_hole = pos_center + add_l + add_s
+            shp_hole = fcfun.shp_cylcenxtr(r=sym_hole_d/2., h=thick,
+                                      normal=axis_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=pos_hole)
+            holes.append(shp_hole)
+
+    # asymetrical hole
+    for add_l in (DraftVecUtils.scaleTo(axis_l,  cbore_hole_sep_l/2),
+                  DraftVecUtils.scaleTo(axis_l, - cbore_hole_sep_l/2)) :
+        for add_s in (DraftVecUtils.scaleTo(axis_s,  cbore_hole_sep_s/2),
+                      DraftVecUtils.scaleTo(axis_s, - cbore_hole_sep_s/2)) :
+            pos_hole = pos_center + add_l + add_s
+            shp_hole = fcfun.shp_cylcenxtr(r=cbore_hole_d/2., h=thick,
+                                      normal=axis_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=1., 
+                                      pos=pos_hole)
+            pos_head = (  pos_hole
+                      + DraftVecUtils.scaleTo(axis_h, thick-cbore_hole_head_l))
+            shp_hole_head = fcfun.shp_cylcenxtr(r=cbore_hole_head_d/2.,
+                                      h=cbore_hole_head_l,
+                                      normal=axis_h,
+                                      ch = 0,
+                                      xtr_top=1., xtr_bot=0, 
+                                      pos=pos_head)
+            shp_cbore_hole = shp_hole.fuse(shp_hole_head)
+
+            holes.append(shp_cbore_hole)
+
+
+    shp_holes = shp_cenhole.multiFuse(holes)
+
+    shp_plate = shp_box.cut(shp_holes)
+    doc.recompute()
+    fco_plate = doc.addObject("Part::Feature", name )
+    fco_plate.Shape = shp_plate
+
+    return (fco_plate)
+
+
+
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        self.fco.Placement.Base = FreeCAD.Vector(position)
+
+    
+                     
+
+def plate_lb2c (
+           fc_axis_h,
+           fc_axis_l,
+           cl=1, cw=1, ch=0,
+           pos = V0,
+           name = 'lb2c_plate'):
+
+    shp_plate = plate_thruhole_hole8 (
+           side_l     = kcomp_optic.LB2C_PLATE['L'], # 76.2, 
+           thick      = kcomp_optic.LB2C_PLATE['thick'],
+           thruhole_d = kcomp_optic.LB2C_PLATE['thruhole_d'],
+           sym_hole_d = kcomp_optic.LB2C_PLATE['sym_hole_d'],
+           sym_hole_sep  = kcomp_optic.LB2C_PLATE['sym_hole_sep'],
+           cbore_hole_d  = kcomp_optic.LB2C_PLATE['cbore_hole_d'],
+           cbore_hole_head_d = kcomp_optic.LB2C_PLATE['cbore_hole_head_d'],
+           cbore_hole_head_l = kcomp_optic.LB2C_PLATE['cbore_hole_head_l'],
+           cbore_hole_sep_l = kcomp_optic.LB2C_PLATE['cbore_hole_sep_l'],
+           cbore_hole_sep_s = kcomp_optic.LB2C_PLATE['cbore_hole_sep_s'],
+           fc_axis_h = fc_axis_h,
+           fc_axis_l = fc_axis_l,
+           cl=cl, cw=cw, ch=ch,
+           pos = pos,
+           name = name)
+
+    return shp_plate
+                       
+
+
+
+#doc = FreeCAD.newDocument()
+#doc = FreeCAD.ActiveDocument
+
+
+#plate_lb2c (fc_axis_h = VZ, fc_axis_l = VX, cl=1, cw=1, ch=0, pos=V0,
+#            name = 'lb2c_plate')
+ 
+
+
+# ---------------------- Sm1TubelensSm2 --------------------------
+
+class SM1TubelensSm2 (object):
+
+    """ Creates a componente formed by joining:
+        the lens tube SM1LXX + SM1A2 + SM2T2, so we have:
+        - on one side a SM1 external thread
+        - on the other side a SM2 external thread
+        And inside we have a SM1 tube lens
+        Since there are threads, they may be inserted differently, so 
+        size may vary. Therefore, size are approximate, and also, details
+        are not drawn, such as threads, or even the part that contains the
+        thread is not drawn:
+                                          .........................
+                        lens tube     _HH ...........             :
+                                     ||..|          :             :
+        LED               SM1LXX     ||  |          :             :
+        _____    ..... ______________||  |          :             :
+           __|   :   _|..............||  |          :             :
+          |      :  | :            : ||  |          :             :
+          |  30.5+  | :    SM1     : ||  |          +55.9         + 57.2
+          |      :  | :            : ||  |          :SM2_TLENS_D  :
+          |__    :  |_:............:.||  |          :             :
+        _____|   :....|______________||  |          :             :
+                    : :              ||  |          :             :
+                    :3:    Lext      ||..|          :             :
+                                     ||__|..........:             :
+         SM1_TLENS_D=30.5              HH ........................:
+                                   0.7: 5.6
+
+
+        So it will be:
+
+                           
+          lens tube     _HH 
+                       ||..|
+            SM1LXX     ||  |
+         ______________||  |
+        |..............||  |
+        |              ||  |
+        |    SM1       ||  |
+        |              ||  |
+        |..............||  |
+        |______________||  |
+                       ||  |
+             Lext      ||..|
+                       ||__|
+                         HH 
+
+        The 3mm thread on the left is not drawn
+
+    Args
+        sm1l_size: length of the side of the cube (then it will be halved)
+        fc_axis: direction of the tube lens: FreeCAD.Vector
+        axis_2: direction big the other right side: 
+        pos : position of the object
+        ref_sm1: 1: if the position is referred to the sm1 end
+                 0: if the position is referred to the ring end
+        name: name of the freecad object
+    """
+
+    def __init__ (self, sm1l_size,
+                        fc_axis = VX,
+                        ref_sm1 = 1,
+                        pos = V0,
+                        name = 'tubelens_sm1_sm2'):
+
+        doc = FreeCAD.ActiveDocument
+
+        # dictionary with the dimensions
+        d_sm1l_sm2 = kcomp_optic.SM1L_2_SM2
+
+        self.base_place = (0,0,0)
+        self.sm1l_size  = sm1l_size
+        self.sm_dict = d_sm1l_sm2
+        self.sm1_d = d_sm1l_sm2['sm1_d']
+        self.sm1_l = d_sm1l_sm2['sm1_l'][sm1l_size]
+        self.sm2_d = d_sm1l_sm2['sm2_d']
+        self.sm2_l = d_sm1l_sm2['sm2_l']
+        self.ring_d = d_sm1l_sm2['ring_d']
+        self.ring_l = d_sm1l_sm2['ring_l']
+        self.thick = d_sm1l_sm2['thick']
+        self.fc_axis = fc_axis
+        self.ref_sm1 = ref_sm1
+        self.pos = pos
+
+        if ref_sm1 == 1:
+            r1 = self.sm1_d/2.
+            h1 = self.sm1_l
+            r2 = self.sm2_d/2.
+            h2 = self.sm2_l
+        else:
+            r1 = self.sm2_d/2.
+            h1 = self.sm2_l
+            r2 = self.sm1_d/2.
+            h2 = self.sm1_l
+        
+        shp_sm1_tube_sm2 = fcfun.add3CylsHole (r1, h1, r2, h2, 
+                                               rring = self.ring_d/2,
+                                               hring = self.ring_l,
+                                               thick = self.thick,
+                                               normal = fc_axis,
+                                               pos = pos)
+
+        doc.recompute()
+        fco_sm1_tube_sm2 = doc.addObject("Part::Feature", name )
+        fco_sm1_tube_sm2.Shape = shp_sm1_tube_sm2
+        self.fco = fco_sm1_tube_sm2
+
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        self.fco.Placement.Base = FreeCAD.Vector(position)
+
+ 
+        
+                                               
 
 class BreadBoard (object):
 
@@ -718,191 +1023,7 @@ class BreadBoard (object):
         self.fco = fco_breadboard
 
 
-    def BasePlace (self, position = (0,0,0)):
-        self.base_place = position
-        self.fco.Placement.Base = FreeCAD.Vector(position)
 
-                                           
-def plate_thruhole_hole8 (side_l, 
-           thick,
-           thruhole_d,
-           sym_hole_d,
-           sym_hole_sep,
-           cbore_hole_d,
-           cbore_hole_head_d,
-           cbore_hole_head_l,
-           cbore_hole_sep_l,
-           cbore_hole_sep_s,
-           fc_axis_h,
-           fc_axis_l,
-           cl=1, cw=1, ch=1,
-           pos = V0,
-           name = 'plate'):
-
-    """
-    draws a square plate, with a thru-hole in the center.
-    4 sets of holes in symetrical positions for screws
-    4 sets of holes for cap-screws
-
-                   fc_axis_l: axis on the large separation
-                    |
-                    |
-            :-- sy_hole_sep -:
-            :                :
-            :cbore_hole_sep_s:
-            :    :      :    :
-          _______________________
-         |       O      O       | -------------------
-         |  0      ....      0  | ....               :
-         |       /      \       |    :               :
-         |      |        |      |    :               :
-         |      |        |      |    +sym_hole_sep   + cbore_hole_sep_s
-         |       \ .... /       |    :               :
-         |  0                0  | ....               :
-         |       O      O       | -------------------
-         |______________________|
-
-
-    Arguments:
-        side_l: length of the plate (two sides)
-        thick : thickness (height of the plate)
-        thruhole_d: diamenter of the central hole
-        sym_hole_d: diamenter of the symetrical holes
-        sym_hole_sep: distance between the centers of the symetrical holes 
-        cbore_hole_d: diameter of the shank of the counter bored hole
-        cbore_hole_head_d: diameter of the cap of the counterbored screw
-        cbore_hole_head_l: length of the cap (head) of the counterbored screw
-        cbore_hole_sep_l: large separation of the counterbored holes
-        cbore_hole_sep_s: small separation of the counterbored holes
-        fc_axis_h: FreeCAD.Vector on the direction of the vertical (thickness)
-        fc_axis_l: FreeCAD.Vector on the direction of the large distance of
-                the counterbored asymetrical holes
-        cl: 1: centered on the fc_axis_l direction
-        cw: 1: centered on the axis_small direction (perpendicular to fc_axis_l
-               and fc_axis_h)
-        ch: 1: centered on the vertical direction (thickness)
-        pos :  position of the center. FreeCAD.Vector
-        name: name 
-
-    """
-
-    doc = FreeCAD.ActiveDocument
-
-    # normalize de axis
-    axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
-    axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
-    axis_s = fc_axis_l.cross(fc_axis_h)
-
-    shp_box = fcfun.shp_box_dir(side_l, side_l, thick, axis_h, axis_l,
-                                  cw = cl, cd = cw, ch = ch,
-                                  pos = pos)
-
-    # getting the offset of the center coordinates
-    if cl == 1:
-       l_0 = V0 # already centered
-    else:
-       l_0 = DraftVecUtils.scaleTo(axis_l, side_l/2.)
-    if cw == 1:
-       s_0 = V0
-    else:
-       s_0 = DraftVecUtils.scaleTo(axis_s, side_l/2.)
-    if ch == 1: # for the height, we want the lower side
-       h_0 = DraftVecUtils.scaleTo(axis_h, -thick/2.)
-    else:
-       h_0 = V0
-
-    pos_center = pos + l_0 + s_0 + h_0
-
-    shp_cenhole = fcfun.shp_cylcenxtr(r=thruhole_d/2., h=thick,
-                                      normal=axis_h,
-                                      ch = 0,
-                                      xtr_top=1., xtr_bot=1., 
-                                      pos=pos_center)
-
-    # symetrical holes
-    holes = []
-    for add_l in (DraftVecUtils.scaleTo(axis_l,  sym_hole_sep/2),
-                  DraftVecUtils.scaleTo(axis_l, - sym_hole_sep/2)) :
-        for add_s in (DraftVecUtils.scaleTo(axis_s,  sym_hole_sep/2),
-                      DraftVecUtils.scaleTo(axis_s, - sym_hole_sep/2)) :
-            pos_hole = pos_center + add_l + add_s
-            shp_hole = fcfun.shp_cylcenxtr(r=sym_hole_d/2., h=thick,
-                                      normal=axis_h,
-                                      ch = 0,
-                                      xtr_top=1., xtr_bot=1., 
-                                      pos=pos_hole)
-            holes.append(shp_hole)
-
-    # asymetrical hole
-    for add_l in (DraftVecUtils.scaleTo(axis_l,  cbore_hole_sep_l/2),
-                  DraftVecUtils.scaleTo(axis_l, - cbore_hole_sep_l/2)) :
-        for add_s in (DraftVecUtils.scaleTo(axis_s,  cbore_hole_sep_s/2),
-                      DraftVecUtils.scaleTo(axis_s, - cbore_hole_sep_s/2)) :
-            pos_hole = pos_center + add_l + add_s
-            shp_hole = fcfun.shp_cylcenxtr(r=cbore_hole_d/2., h=thick,
-                                      normal=axis_h,
-                                      ch = 0,
-                                      xtr_top=1., xtr_bot=1., 
-                                      pos=pos_hole)
-            pos_head = (  pos_hole
-                      + DraftVecUtils.scaleTo(axis_h, thick-cbore_hole_head_l))
-            shp_hole_head = fcfun.shp_cylcenxtr(r=cbore_hole_head_d/2.,
-                                      h=cbore_hole_head_l,
-                                      normal=axis_h,
-                                      ch = 0,
-                                      xtr_top=1., xtr_bot=0, 
-                                      pos=pos_head)
-            shp_cbore_hole = shp_hole.fuse(shp_hole_head)
-
-            holes.append(shp_cbore_hole)
-
-
-    shp_holes = shp_cenhole.multiFuse(holes)
-
-    shp_plate = shp_box.cut(shp_holes)
-    doc.recompute()
-    fco_plate = doc.addObject("Part::Feature", name )
-    fco_plate.Shape = shp_plate
-
-    return (fco_plate)
-    
-                     
-
-def plate_lb2c (
-           fc_axis_h,
-           fc_axis_l,
-           cl=1, cw=1, ch=0,
-           pos = V0,
-           name = 'lb2c_plate'):
-
-    shp_plate = plate_thruhole_hole8 (
-           side_l     = kcomp_optic.LB2C_PLATE['L'], # 76.2, 
-           thick      = kcomp_optic.LB2C_PLATE['thick'],
-           thruhole_d = kcomp_optic.LB2C_PLATE['thruhole_d'],
-           sym_hole_d = kcomp_optic.LB2C_PLATE['sym_hole_d'],
-           sym_hole_sep  = kcomp_optic.LB2C_PLATE['sym_hole_sep'],
-           cbore_hole_d  = kcomp_optic.LB2C_PLATE['cbore_hole_d'],
-           cbore_hole_head_d = kcomp_optic.LB2C_PLATE['cbore_hole_head_d'],
-           cbore_hole_head_l = kcomp_optic.LB2C_PLATE['cbore_hole_head_l'],
-           cbore_hole_sep_l = kcomp_optic.LB2C_PLATE['cbore_hole_sep_l'],
-           cbore_hole_sep_s = kcomp_optic.LB2C_PLATE['cbore_hole_sep_s'],
-           fc_axis_h = fc_axis_h,
-           fc_axis_l = fc_axis_l,
-           cl=cl, cw=cw, ch=ch,
-           pos = pos,
-           name = name)
-
-    return shp_plate
-                       
-
-
-#doc = FreeCAD.newDocument()
-#doc = FreeCAD.ActiveDocument
-
-
-#plate_lb2c (fc_axis_h = VZ, fc_axis_l = VX, cl=1, cw=1, ch=0, pos=V0,
-#            name = 'lb2c_plate')
-            
 
 def f_breadboard (d_breadboard,
                   length,

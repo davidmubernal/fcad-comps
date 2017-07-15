@@ -16,11 +16,15 @@ import kcomp
 
 INCH = 25.4  # how many mm are one inch
 
+# diameter of a SM2 thread
+SM2_D =  2.035*INCH  # SM2 (2.035"-40): d=51.689 mm
+SM1_D =  1.035*INCH  # SM2 (1.035"-40): d=26.289 mm
+
 CAGE_CUBE_60 = {
            'L'             :  76.2 ,  # Length of each side (3 inch)
            'thru_hole_d'   :  63.5 ,  # both sides, thru, not threaded
                                       # Thru, 4 sides
-           'thru_thread_d' :  2.035*INCH ,  # SM2 (2.035"-40): d=51.689 mm
+           'thru_thread_d' :  SM2_D ,  # SM2 (2.035"-40): d=51.689 mm
            'thru_rod_d'    :  6. ,    # 4 places, 2 sides, thru, on SM2 side
            'thru_rod_sep'  :  60. ,   # Separation between the rods
            # thread of the rods that can be tapped on the sides other than
@@ -98,6 +102,105 @@ LB2C_PLATE = {
            'cbore_hole_sep_s' : CAGE_CUBE_60['tap_sep_s']
            }
 
+# 2inch diameter stackabel lens tubes> SM2LXX
+#
+#                     ______________
+#                   _|..............|
+#                  | :              |
+#     SM2 external | :              |   SM2 (2 inch) internal thread
+#       thread     | :              |
+#                  |_:..............|
+#                    |______________|
+#                  : :              :
+#                  :3:    Lext      :
+#                  :                :
+#                  :...... L1 ......:
+#
+#
+#
+
+SM1L_Lint = 3.
+SM2L_Lint = 3.
+
+# External diameter of a SM1 tube lens
+SM1_TLENS_D = 30.5
+SM2_TLENS_D = 55.9
+
+
+# Length exterior (L), so when threaded, the interior length of 3mm doesnt count
+
+
+SM2L_Lext = {      # L1
+              3 : 11.4 - SM2L_Lint, #SM2L03
+              5 : 16.5 - SM2L_Lint, #SM2L05
+             10 : 29.2 - SM2L_Lint, #SM2L10
+             15 : 41.9 - SM2L_Lint, #SM2L15
+             20 : 54.6 - SM2L_Lint, #SM2L20
+             30 : 80.0 - SM2L_Lint  #SM2L30
+             }
+
+
+SM1L_Lext = {      # L1
+              3 :  11.4 - SM1L_Lint, #SM1L03
+              5 :  16.5 - SM1L_Lint, #SM1L05
+             10 :  29.2 - SM1L_Lint, #SM1L10
+             15 :  41.9 - SM1L_Lint, #SM1L15
+             20 :  54.6 - SM1L_Lint, #SM1L20
+             30 :  80.0 - SM1L_Lint, #SM1L30
+             35 :  92.7 - SM1L_Lint, #SM1L35
+             40 : 105.4 - SM1L_Lint  #SM1L40
+             }
+
+
+#                                 SM1A2        SM2T2
+#
+#                  lens tube         __            locking rings: 2.8mm each
+#                                   | .|       _H_H_
+#     LED            SM1LXX         |: |      |.....|
+#     _____       ______________    |: |      |     |
+#        __|    _|..............|  _|: |      |     |
+#       |      | :              | |  : |      |     |
+#       |      | :    SM1       | |  : | SM2  |     |
+#       |      | :              | |  : |      |     |
+#       |__    |_:..............| |_ : |      |     |
+#     _____|     |______________|   |: |      |     |
+#              : :              :   |: |      |.....|
+#              :3:    Lext      :   |:.|      |_____|
+#                                   |__|        H H
+#                                   ::            
+#                                   0.7 mm
+
+# So, joining the lens tube SM1LXX + SM1A2 + SM2T2
+# we have something like this, is approximate, also because it can be adjusted
+# differently. NOT DRAWING THE THREADS, just the length as it were threaded in
+#
+#                                    .........................
+#                  lens tube     _HH ...........             :
+#                               ||..|          :             :
+#  LED               SM1LXX     ||  |          :             :
+#  _____    ..... ______________||  |          :             :
+#     __|   :   _|..............||  |          :             :
+#    |      :  | :            : ||  |          :             :
+#    |  30.5+  | :    SM1     : ||  |          +55.9         + 57.2
+#    |      :  | :            : ||  |          :SM2_TLENS_D  :
+#    |__    :  |_:............:.||  |          :             :
+#  _____|   :....|______________||  |          :             :
+#              : :              ||  |          :             :
+#              :3:    Lext      ||..|          :             :
+#                               ||__|..........:             :
+#   SM1_TLENS_D=30.5              HH ........................:
+#                             0.7: 5.6
+
+
+SM1L_2_SM2 = {
+              'sm1_d' : SM1_TLENS_D, # SM1 lens diameter
+              'sm1_l' : SM1L_Lext,   # dictionary to the length of the SM1 part
+              'sm2_d' : SM2_TLENS_D, # SM2 lens diameter
+              'sm2_l' : 0.7, # height (length) of the SM2 part
+              'ring_d' : 57.2, # diameter of the ring
+              'ring_l' : 5.6,  # height (length) of the ring
+              'thick' : ((SM1_TLENS_D - SM1_D) / 2.)  # approximate thickness
+             }
 
 
 # metric bread board constant dimensions:

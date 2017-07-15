@@ -918,6 +918,106 @@ def add2CylsHole (r1, h1, r2, h2, thick,
 
 
 
+def add3CylsHole (r1, h1, r2, h2, rring, hring, thick,
+                  normal = VZ, pos = V0):
+
+    """ Creates a piece formed by 2 hollow cylinders, and a ring
+        on the side of the larger cylinder
+
+        ref
+
+
+               _:.. h1 .....+..h2..:
+              | |           :      :
+           ...| |___________:      :
+      thick...|.|.......... |      :
+              | |         : |______:.....
+              | |         :........|    :
+              | |         :        |    + r2
+              * |         :        |....:.......
+              | |         :........|    :      :
+              | |         :  ______|    + r1   :
+              |.|.........: |           :      :
+              | |___________|...........:      + rring
+              | |                              :
+              |_|..............................:
+              : :
+               + hring
+
+    Arguments:
+        r1: radius of the 1st cylinder. The first cylinder relative to 
+            the position pos (if this is larger than r2, the ring will go first)
+        h1: height of the 1st cylinder (seen from outside)
+        r2: radius of the 2nd cylinder
+        h2: height of the 2nd cylinder (seen from outside)
+        rring: radius of the ring, it has to be larger than r1, and r2
+        hring: height of the ring, it has to be larger than r1, and r2
+        thick: thickness of the walls, excluding the ring
+        normal: direction of the height
+        pos: position of the center
+
+    """
+
+    # normalize de axis just in case:
+    nnormal = DraftVecUtils.scaleTo(normal,1)
+
+    if r1 > rring or r2 > rring:
+        logger.error('r ring has to be larger the the other radius' )
+
+    # the smaller radius cylinder will be larger, add thick   
+
+    if r1 < r2: # the smaller radius cylinder first
+        shp_cyl1 = shp_cyl(r1, h1 + 1, nnormal, pos)
+        pos_cyl2 = pos + DraftVecUtils.scaleTo(nnormal, h1) 
+        shp_cyl2 = shp_cyl(r2, h2 + hring/2., nnormal, pos_cyl2)
+        pos_ring = pos + DraftVecUtils.scaleTo(nnormal, h1+ h2) 
+        shp_ring = shp_cyl(rring, hring, nnormal, pos_ring)
+
+        # thruhole of the smaller radius
+        shp_innercyl_s = shp_cylcenxtr (r1-thick, h = h1+h2+hring,
+                                        normal = nnormal,
+                                        ch = 0, xtr_top=1, xtr_bot=1,
+                                        pos = pos)
+        # thruhole of the larger radius
+        pos_innercyl_l = pos + DraftVecUtils.scaleTo(nnormal, h1+thick)
+        shp_innercyl_l = shp_cylcenxtr (r2-thick, h = h2 + hring - thick,
+                                        normal = nnormal,
+                                        ch = 0,
+                                        xtr_top=1,
+                                        xtr_bot=0,
+                                        pos = pos_innercyl_l)
+    elif r1 > r2: # the ring first, then the larger radius, and then the smaller
+        shp_ring = shp_cyl(rring, hring, nnormal, pos)
+        pos_cyl1 = pos + DraftVecUtils.scaleTo(nnormal, hring) 
+        shp_cyl1 = shp_cylcenxtr(r1, h1, nnormal, ch=0,
+                                 xtr_top = 0, xtr_bot = hring/2., 
+                                 pos = pos_cyl1)
+        pos_cyl2 = pos_cyl1 + DraftVecUtils.scaleTo(nnormal, h1-thick)
+        shp_cyl2 = shp_cyl(r2,h2+thick, nnormal, pos_cyl2)
+        # thruhole of the smaller radius
+        shp_innercyl_s = shp_cylcenxtr (r2-thick, h = h1+h2+hring,
+                                        normal = nnormal,
+                                        ch = 0, xtr_top=1, xtr_bot=1,
+                                        pos = pos)
+        # thruhole of the larger radius
+        pos_innercyl_l = pos + DraftVecUtils.scaleTo(nnormal, h1+thick)
+        shp_innercyl_l = shp_cylcenxtr (r1-thick, h = h1 + hring - thick,
+                                        normal = nnormal,
+                                        ch = 0,
+                                        xtr_top=0,
+                                        xtr_bot=1,
+                                        pos = pos)
+    else:
+        logger.debug('Cylinders have the same radius')
+
+    shp_ext = shp_cyl1.multiFuse([shp_cyl2, shp_ring])
+    shp_innercyl = shp_innercyl_s.fuse(shp_innercyl_l)
+    shp_2cyls_ring = shp_ext.cut(shp_innercyl)
+    return (shp_2cyls_ring)
+    
+
+
+
 # ------------------- def shp_stadium_wire
 # Creates a wire (shape), that is a rectangle with semicircles at a pair of
 # opposite sides. Also called discorectangle
