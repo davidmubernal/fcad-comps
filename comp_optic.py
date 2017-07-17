@@ -545,6 +545,174 @@ def f_cagecubehalf (d_cagecubehalf,
 #                axis_thru_rods = 'x',
 #                axis_thru_hole = 'y',
 #                name = 'cagecube')
+
+
+class Lb1cPlate (object):
+    """
+    Creates a LB1C/M plate from thorlabs. The plate is centered
+
+                  fc_axis_l: axis on the large separation
+                    |
+                    |
+            :-- sy_hole_sep -:
+            :                :
+            :cbore_hole_sep_s:
+            :    :      :    :
+          _______________________
+         |       O      O       | -------------------
+         |  0                0  | ....               :
+         |                      |    :               :
+         |                      |    :               :
+         |         ( )          |    +sym_hole_sep   + cbore_hole_sep_s
+         |                      |    :               :
+         |  0                0  | ....               :
+         |       O      O       | -------------------
+         |______________________|
+
+         ________________________
+         |  ::  : ::..:         |          fc_axis_h 
+         |__::___H______________| if ref_in=1  |    ->  h=0
+
+
+         ________________________ if ref_in=0 -> h=0
+         |  ::  : ::..:         |              |
+         |__::___H______________|              V fc_axis_h
+
+
+    Args
+        d_plate: dictionary with the dimensions
+        fc_axis_h: FreeCAD.Vector on the direction of the vertical (thickness)
+        fc_axis_l: FreeCAD.Vector on the direction of the large distance of
+                the counterbored asymetrical holes
+        ref_in: 1: fc_axis_h starts on the inside to outside of the plate
+                0: fc_axis_h starts on the outside to inside of the plate
+        pos :  position of the center. FreeCAD.Vector. The center is on the 
+               center of the plate, but on the axis_h can be in either side
+               depending on ref_in
+        name: name 
+
+    """
+
+    def __init__ (self, d_plate,
+                        fc_axis_h = VZ,
+                        fc_axis_l = VX,
+                        ref_in = 1,
+                        pos = V0,
+                        name = 'lb1c_plate'):
+
+        doc = FreeCAD.ActiveDocument
+
+        # dictionary with the dimensions
+        self.d_plate = d_plate
+        side_l = d_plate['L']
+        thick = d_plate['thick']
+        sym_hole_d = d_plate['sym_hole_d']
+        sym_hole_sep = d_plate['sym_hole_sep'] 
+        cbore_hole_d  = d_plate['cbore_hole_d'] 
+        cbore_hole_head_d =d_plate['cbore_hole_head_d'] 
+        cbore_hole_head_l =d_plate['cbore_hole_head_l'] 
+        cbore_hole_sep_l =d_plate['cbore_hole_sep_l'] 
+        cbore_hole_sep_s =d_plate['cbore_hole_sep_s']
+
+        # normalize de axis
+        axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+        axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
+        axis_s = fc_axis_l.cross(fc_axis_h)
+
+        shp_box = fcfun.shp_box_dir(side_l, side_l, thick, axis_h, axis_l,
+                                    cw = 1, cd = 1, ch = 0,
+                                    pos = pos)
+
+        if ref_in == 1:
+            # the holes mounting hole (center) and the cap holes will start
+            # on the other side, and will go on negated axis_h.
+            # For the other holes (thruholes) it doesn't matter
+            pos_h_add = DraftVecUtils.scale(axis_h, thick)
+            axis_hole = DraftVecUtils.neg(axis_h)
+            # for the ring:
+            axis_ring = axis_h
+            pos_ring = pos + DraftVecUtils.scale(axis_h,
+                                                 - d_plate['seal_ring_thick'] )
+        else:
+            pos_h_add = V0
+            axis_hole = axis_h
+            axis_ring = DraftVecUtils.neg(axis_h)
+            pos_ring = pos + DraftVecUtils.scale(axis_h,
+                                          thick + d_plate['seal_ring_thick'] )
+
+        shp_cenhole = fcfun.shp_cylcenxtr(r=d_plate['mhole_d']/2.,
+                                          h=d_plate['mhole_depth'],
+                                          normal=axis_hole,
+                                          ch = 0,
+                                          xtr_top=0, xtr_bot=1, 
+                                          pos=pos + pos_h_add)
+
+        # Retaining ring hole
+        shp_ringhole = fcfun.shp_cylholedir (
+                             r_out = (  d_plate['seal_ring_d']/2.
+                                      + d_plate['seal_ring_thick']/2.),
+                             r_in = (  d_plate['seal_ring_d']/2.
+                                     - d_plate['seal_ring_thick']/2.),
+                             h = 2 * d_plate['seal_ring_thick'],
+                             normal = axis_ring,
+                             pos = pos_ring)
+
+
+        holes = [shp_ringhole]
+        # symetrical holes
+        for add_l in (DraftVecUtils.scaleTo(axis_l,  sym_hole_sep/2),
+                      DraftVecUtils.scaleTo(axis_l, - sym_hole_sep/2)) :
+            for add_s in (DraftVecUtils.scaleTo(axis_s,  sym_hole_sep/2),
+                          DraftVecUtils.scaleTo(axis_s, - sym_hole_sep/2)) :
+                pos_hole = pos + add_l + add_s
+                shp_hole = fcfun.shp_cylcenxtr(r=sym_hole_d/2., h=thick,
+                                          normal=axis_h,
+                                          ch = 0,
+                                          xtr_top=1., xtr_bot=1., 
+                                          pos=pos_hole)
+                holes.append(shp_hole)
+
+        # asymetrical hole
+        for add_l in (DraftVecUtils.scaleTo(axis_l,  cbore_hole_sep_l/2),
+                      DraftVecUtils.scaleTo(axis_l, - cbore_hole_sep_l/2)) :
+            for add_s in (DraftVecUtils.scaleTo(axis_s,  cbore_hole_sep_s/2),
+                          DraftVecUtils.scaleTo(axis_s, - cbore_hole_sep_s/2)) :
+                pos_hole = pos + add_l + add_s
+                shp_hole = fcfun.shp_cylcenxtr(r=cbore_hole_d/2., h=thick,
+                                          normal=axis_h,
+                                          ch = 0,
+                                          xtr_top=1., xtr_bot=1., 
+                                          pos=pos_hole)
+                shp_hole_head = fcfun.shp_cylcenxtr(r=cbore_hole_head_d/2.,
+                                          h=cbore_hole_head_l,
+                                          normal=axis_hole,
+                                          ch = 0,
+                                          xtr_top=0, xtr_bot=1, 
+                                          pos=pos_hole + pos_h_add)
+                shp_cbore_hole = shp_hole.fuse(shp_hole_head)
+                holes.append(shp_cbore_hole)
+    
+
+        shp_holes = shp_cenhole.multiFuse(holes)
+
+        shp_plate = shp_box.cut(shp_holes)
+        doc.recompute()
+        fco_plate = doc.addObject("Part::Feature", name )
+        fco_plate.Shape = shp_plate
+        self.fco = fco_plate
+
+
+doc = FreeCAD.newDocument()
+doc = FreeCAD.ActiveDocument
+
+
+Lb1cPlate (kcomp_optic.LB1CM_PLATE)
+Lb1cPlate (kcomp_optic.LB1CM_PLATE,
+                        fc_axis_h = VY,
+                        fc_axis_l = VXN,
+                        ref_in = 0,
+                        pos = V0)
+
                            
 def plate_thruhole_hole8 (side_l, 
            thick,
@@ -598,6 +766,7 @@ def plate_thruhole_hole8 (side_l,
         cbore_hole_sep_l: large separation of the counterbored holes
         cbore_hole_sep_s: small separation of the counterbored holes
         fc_axis_h: FreeCAD.Vector on the direction of the vertical (thickness)
+                   from the inside of the plate
         fc_axis_l: FreeCAD.Vector on the direction of the large distance of
                 the counterbored asymetrical holes
         cl: 1: centered on the fc_axis_l direction
@@ -691,9 +860,9 @@ def plate_thruhole_hole8 (side_l,
 
 
 
-    def BasePlace (self, position = (0,0,0)):
-        self.base_place = position
-        self.fco.Placement.Base = FreeCAD.Vector(position)
+#   def BasePlace (self, position = (0,0,0)):
+#       self.base_place = position
+#       self.fco.Placement.Base = FreeCAD.Vector(position)
 
     
                      
@@ -791,9 +960,11 @@ class SM1TubelensSm2 (object):
         sm1l_size: length of the side of the cube (then it will be halved)
         fc_axis: direction of the tube lens: FreeCAD.Vector
         axis_2: direction big the other right side: 
-        pos : position of the object
         ref_sm1: 1: if the position is referred to the sm1 end
                  0: if the position is referred to the ring end
+        pos : position of the object
+        ring : 1: if there is ring
+               0: there is no ring, so just the thread, at it is not drawn
         name: name of the freecad object
     """
 
@@ -801,6 +972,7 @@ class SM1TubelensSm2 (object):
                         fc_axis = VX,
                         ref_sm1 = 1,
                         pos = V0,
+                        ring = 1,
                         name = 'tubelens_sm1_sm2'):
 
         doc = FreeCAD.ActiveDocument
@@ -815,8 +987,14 @@ class SM1TubelensSm2 (object):
         self.sm1_l = d_sm1l_sm2['sm1_l'][sm1l_size]
         self.sm2_d = d_sm1l_sm2['sm2_d']
         self.sm2_l = d_sm1l_sm2['sm2_l']
-        self.ring_d = d_sm1l_sm2['ring_d']
-        self.ring_l = d_sm1l_sm2['ring_l']
+        if ring == 1:
+            self.ring_d = d_sm1l_sm2['ring_d']
+            self.ring_l = d_sm1l_sm2['ring_l']
+            self.ring = 1
+        else:
+            self.ring_d = 0
+            self.ring_l = 0
+            self.ring = 0
         self.thick = d_sm1l_sm2['thick']
         self.fc_axis = fc_axis
         self.ref_sm1 = ref_sm1
@@ -832,10 +1010,17 @@ class SM1TubelensSm2 (object):
             h1 = self.sm2_l
             r2 = self.sm1_d/2.
             h2 = self.sm1_l
+        self.length = self.sm1_l + self.sm2_l + self.ring_l
         
-        shp_sm1_tube_sm2 = fcfun.add3CylsHole (r1, h1, r2, h2, 
+        if ring == 1:
+            shp_sm1_tube_sm2 = fcfun.add3CylsHole (r1, h1, r2, h2, 
                                                rring = self.ring_d/2,
                                                hring = self.ring_l,
+                                               thick = self.thick,
+                                               normal = fc_axis,
+                                               pos = pos)
+        else:
+            shp_sm1_tube_sm2 = fcfun.add2CylsHole (r1, h1, r2, h2, 
                                                thick = self.thick,
                                                normal = fc_axis,
                                                pos = pos)
@@ -849,9 +1034,338 @@ class SM1TubelensSm2 (object):
         self.base_place = position
         self.fco.Placement.Base = FreeCAD.Vector(position)
 
- 
+
+# ---------------------- ThLed30 --------------------------
+
+class ThLed30 (object):
+
+    """ Creates the shape of a Thorlabs Led with 30.5 mm Heat Sink diameter
+        The drawing is very rough
+                                 
+                          :....35...:
+                          :         :
+                          :         :
+                          :  Cable  :
+                         | | diam ? :
+                         | |        :
+                     ____|_|________:..................
+            ......__|       | | | | |                 :
+            :    |  :       | | | | |                 :
+            :    |  :       | | | | |                 :
+       <- ? +   C|  0       | | | | |                 + 30.5
+    fc_axis :    |          | | | | |                 :
+            :....|__        | | | | |                 :
+                :   |_______________|.................:
+                :   :               :
+                :   :......50.......:
+                :                   :
+                :........60.4.......:
+                            :       :
+                            :       :
+                            : heatsinks_totl
+
+    The reference is marked with a 0 in the drawing
+
+    fc_axis : axis on the direction of the led
+                                
+    """
+
+    def __init__ (self, 
+                        fc_axis = VY,
+                        fc_axis_cable = VZN,
+                        pos = V0,
+                        name = 'thled30'):
+
+        self.fc_axis = fc_axis
+        self.fc_axis_cable = fc_axis_cable
+        self.pos = pos
+        doc = FreeCAD.ActiveDocument
+
+        # normalize the axis and negate to build the cylinders
+        n_axis = DraftVecUtils.scaleTo(fc_axis,-1)
+
+        # dictionary with the dimensions
+        d_led = kcomp_optic.THLED30
+
+        # length of the part of the heat sinks (very approximate)
+        heatsinks_totl =  d_led['cable_dist'] - d_led['cable_d']
+        # the main part, without the heat sink
+        shp_cyl_body = fcfun.shp_cyl(
+                   r = d_led['ext_d']/2.,
+                   h = d_led['ext_l'] - heatsinks_totl,
+                   normal = n_axis,
+                   pos = pos)
+    
+        # the solid part under the heat sinks
+        shp_cyl_solid = fcfun.shp_cyl(
+                   r = d_led['ext_d']/6, #approximate
+                   h = d_led['ext_l'],
+                   normal = n_axis,
+                   pos = pos)
+        fuse_list = []
+        fuse_list.append(shp_cyl_solid)
+
+        # the part where the Led is, very approximate, simplified drawing
+        shp_cyl_led = fcfun.shp_cylcenxtr(
+                   r = d_led['int_d']/2.,
+                   h = d_led['tot_l'] - d_led['ext_l'],
+                   normal = DraftVecUtils.neg(n_axis), #on the other direction
+                   ch = 0, xtr_top=0, xtr_bot =1.,
+                   pos = pos)
+        fuse_list.append(shp_cyl_led)
+
+        # Just a few heat sinks (4). Just to see them in the drawing
+        heatsink_w = heatsinks_totl / 8.
+        pos_heatsink = (  pos 
+                        + DraftVecUtils.scaleTo(n_axis,
+                               d_led['ext_l'] - heatsinks_totl + heatsink_w))
+        pos_heatsink_add =  DraftVecUtils.scaleTo(n_axis, 2* heatsink_w)
+        for i in xrange(4): #0, 1, 2, 3
+            shp_heatsink = fcfun.shp_cyl(
+                              r = d_led['ext_d']/2.,
+                              h = heatsink_w,
+                              normal = n_axis,
+                              pos = pos_heatsink)
+            fuse_list.append(shp_heatsink)
+            pos_heatsink = pos_heatsink + pos_heatsink_add 
         
-                                               
+        # Cable
+        poscable = ( pos + DraftVecUtils.scaleTo(n_axis,
+                                 d_led['ext_l'] - d_led['cable_dist']))
+        shp_cable = fcfun.shp_cyl (r = d_led['cable_d']/2.,
+                              h = d_led['ext_d'],
+                              normal = fc_axis_cable,
+                              pos = poscable)
+
+        fuse_list.append(shp_cable)
+        shp_led = shp_cyl_body.multiFuse(fuse_list)
+
+        doc.recompute()
+        fco_led = doc.addObject("Part::Feature", name )
+        fco_led.Shape = shp_led
+        self.fco = fco_led
+
+
+
+#doc = FreeCAD.newDocument()
+#doc = FreeCAD.ActiveDocument
+
+
+#ThLed30 (
+#                       fc_axis = VY,
+#                       fc_axis_cable = VZN,
+#                       pos = V0,
+#                       name = 'thled30')
+
+
+# ---------------------- PrizLed --------------------------
+
+class PrizLed (object):
+
+    """ Creates the shape of a Prizmatix UHP-T-Led 
+        The drawing is very rough, and the original drawing lacks many 
+        dimensions
+
+               ...22....                        ........50.........
+               :       :                        :                 :
+       ........:________________             vtl:_________________:vtr.....
+       : 10.5+ |              | |___________    |                 |   :   :
+       :     :.|       O M6   | |           |   |      ____       |   +25 :
+       :       |              | |           |   |     /     \     |   :   :
+       +39.5   |              | |  Fan      |   |    | SM1   |    |...:   :
+       :.......|       O      | |           |   |     \____ /     |       :
+               |              | |           |   |                 |       + 90
+               |              | |___________|   |      KEEP       |       :
+               |              | |               |      CLEAR      |       :
+               |              | |               |      |  |       |       :
+               |              | |               |      V  V       |       :
+               |              | |               |_________________|       :
+                \_____________|_|               |_________________|.......:
+                                                         :
+               :15:                                      :
+               :  :                                      V
+               :__:__________________________         fc_axis_clear
+               |              | |           |          
+               |  O           | |           |
+    fc_axis_led|              | |           |
+          <--- |              | |           |
+               |              | |           | 
+               |              | |           |
+               |  O M6        | |           |
+               |______________|_|___________|
+               :                            :
+               :...........98.75............:
+
+    Arguments:
+        fc_axis_led: FreeCAD.Vector on the direction of the led
+        fc_axis_clear: FreeCAD.Vector on the direction of the arrows
+                       indicating to keep clear
+        pos: position of the LED, on the center of the SM1 thread
+
+    """
+
+    def __init__ (self, fc_axis_led = VX, fc_axis_clear = VZN,
+                  pos = V0, name = 'prizmatix_led'):
+
+        self.fc_axis_led = fc_axis_led
+        self.fc_axis_clear = fc_axis_clear
+        self.pos = pos
+        self.d_led = kcomp_optic.PRIZ_UHP_LED # the dictionary
+        doc = FreeCAD.ActiveDocument
+        doc.recompute() 
+
+
+        d_led = kcomp_optic.PRIZ_UHP_LED
+
+        # normalize axis:
+        nnorm_led = DraftVecUtils.scaleTo(fc_axis_led,1)
+        # negated to have the direction to build the shapes
+        nnorm_ledn = DraftVecUtils.neg(nnorm_led)
+        nnorm_clear = DraftVecUtils.scaleTo(fc_axis_clear,1)
+
+        # get the 3rd perpendicular vector:
+        nnorm_perp = nnorm_led.cross(nnorm_clear)
+        nnorm_perpn = DraftVecUtils.neg(nnorm_perp)
+        # check if they are perpendicular
+        nperp = nnorm_led.dot(nnorm_clear)
+        if nperp != 0:
+            logger.error('axis are not perpendicular')
+
+        # the center of the block will be on the half of the height:90.
+        # pos is on 25., so 20. down the fc_axis_clear axis
+        # use scale and not scale to because nnorm_clear length is 1
+        pos_center_block = pos + DraftVecUtils.scale(nnorm_clear, 
+                                 d_led['H']/2. - d_led['led_hole_dist'])
+        shp_block = fcfun.shp_box_dir(box_w = d_led['width'],
+                                       box_d = d_led['depth_block'],
+                                       box_h = d_led['H'],
+                                       fc_axis_h = nnorm_clear,
+                                       fc_axis_d = nnorm_ledn,
+                                       cw = 1, cd = 0, ch = 1,
+                                       pos = pos_center_block)
+        # chamfer the edge on these vertexes:
+        chmf_v0 = (  pos_center_block
+                   + DraftVecUtils.scale(nnorm_clear, d_led['H']/2.)
+                   + DraftVecUtils.scale(nnorm_perp, d_led['width']/2.))
+        chmf_v1 = (  pos_center_block
+                   + DraftVecUtils.scale(nnorm_clear, d_led['H']/2.)
+                   + DraftVecUtils.scale(nnorm_perp, - d_led['width']/2.))
+        for edge in shp_block.Edges:
+            edge_v0 = edge.Vertexes[0].Point #Point to get the FreeCAD.Vector
+            edge_v1 = edge.Vertexes[1].Point
+            if ((DraftVecUtils.equals(edge_v0, chmf_v0) and
+                 DraftVecUtils.equals(edge_v1, chmf_v1)) or
+                (DraftVecUtils.equals(edge_v0, chmf_v1) and
+                 DraftVecUtils.equals(edge_v1, chmf_v0))):
+                shp_block = shp_block.makeChamfer(d_led['chmf_r'],[edge])
+                break
+
+        # adding the box of the fan:
+        pos_fan = pos + DraftVecUtils.scale(nnorm_clear,10)
+        shp_fan = fcfun.shp_box_dir(box_w = d_led['width'],
+                                    box_d = d_led['depth_t'],
+                                    box_h = d_led['width'],
+                                    fc_axis_h = nnorm_clear,
+                                    fc_axis_d = nnorm_ledn,
+                                    cw = 1, cd = 0, ch = 1,
+                                    pos = pos_fan)
+       
+        shp_block = shp_block.fuse(shp_fan)
+        shp_block = shp_block.removeSplitter()
+
+        # make a hole for the SM1 thread, doesnt say how deep it is
+        shp_cyl_sm1 = fcfun.shp_cylcenxtr(r = d_led['led_hole_d']/2.,
+                                          h = d_led['led_hole_depth'],
+                                          normal = nnorm_ledn,
+                                          ch = 0, xtr_top = 0, xtr_bot = 1,
+                                          pos = pos)
+
+        # M6 mounting threads
+        # top center point
+        vtc = pos + DraftVecUtils.scale(nnorm_clear, - d_led['led_hole_dist'])
+        # top corner right point:
+        vtr = vtc + DraftVecUtils.scale(nnorm_perp, d_led['width']/2.)
+        vtl = vtc + DraftVecUtils.scale(nnorm_perp, - d_led['width']/2.)
+        # vector from the corner to top of the side hole
+        corner2topsidehole = DraftVecUtils.scale(nnorm_ledn,
+                                                 d_led['side_thread_depth'])
+        pos_sideholetopr = (vtr + corner2topsidehole +
+                       DraftVecUtils.scale(nnorm_clear,d_led['side_thread1_h']))
+        shp_sideholetopr = fcfun.shp_cylcenxtr(r = d_led['mthread_d']/2.,
+                                               h = d_led['mthread_h'],
+                                               normal = nnorm_perpn,
+                                               ch = 0, xtr_top = 0, xtr_bot = 1,
+                                               pos = pos_sideholetopr)
+        threadholes_list = [shp_sideholetopr]
+        pos_sideholebotr = (vtr + corner2topsidehole +
+                       DraftVecUtils.scale(nnorm_clear,d_led['side_thread2_h']))
+        shp_sideholebotr = fcfun.shp_cylcenxtr(r = d_led['mthread_d']/2.,
+                                               h = d_led['mthread_h'],
+                                               normal = nnorm_perpn,
+                                               ch = 0, xtr_top = 0, xtr_bot = 1,
+                                               pos = pos_sideholebotr)
+        threadholes_list.append(shp_sideholebotr)
+        pos_sideholetopl = (vtl + corner2topsidehole +
+                       DraftVecUtils.scale(nnorm_clear,d_led['side_thread1_h']))
+        shp_sideholetopl = fcfun.shp_cylcenxtr(r = d_led['mthread_d']/2.,
+                                               h = d_led['mthread_h'],
+                                               normal = nnorm_perp,
+                                               ch = 0, xtr_top = 0, xtr_bot = 1,
+                                               pos = pos_sideholetopl)
+        threadholes_list.append(shp_sideholetopl)
+        pos_sideholebotl = (vtl + corner2topsidehole +
+                       DraftVecUtils.scale(nnorm_clear,d_led['side_thread2_h']))
+        shp_sideholebotl = fcfun.shp_cylcenxtr(r = d_led['mthread_d']/2.,
+                                               h = d_led['mthread_h'],
+                                               normal = nnorm_perp,
+                                               ch = 0, xtr_top = 0, xtr_bot = 1,
+                                               pos = pos_sideholebotl)
+        threadholes_list.append(shp_sideholebotl)
+
+        corner2toptophole = DraftVecUtils.scale(nnorm_ledn,
+                                                d_led['top_thread_depth'])
+
+        pos_topholer = ( vtr + corner2toptophole +
+                         DraftVecUtils.scale(nnorm_perp,
+                                 -(d_led['width']-d_led['top_thread_sep'])/2.))
+        shp_topholer = fcfun.shp_cylcenxtr(r=d_led['mthread_d']/2.,
+                                           h = d_led['mthread_h'],
+                                           normal = nnorm_clear,
+                                           ch = 0, xtr_top = 0, xtr_bot = 1,
+                                           pos = pos_topholer)
+        threadholes_list.append(shp_topholer)
+        pos_topholel = ( vtl + corner2toptophole +
+                         DraftVecUtils.scale(nnorm_perp,
+                                  (d_led['width']-d_led['top_thread_sep'])/2.))
+        shp_topholel = fcfun.shp_cylcenxtr(r=d_led['mthread_d']/2.,
+                                           h = d_led['mthread_h'],
+                                           normal = nnorm_clear,
+                                           ch = 0, xtr_top = 0, xtr_bot = 1,
+                                           pos = pos_topholel)
+        threadholes_list.append(shp_topholel)
+
+        shp_holes = shp_cyl_sm1.multiFuse(threadholes_list)
+
+        shp_block = shp_block.cut(shp_holes)
+        doc.recompute() 
+
+        Part.show(shp_block)
+    
+
+#doc = FreeCAD.newDocument()
+#doc = FreeCAD.ActiveDocument
+
+
+#PrizLed (
+#                       fc_axis_led = VY,
+#                       fc_axis_clear = VZN,
+#                       pos = V0,
+#                       name = 'prizled')
+  
+
+
+       
+
 
 class BreadBoard (object):
 

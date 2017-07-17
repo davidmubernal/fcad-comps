@@ -18,7 +18,7 @@ INCH = 25.4  # how many mm are one inch
 
 # diameter of a SM2 thread
 SM2_D =  2.035*INCH  # SM2 (2.035"-40): d=51.689 mm
-SM1_D =  1.035*INCH  # SM2 (1.035"-40): d=26.289 mm
+SM1_D =  1.035*INCH  # SM1 (1.035"-40): d=26.289 mm
 
 CAGE_CUBE_60 = {
            'L'             :  76.2 ,  # Length of each side (3 inch)
@@ -93,6 +93,26 @@ LB2C_PLATE = {
            'L' : CAGE_CUBE_60['L'], # 76.2, 
            'thick'  : 7.6,
            'thruhole_d' : CAGE_CUBE_60['thru_thread_d'],
+           'sym_hole_d' : kcomp.UNC_D['4'] ,  #4-40
+           'sym_hole_sep' :  CAGE_CUBE_60['thru_rod_sep'],
+           'cbore_hole_d'  :  kcomp.UNC_D['8'],  #8-32,
+           'cbore_hole_head_d' : 6.9, #taken from a socket cap bolt
+           'cbore_hole_head_l' : 4.2, #taken from a socket cap bolt
+           'cbore_hole_sep_l' : CAGE_CUBE_60['tap_sep_l'],
+           'cbore_hole_sep_s' : CAGE_CUBE_60['tap_sep_s']
+           }
+
+
+
+# Thorlabs LB1C/M plate dimensions
+
+LB1CM_PLATE = {
+           'L' : CAGE_CUBE_60['L'], # 76.2, 
+           'thick'  : 7.6,
+           'mhole_d' : 6., # mounting hole M6
+           'mhole_depth' : 5.1, # mounting hole M6
+           'seal_ring_d' : 67.5, # O-ring for tight seal
+           'seal_ring_thick' : 2., # Thickness of the ring, not defined
            'sym_hole_d' : kcomp.UNC_D['4'] ,  #4-40
            'sym_hole_sep' :  CAGE_CUBE_60['thru_rod_sep'],
            'cbore_hole_d'  :  kcomp.UNC_D['8'],  #8-32,
@@ -202,6 +222,97 @@ SM1L_2_SM2 = {
               'thick' : ((SM1_TLENS_D - SM1_D) / 2.)  # approximate thickness
              }
 
+
+# ---------------------- ThLed30 --------------------------
+#   Dimensions of the Thorlabs Led with 30.5 mm Heat Sink diameter
+#       The drawing is very rough
+#                                
+#                         :....35...:
+#                         :         :
+#                         :         :
+#                         :  Cable  :
+#                        | | diam ? :
+#                        | |        :
+#                    ____|_|________:..................
+#           ......__|       | | | | |                 :
+#           :    |  :       | | | | |                 :
+#           :    |  :       | | | | |                 :
+#         ? +   C|  0.....  | | | | |                 + 30.5: SM1_TLENS_D
+#           :    |          | | | | |                 :
+#           :....|__        | | | | |                 :
+#               :   |_______________|.................:
+#               :   :               :
+#               :   :......50.......:
+#               :                   :
+#               :........60.4.......:
+#
+
+THLED30 = { 'ext_l'  : 50., # external length, the other part will be inside
+                            # the tubelens
+            'tot_l'  : 60.4, # total length
+            'ext_d'  : SM1_TLENS_D, # external diameter: 30.5
+            'cable_dist': 35., #distance of the center of the cable to the end
+            'int_d'  : 24.,  #I dont know the value, but 26.289 is the thread
+                            # so it has to be smaller
+            'cable_d' : 5. # dont know the value
+          }
+
+# ---- Dimensions of a Prizmatix UHP-T-Led 
+#       The drawing is very rough, and the original drawing lacks many 
+#       dimensions
+#
+#              ...22....                        ........50.........
+#              :       :                        :                 :
+#      ........:________________                :_________________:........
+#      : 10.5+ |              | |___________    |                 |   :   :
+#      :     :.|       O M6   | |           |   |      ____       |   +25 :
+#      :       |              | |           |   |     /     \     |   :   :
+#      +39.5   |              | |  Fan      |   |    | SM1   |    |...:   :
+#      :.......|       O      | |           |   |     \____ /     |       :
+#              |              | |           |   |                 |       + 90
+#              |              | |___________|   |      KEEP       |       : H
+#              |              | |               |      CLEAR      |       :
+#              |              | |               |      |  |       |       :
+#              |              | |               |      V  V       |       :
+#              |              | |               |_________________|       :
+#               \_____________|_|               |_________________|.......:
+#              :                :
+#              :..depth_block...:
+#                                                        :
+#              :15:                                      :
+#              :  :                                      V
+#              :__:__________________________         fc_axis_clear
+#              |              | |           |          
+#              |  O           | |           |
+#   fc_axis_led|              | |           |
+#         <--- |              | |           |
+#              |              | |           | 
+#              |              | |           |
+#              |  O M6        | |           |
+#              |______________|_|___________|
+#              :                            :
+#              :...........98.75............:
+#                   depth_t
+
+
+PRIZ_UHP_LED = {
+               'H' : 90, # height
+               'depth_t' : 98.75, # total depth
+               'width' : 50., # width
+               'depth_block' : 50., # not defined value
+               'led_hole_d': SM1_D, 
+               'led_hole_depth': 10.,  # value not defined
+               'led_hole_dist': 25., # distance from the top
+               'fan_w': 50., #fan width, not defined
+               'chmf_r' : 8., #chamfer radius, not defined
+               'side_thread_depth' : 22., 
+               'side_thread1_h' : 10.5, # height of the 1st thread
+               'side_thread2_h' : 39.5, # height of the 2st thread
+               'top_thread_depth' : 15., 
+               'top_thread_sep' : 34.,  # unknown
+               'mthread_d' : 6., # mounting thread diamenter
+               'mthread_h' : 8. # unknown
+               }
 
 # metric bread board constant dimensions:
 

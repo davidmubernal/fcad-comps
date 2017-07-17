@@ -834,6 +834,42 @@ def addCylHolePos (r_out, r_in, h, name, normal = VZ, pos = V0):
 
     return cyl_hole
 
+
+
+def shp_cylholedir (r_out, r_in, h, normal = VZ, pos = V0):
+
+    """
+        same as addCylHolePos, but just a shape
+        same as shp_cylhole, but this one accepts any normal
+    Arguments
+        r_out: outside radius,
+        r_in : inside radius,
+        h: height 
+        normal: FreeCAD.Vector pointing to the normal (if its module is not one,
+                the height will be larger than h
+        pos: position of the cylinder
+    """
+
+
+    cir_out =  Part.makeCircle (r_out,   # Radius
+                                pos,     # Position
+                                normal)  # direction
+    cir_in =  Part.makeCircle (r_in,   # Radius
+                                pos,     # Position
+                                normal)  # direction
+
+
+    wire_cir_out = Part.Wire(cir_out)
+    wire_cir_in  = Part.Wire(cir_in)
+    face_cir_out = Part.Face(wire_cir_out)
+    face_cir_in  = Part.Face(wire_cir_in)
+
+    face_cir_hole = face_cir_out.cut(face_cir_in)
+    dir_extrus = DraftVecUtils.scaleTo(normal, h)
+    shp_cyl_hole = face_cir_hole.extrude(dir_extrus)
+
+    return shp_cyl_hole
+
 def add2CylsHole (r1, h1, r2, h2, thick,
                   normal = VZ, pos = V0):
 
