@@ -18,10 +18,20 @@ STOL = TOL / 2.0       # smaller tolerance
 # height of the layer to print. To make some supports, ie: bolt's head
 LAYER3D_H = 0.3  
 
-# ---------------------- Bearings
+# ---------------------- linear Bearings
 LMEUU_L = { 8: 25., 10: 29.0, 12: 32.0 }; #the length of the bearing
 LMEUU_D = { 8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
 
+
+LMEUU_10 = {
+         'Di' : 10,  # interior diameter
+         'De' : LMEUU_D[10], # exterior diameter
+         'L' : LMEUU_L[10] # length
+           }
+
+LMEUU = {
+         10 : LMEUU_10
+        }
 
 
 # E3D V6 extrusor dimensions
@@ -320,6 +330,67 @@ def get_idlepull_maxbear_d (idlepull_list):
                 d_maxbear = elem.d_out
     return d_maxbear
     
+
+# ------------------------- Linear bearing housing
+# Similar to SC10UU, but without many the details, just the main dimensions
+#
+#          bolt_d
+#         : : 
+#         _______________                   ..... ________________
+#        |: :   ___   : :|                  :    |.:.:........:.:.|
+#        |: :  /   \  : :|                H +    | : :        : : |
+#        |----|-----|----|----              :    | : :        : : |
+#        |: :  \___/  : :|   + axis_h       :    |.:.:........:.:.| 
+#        |:_:_________:_:|...:              :....|_:_:________:_:_|      
+#        : :           : :                       :  :          :  :
+#        : :...........: :                       :  :..........:  :
+#        :   bolt_sep_w  :                       :   bolt_sep_l   :
+#        :...... W ......:                       :......L.........:
+#
+#
+#         _____________ 
+#        | 0 :     : 0 |
+#        |   :     :   |
+#        |   :     :   |
+#        |   :     :   |
+#        |   :     :   |
+#        |_0_:_____:_0_|
+#
+
+
+SC10UU = {
+        'L'          : 35.,
+        'W'          : 40.,
+        'H'          : 26.,
+        'axis_h'     : 13.,
+        'bolt_sep_l' : 21.,
+        'bolt_sep_w' : 28.,
+        'bolt_d'     : 5.,  # M5
+        'lbear'      : LMEUU_10  #dictionary with linear bearging dim.
+        }
+
+# modified version to print
+SC10UU_Pr = {
+        'L'          : 35.,
+        'W'          : 40.,
+        'H'          : 26.,
+        'axis_h'     : 13.,
+        'bolt_sep_l' : 21.,
+        'bolt_sep_w' : 28.,
+        'bolt_d'     : 3.,  # M3: changed from M5 to M3
+        'lbear'      : LMEUU_10  #dictionary with linear bearging dim.
+        }
+
+
+SCUU = {
+        10: SC10UU
+       }
+
+SCUU_Pr = {
+        10: SC10UU_Pr
+       }
+
+
 
 # ----------------------------- NEMA motor dimensions --------
 

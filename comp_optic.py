@@ -702,16 +702,16 @@ class Lb1cPlate (object):
         self.fco = fco_plate
 
 
-doc = FreeCAD.newDocument()
-doc = FreeCAD.ActiveDocument
+#doc = FreeCAD.newDocument()
+#doc = FreeCAD.ActiveDocument
 
 
-Lb1cPlate (kcomp_optic.LB1CM_PLATE)
-Lb1cPlate (kcomp_optic.LB1CM_PLATE,
-                        fc_axis_h = VY,
-                        fc_axis_l = VXN,
-                        ref_in = 0,
-                        pos = V0)
+#Lb1cPlate (kcomp_optic.LB1CM_PLATE)
+#Lb1cPlate (kcomp_optic.LB1CM_PLATE,
+#                       fc_axis_h = VY,
+#                       fc_axis_l = VXN,
+#                       ref_in = 0,
+#                       pos = V0)
 
                            
 def plate_thruhole_hole8 (side_l, 
@@ -852,11 +852,11 @@ def plate_thruhole_hole8 (side_l,
     shp_holes = shp_cenhole.multiFuse(holes)
 
     shp_plate = shp_box.cut(shp_holes)
-    doc.recompute()
-    fco_plate = doc.addObject("Part::Feature", name )
-    fco_plate.Shape = shp_plate
-
-    return (fco_plate)
+    #doc.recompute()
+    #fco_plate = doc.addObject("Part::Feature", name )
+    #fco_plate.Shape = shp_plate
+    #return (fco_plate)
+    return (shp_plate)
 
 
 
@@ -901,6 +901,70 @@ def plate_lb2c (
 
 
 #plate_lb2c (fc_axis_h = VZ, fc_axis_l = VX, cl=1, cw=1, ch=0, pos=V0,
+#            name = 'lb2c_plate')
+ 
+
+class Lb2cPlate (object):
+
+    """ Same as plate_lb2c, but it creates an object """
+
+    def __init__(self,
+           fc_axis_h,
+           fc_axis_l,
+           cl=1, cw=1, ch=0,
+           pos = V0,
+           name = 'lb2c_plate'):
+
+        doc = FreeCAD.ActiveDocument
+
+        self.base_place = (0,0,0)
+        shp_plate = plate_thruhole_hole8 (
+           side_l     = kcomp_optic.LB2C_PLATE['L'], # 76.2, 
+           thick      = kcomp_optic.LB2C_PLATE['thick'],
+           thruhole_d = kcomp_optic.LB2C_PLATE['thruhole_d'],
+           sym_hole_d = kcomp_optic.LB2C_PLATE['sym_hole_d'],
+           sym_hole_sep  = kcomp_optic.LB2C_PLATE['sym_hole_sep'],
+           cbore_hole_d  = kcomp_optic.LB2C_PLATE['cbore_hole_d'],
+           cbore_hole_head_d = kcomp_optic.LB2C_PLATE['cbore_hole_head_d'],
+           cbore_hole_head_l = kcomp_optic.LB2C_PLATE['cbore_hole_head_l'],
+           cbore_hole_sep_l = kcomp_optic.LB2C_PLATE['cbore_hole_sep_l'],
+           cbore_hole_sep_s = kcomp_optic.LB2C_PLATE['cbore_hole_sep_s'],
+           fc_axis_h = fc_axis_h,
+           fc_axis_l = fc_axis_l,
+           cl=cl, cw=cw, ch=ch,
+           pos = pos,
+           name = name)
+
+        self.side_l     = kcomp_optic.LB2C_PLATE['L'] # 76.2 
+        self.thick      = kcomp_optic.LB2C_PLATE['thick']
+        self.thruhole_d = kcomp_optic.LB2C_PLATE['thruhole_d']
+        self.sym_hole_d = kcomp_optic.LB2C_PLATE['sym_hole_d']
+        self.sym_hole_sep  = kcomp_optic.LB2C_PLATE['sym_hole_sep']
+        self.cbore_hole_d  = kcomp_optic.LB2C_PLATE['cbore_hole_d']
+        self.cbore_hole_head_d = kcomp_optic.LB2C_PLATE['cbore_hole_head_d']
+        self.cbore_hole_head_l = kcomp_optic.LB2C_PLATE['cbore_hole_head_l']
+        self.cbore_hole_sep_l = kcomp_optic.LB2C_PLATE['cbore_hole_sep_l']
+        self.cbore_hole_sep_s = kcomp_optic.LB2C_PLATE['cbore_hole_sep_s']
+        self.fc_axis_h = fc_axis_h
+        self.fc_axis_l = fc_axis_l
+        self.cl=cl
+        self.cw=cw
+        self.ch=ch
+        self.pos = pos
+        self.name = name
+
+        doc.recompute()
+        fco_plate = doc.addObject("Part::Feature", name )
+        fco_plate.Shape = shp_plate
+        self.fco = fco_plate
+
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        self.fco.Placement.Base = FreeCAD.Vector(position)
+
+#doc = FreeCAD.newDocument()
+#doc = FreeCAD.ActiveDocument
+#Lb2cPlate (fc_axis_h = VZ, fc_axis_l = VX, cl=1, cw=1, ch=0, pos=V0,
 #            name = 'lb2c_plate')
  
 

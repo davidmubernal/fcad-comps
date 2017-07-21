@@ -328,8 +328,8 @@ def shp_box_rot (box_w, box_d, box_h,
 
 
 def shp_box_dir (box_w, box_d, box_h,
-                    fc_axis_h,
-                    fc_axis_d,
+                    fc_axis_h =VZ,
+                    fc_axis_d = VY,
                     cw=1, cd=1, ch=1,
                     pos=V0):
 
@@ -1385,6 +1385,53 @@ def regpolygon_vecl (n_sides, radius, x_angle=0):
     return (vec_vertex_list)
 
 
+def regpolygon_dir_vecl (n_sides, radius, fc_normal, fc_verx1, pos):
+
+    """
+    Similar to regpolygon_vecl but in any place and direction of the space
+    calculates the vertexes of a regular polygon. Returns a list of 
+    FreeCAD vectors with the vertexes. The first vertex will be repeated
+    at the end, this is needed to close the wire to make the shape
+    The polygon will have the center in pos. The normal on fc_normal
+    The direction of the first vertex on fc_verx_1
+
+    Args:
+        n_sides: number of sides of the polygon
+        radius: Circumradius of the polygon
+        fc_normal: FreeCAD.Vector with the direction of the normal
+        fc_verx1: FreeCAD.Vector of direction of the first vertex
+        pos: FreeCAD.Vector with the position of the center
+
+    Returns:
+        a list of FreeCAD.Vector of the vertexes
+
+    """
+
+    # normalize the normal direction
+    nnormal = DraftVecUtils.scaleTo(fc_normal,1)
+
+    # check if the vectors are perpendicular
+    if not fc_isperp(nnormal, fc_verx1):
+        logger.error('Vectors are Not perpendicular')
+    #direction of the first vertex scaled to the radius
+    n1dir_rad = DraftVecUtils.scaleTo(fc_verx1,radius)
+
+    vertex_list = []
+    # divide the 360 degrees by the number of sides
+    polygon_angle = 2*math.pi / n_sides
+    for i in range(n_sides):
+        rot_angle = i*polygon_angle
+        # Rotate n1dir, and then add to pos
+        vertex = pos + DraftVecUtils.rotate(n1dir_rad,rot_angle,nnormal)
+        vertex_list.append(vertex)
+    # the first vertex will be also the last one
+    vertex_list.append(vertex_list[0])
+        
+    return (vertex_list)
+
+
+
+
 def shp_regpolygon_face (n_sides, radius,
                          n_axis='z', v_axis='x',
                          edge_rot=0, pos=V0):
@@ -1415,6 +1462,32 @@ def shp_regpolygon_face (n_sides, radius,
     shp_rpolygon_face = Part.Face(rpolygon_wire)
     return shp_rpolygon_face
     
+
+
+def shp_regpolygon_dir_face (n_sides, radius,
+                         fc_normal=VZ, fc_verx1=VX,
+                         pos=V0):
+    """
+    Similar to shp_regpolygon_face, but in any direction of the space
+    makes the shape of a face of a regular polygon
+
+    Args:
+        n_sides: number of sides of the polygon
+        radius: Circumradius of the polygon
+        fc_normal: FreeCAD.Vector with the direction of the normal
+        fc_verx1: FreeCAD.Vector of direction of the first vertex
+        pos: FreeCAD.Vector of the position of the center. Default (0,0,0)
+
+    Returns:
+        a shape (TopoShape) of the face
+
+    """
+
+    rpolygon_vlist = regpolygon_dir_vecl (n_sides, radius, fc_normal,
+                                          fc_verx1, pos)
+    rpolygon_wire = Part.makePolygon(rpolygon_vlist)
+    shp_rpolygon_face = Part.Face(rpolygon_wire)
+    return shp_rpolygon_face
 
 
 def shp_regprism (n_sides, radius, length,
@@ -1486,9 +1559,14 @@ def shp_regprism_xtr (n_sides, radius, length,
     """
 
     vec_n_axis = getfcvecofname(n_axis)
-    if xtr_bot > 0:
-        # bring back the extra distance
-        pos = pos - DraftVecUtils.scaleTo(vec_n_axis,xtr_bot)
+    if centered == 0:
+        if xtr_bot > 0:
+            # bring back the extra distance
+            pos = pos - DraftVecUtils.scaleTo(vec_n_axis,xtr_bot)
+    else:
+        #centered, find the new center, related to how much is increased
+        # on top and bottom
+        pos = pos + (xtr_top - xtr_bot)/2.
 
     shp_rpolygon_face = shp_regpolygon_face (n_sides,
                                              radius,
@@ -1500,6 +1578,54 @@ def shp_regprism_xtr (n_sides, radius, length,
     shp_rprism = shp_extrud_face(shp_rpolygon_face,
                                  totlen, vec_n_axis,centered)
     return shp_rprism
+
+def shp_regprism_dirxtr (n_sides, radius, length,
+                    fc_normal=VZ, fc_verx1=VX,
+                    centered = 0,
+                    xtr_top = 0,
+                    xtr_bot = 0,
+                    pos=V0):
+    """
+    Similar to shp_regprism_xtr, but in any direction
+    makes a shape of a face of a regular polygon.
+    Includes the posibility to add extra length on top and bottom.
+    On top is easy, but at the bottom, the reference will be no counting that
+    extra lenght added. This is useful to make boolean difference
+
+    Args:
+        n_sides: number of sides of the polygon
+        radius: Circumradius of the polygon
+        length: length of the polygon
+        fc_normal: FreeCAD.Vector with the direction of the normal
+        fc_verx1: FreeCAD.Vector of direction of the first vertex
+        centered: 1 if the extrusion is centered on pos (symmetrical)
+        xtr_top: add an extra lenght on top. If 0, nothing added
+        xtr_bot: add an extra lenght at the bottom. If 0, nothing added
+        pos:  FreeCAD.Vector of the position of the center. Default (0,0,0)
+
+    Returns:
+        a shape (TopoShape) of the regular prism
+
+    """
+
+    # normalize the normal:
+    nnorm = DraftVecUtils.scaleTo(fc_normal, 1)
+    totlen = length + xtr_bot + xtr_top
+    if centered == 0:
+        if xtr_bot > 0:
+            # bring back the extra distance
+            pos = pos - DraftVecUtils.scaleTo(nnorm,xtr_bot)
+    else: #centered, find the new center
+        movcenter = (xtr_top - xtr_bot)/2.
+        pos = pos + DraftVecUtils.scaleTo(nnorm,movcenter) 
+
+    shp_rpolygon_face = shp_regpolygon_dir_face (n_sides, radius,
+                                                  nnorm, fc_verx1,
+                                                  pos)
+    shp_rprism = shp_extrud_face(shp_rpolygon_face,
+                                 totlen, nnorm,centered)
+    return shp_rprism
+
 
 # ------------------ shp_extrud_face
 # extrudes a face on any plane
@@ -1869,6 +1995,173 @@ def shp_bolt (r_shank, l_bolt, r_head, l_head,
 
 
 
+def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
+              hex_head = 0,
+              xtr_head=1,
+              xtr_shank=1,
+              support=1,
+              fc_normal = VZ,
+              fc_verx1 = VX,
+              pos = V0):
+    """ 
+    Similar to shp_bolt, but it can be done in any direction
+    Creates a shape, not a of a FreeCAD Object
+    Creates a shape of the bolt shank and head or the nut
+    Tolerances have to be included if you want it for making a hole
+
+    It is referenced at the end of the head
+
+    Args:
+        r_shank: Radius of the shank (tolerance included)
+        l_bolt: total length of the bolt: head & shank
+        r_head: radius of the head (tolerance included)
+        l_head: length of the head
+        hex_head: inidicates if the head is hexagonal or rounded
+              1: hexagonal
+              0: rounded
+        h_layer3d: height of the layer for printing, if 0, means that the
+                   support is not needed
+        xtr_head: 1 if you want 1 mm on the head to avoid cutting on the same
+               plane pieces after making cuts (boolean difference) 
+        xtr_shank: 1 if you want 1 mm at the opposite side of the head to
+               avoid cutting on the same plane pieces after making cuts
+               (boolean difference) 
+        support: 1 if you want to include a triangle between the shank and the
+                 head to support the shank and not building the head on the
+                 air using kcomp.LAYER3D_H
+        fc_normal: FreeCAD.Vector: defines the orientation
+           for example:
+           fc_normal = (0,0,-1):     Z
+                                     :
+                         ....... ____:____
+             xtr_head=1  .......|    :....|...... X
+                                |         |
+                                |__     __|
+                                   |   |
+                                   |   |
+                                   |   |
+                                   |___|
+
+           fc_normal = (0,0,1):      Z
+                                     :
+                                     :
+                                    _:_
+                                   | : |
+                                   | : |
+                                   | : |
+                                 __| : |__
+                                |    :    |
+             xtr_head=1  .......|    :....|...... X
+                         .......|____:____|
+
+        fc_verx1: In case of a hexagonal head, this will indicate the
+                 axis that the first vertex of the nut will point
+                 it has to be perpendicular to fc_normal, 
+
+        pos: FreeCAD.Vector of the position of the center of the head of the
+              bolt
+
+
+
+    """
+
+    elements = []
+    nnormal = DraftVecUtils.scaleTo(fc_normal,1)
+
+
+    shp_shank = shp_cylcenxtr (r_shank, l_bolt, nnormal,
+                                ch=0,
+                                # the shank end is top
+                                xtr_top = xtr_shank,
+                                # the head end is bottom
+                                # No need to add extra, the head will do
+                                xtr_bot = 0,
+                                pos = pos)
+    elements.append (shp_shank)
+    # head:
+    if hex_head == 0:
+        shp_head = shp_cylcenxtr (r_head, l_head, nnormal,
+                                  ch=0,
+                                  # no extra on top, the shank will be there
+                                  xtr_top = 0,
+                                  xtr_bot = xtr_head,
+                                  pos = pos)
+        if not fc_isperp(nnormal, fc_verx1):
+            # get any perpendicular vector:
+            fc_verx1 = get_fc_perpend1(nnormal)     
+    else:
+        # check if fc_normal and fc_verx1 are perpendicular
+        if not fc_isperp(nnormal, fc_verx1):
+            logger.debug('Vectors are not perpendicular')
+            # get any perpendicular vector:
+            fc_verx1 = get_fc_perpend1(nnormal)
+
+        shp_head = shp_regprism_dirxtr (
+                                     n_sides=6,
+                                     radius = r_head,
+                                     length = l_head,
+                                     fc_normal=nnormal,
+                                     fc_verx1=fc_verx1,
+                                     centered = 0,
+                                     # no extra on top, the shank will be there
+                                     xtr_top = 0,
+                                     xtr_bot = xtr_head,
+                                     pos=pos)
+
+    # Dont append the head, because multifuse requires one outside of the list
+    # elements.append (shp_head)
+    # support for the shank:
+    if support==1 and kcomp.LAYER3D_H > 0:
+        # we could put it just on top of the head, but since we are going to 
+        # make an union, we put it from the bottom (no need to include extra)
+        # have to rotate 30 degrees the vertex for this triangle
+        fc_verx1_triangle = DraftVecUtils.rotate(fc_verx1, math.pi/6., nnormal)
+        shp_sup1 = shp_regprism_dirxtr (n_sides=3,
+                                 radius = 2*r_shank,
+                                 length = l_head + kcomp.LAYER3D_H,
+                                 fc_normal=nnormal,
+                                 fc_verx1=fc_verx1_triangle,
+                                 centered = 0,
+                                 pos=pos)
+        # take vertexes away:
+        sup1away_l = l_head + kcomp.LAYER3D_H
+        if hex_head == 0:
+            shp_sup1away = shp_cyl(r_head, sup1away_l, nnormal, pos)
+        else:
+            shp_sup1away = shp_regprism_dirxtr (
+                                        n_sides=6,
+                                        radius= r_head,
+                                        length= sup1away_l,
+                                        fc_normal=nnormal,
+                                        fc_verx1=fc_verx1,
+                                        centered = 0,
+                                        pos = pos)
+        shp_sup1cut = shp_sup1.common(shp_sup1away)
+        elements.append (shp_sup1cut)
+        # another support
+        # 1.15 is the relationship between the Radius and the Apothem
+        # of the hexagon: sqrt(3)/2 . I make it slightly smaller
+        shp_sup2 = shp_regprism_dirxtr (
+                                 n_sides=6,
+                                 radius = 1.15*r_shank,
+                                 length = l_head + 2* kcomp.LAYER3D_H,
+                                 fc_normal=nnormal,
+                                 fc_verx1=fc_verx1,
+                                 centered = 0,
+                                 pos=pos)
+        elements.append (shp_sup2)
+  
+    # union of elements
+    shp_bolt = shp_head.multiFuse(elements)
+    shp_bolt = shp_bolt.removeSplitter()
+    return shp_bolt
+
+
+
+
+
+
+
 def addBoltNut_hole (r_shank,        l_bolt, 
                      r_head,         l_head,
                      r_nut,          l_nut,
@@ -1968,6 +2261,157 @@ def addBoltNut_hole (r_shank,        l_bolt,
     return boltnut
       
 
+
+
+def shp_boltnut_dir_hole (r_shank,        l_bolt, 
+                          r_head,         l_head,
+                          r_nut,          l_nut,
+                          hex_head=0,   
+                          xtr_head=1,     xtr_nut=1,
+                          supp_head=1,    supp_nut=1,
+                          headstart=1,    
+                          fc_normal = VZ, fc_verx1=V0,
+                          pos = V0):
+
+    """
+    similar to addBoltNut_hole, but in any direction and creates shapes,
+    not FreeCAD Objects
+    Creates the hole for the bolt shank, the head and the nut.
+    The bolt head will be at the botton, and the nut will be on top
+    Tolerances have to be already included in the argments values
+
+    Args:
+        r_shank: Radius of the shank (tolerance included)
+        l_bolt: total length of the bolt: head & shank
+        r_head: radius of the head (tolerance included)
+        l_head: length of the head
+        r_nut : radius of the nut (tolerance included)
+        l_nut : length of the nut. It doesn't have to be the length of the nut
+                but how long you want the nut to be inserted
+        hex_head: inidicates if the head is hexagonal or rounded
+                  1: hexagonal
+                  0: rounded
+        xtr_head: 1 if you want an extra size on the side of the head
+                   to avoid cutting on the same plane pieces after making
+                   differences 
+        xtr_nut: 1 if you want an extra size on the side of the nut
+                   to avoid cutting on the same plane pieces after making
+                   differences 
+        supp_head: 1 if you want to include a triangle between the shank and the
+                 head to support the shank and not building the head on the air
+                 using kcomp.LAYER3D_H
+        supp_nut: 1 if you want to include a triangle between the shank and the
+                 nut to support the shank and not building the nut on the air
+                 using kcomp.LAYER3D_H
+        headstart: if on pos you have the head, or if you have it on the
+                   other end
+        fc_normal: direction of the bolt
+        fc_verx1:  direction of the first vertex of the hexagonal nut.
+                 Perpendicular to fc_normal. If not perpendicular or zero,
+                 means that it doesn't matter which direction and the function
+                 will obtain one perpendicular direction
+        pos: position of the head (if headstart) or of the nut 
+    """
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+
+    # normalize
+    nnormal = DraftVecUtils.scaleTo(fc_normal,1)
+    if not fc_isperp(nnormal, fc_verx1):
+        # if they are not perpendicular (or if fc_verx1 is null)
+        # get a perpendicular vector
+        nverx1 = get_fc_perpend1(nnormal)
+    else:
+        nverx1 = DraftVecUtils.scaleTo(fc_verx1,1)
+
+    # vector from the origin position (pos) to the end
+    pos2end = DraftVecUtils.scaleTo(nnormal, l_bolt)
+    # nnormal negated
+    nnormal_neg = DraftVecUtils.scaleTo(nnormal,-1)
+    if headstart == 1:
+        #the head will be on pos and the nut on pos + l_bolt
+        pos_head = pos
+        pos_nut = pos + pos2end
+        nnormal_head = nnormal
+        nnormal_nut = nnormal_neg
+    else:
+        #the nut will be on pos and the head on pos + l_bolt
+        pos_head = pos + pos2end
+        pos_nut = pos
+        nnormal_head = nnormal_neg
+        nnormal_nut = nnormal
+
+
+    # bolt with the head:
+    shp_bolt = shp_bolt_dir  (r_shank  = r_shank,
+                          l_bolt   = l_bolt,
+                          r_head   = r_head,
+                          l_head   = l_head,
+                          hex_head = hex_head,
+                          xtr_head = xtr_head,
+                          xtr_shank = 0, # no need, the nut will go extra
+                          support   = supp_head,
+                          fc_normal = nnormal_head,
+                          fc_verx1  = nverx1,
+                          pos       = pos_head)
+
+    # Nut:
+    shp_nut = shp_regprism_dirxtr ( 
+                                     n_sides = 6,
+                                     radius  = r_nut,
+                                     length  = l_nut,
+                                     fc_normal = nnormal_nut,
+                                     fc_verx1  = nverx1,
+                                     centered  = 0,
+                                     # no extra on top, the shank will be there
+                                     xtr_top   = 0,
+                                     xtr_bot   = xtr_nut,
+                                     pos       = pos_nut)
+
+    nut_elements = [shp_nut]
+    # support for the nut
+    if supp_nut == 1 and kcomp.LAYER3D_H > 0:
+        # rotate 30 degrees
+        nverx1_triangle =  DraftVecUtils.rotate(nverx1,
+                                                -math.pi/6., nnormal_nut)
+        shp_sup1 = shp_regprism_dirxtr (n_sides=3,
+                                 radius = 2*r_shank,
+                                 length = l_nut + kcomp.LAYER3D_H,
+                                 fc_normal=nnormal_nut,
+                                 fc_verx1=nverx1_triangle,
+                                 centered = 0,
+                                 pos=pos_nut)
+        # take vertexes away:
+        sup1away_l = l_nut + kcomp.LAYER3D_H
+        shp_sup1away = shp_regprism_dirxtr (
+                                        n_sides=6,
+                                        radius= r_nut,
+                                        length= sup1away_l,
+                                        fc_normal=nnormal_nut,
+                                        fc_verx1=nverx1,
+                                        centered = 0,
+                                        pos = pos_nut)
+        shp_sup1cut = shp_sup1.common(shp_sup1away)
+        nut_elements.append (shp_sup1cut)
+
+        # another support
+        # 1.15 is the relationship between the Radius and the Apothem
+        # of the hexagon: sqrt(3)/2 . I make it slightly smaller
+        shp_sup2 = shp_regprism_dirxtr (
+                                 n_sides=6,
+                                 radius = 1.15*r_shank,
+                                 length = l_nut + 2* kcomp.LAYER3D_H,
+                                 fc_normal=nnormal_nut,
+                                 fc_verx1=nverx1,
+                                 centered = 0,
+                                 pos=pos_nut)
+        nut_elements.append (shp_sup2)
+        
+
+    # union of elements
+    shp_boltnut = shp_bolt.multiFuse(nut_elements)
+    shp_boltnut = shp_boltnut.removeSplitter()
+    return shp_boltnut
 
 
 # ------------------- def shpAluProfWire
@@ -2367,6 +2811,109 @@ def edgeonaxis (edge, axis):
             return False
     else:
         return False
+
+def shp_filletchamfer_dir (shp, fc_axis = VZ,  fillet = 1, radius=1):
+    """
+        Fillet or chamfer edges on a certain axis
+        For a shape
+    Arguments:
+        shp:   is the original shape we want to fillet or chamfer
+        fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+        radius: the radius of the fillet or chamfer
+        fc_axis  : FreeCAD.Vector the axis where the fillet will be
+
+    """
+
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
+    edgelist = []
+    # normalize the axis:
+    nnorm = DraftVecUtils.scaleTo(fc_axis,1)
+    # get the negative of the normalized vector
+    nnorm_neg = nnorm.negative()
+    #logger.debug('filletchamfer: elen: %s',  e_len)
+    for edge in shp.Edges:
+        #logger.debug('filletchamfer: edge Length: %s ind %s',
+        #             edge.Length, edge_ind)
+        # get the FreeCAD.Vector with the point
+        p0 = edge.Vertexes[0].Point
+        p1 = edge.Vertexes[1].Point
+        v_vertex = p1.sub(p0)  #substraction
+        # I could calculate the angle, but I think it will take more
+        # time than normalizing and checking if they are the same
+        v_vertex.normalize()
+        # check if they are the same vector (they are parallel):
+        if ( DraftVecUtils.equals(v_vertex, nnorm) or
+             DraftVecUtils.equals(v_vertex, nnorm_neg)):
+            edgelist.append(edge)
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            #logger.debug('%', str(edgelist))
+            shp_fillcham = shp.makeFillet(radius, edgelist)
+        else:
+            shp_fillcham = shp.makeChamfer(radius, edgelist)
+        doc.recompute()
+        return shp_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
+
+
+
+def shp_filletchamfer_dirs (shp, fc_axis_l, fillet = 1, radius=1):
+    """
+        Same as shp_filletchamfer_dir, but with a list of directions
+    Arguments:
+        shp:   is the original shape we want to fillet or chamfer
+        fc_axis_l  : a list of FreeCAD.Vector. Each vector indicates the axis
+                     where the fillet/chamfer will be
+        fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+        radius: the radius of the fillet or chamfer
+
+    """
+
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
+    edgelist = []
+    n_axis_list = []
+    for axis in fc_axis_l:
+        # normalize the axis:
+        nnorm = DraftVecUtils.scaleTo(axis,1)
+        n_axis_list.append(nnorm)
+        # get the negative of the normalized vector
+        nnorm_neg = nnorm.negative()
+        n_axis_list.append(nnorm_neg)
+    #logger.debug('filletchamfer: elen: %s',  e_len)
+    for edge in shp.Edges:
+        #logger.debug('filletchamfer: edge Length: %s ind %s',
+        #             edge.Length, edge_ind)
+        # get the FreeCAD.Vector with the point
+        p0 = edge.Vertexes[0].Point
+        p1 = edge.Vertexes[1].Point
+        v_vertex = p1.sub(p0)  #substraction
+        # I could calculate the angle, but I think it will take more
+        # time than normalizing and checking if they are the same
+        v_vertex.normalize()
+        # check if they are the same vector (they are parallel):
+        for naxis in n_axis_list:
+            if ( DraftVecUtils.equals(v_vertex, naxis)):
+                edgelist.append(edge)
+                break # breaks inside this for, but not the outer
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            #logger.debug('%', str(edgelist))
+            shp_fillcham = shp.makeFillet(radius, edgelist)
+        else:
+            shp_fillcham = shp.makeChamfer(radius, edgelist)
+        doc.recompute()
+        return shp_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
 
 
 #  --- Fillet or chamfer edges of a certain length, on a certain axis
@@ -3065,3 +3612,98 @@ def get_fclist_4perp2_fcvec (fcvec):
     """
     return (get_fclist_4perp2_vecname(get_nameofbasevec(fcvec)))
 
+def get_positive_vecname (vecname):
+
+    """ it just get 'x' when vecname is 'x' or '-x', and the same
+        for the others, because some functions receive only positive
+        base vector
+    Args:
+        vecname:  'x', '-x', 'y', '-y', 'z', '-z'
+    """
+
+    if vecname == 'x' or vecname == '-x':
+        return 'x'
+    elif vecname == 'y' or vecname == '-y':
+        return 'y'
+    elif vecname == 'z' or vecname == '-z':
+        return 'z'
+    else:
+        logger.error('Not a valid base vector name')
+
+
+def fc_isperp (fc1, fc2):
+
+    """ return 1 if fc1 and fc2 are perpendicular, 0 if they are not
+    Args:
+        fc1: FreeCAD.Vector
+        fc2: FreeCAD.Vector
+    Return:
+         1 if fc1 and fc2 are perpendicular, 0 if they are not 
+    """
+
+    if DraftVecUtils.isNull(fc1) == 1 or DraftVecUtils.isNull(fc2) == 1:
+        # if any of them are null, they are not perpendicular
+        return 0
+    else:
+        nperp = fc1.dot(fc2)
+        nperp_round = round(nperp,DraftVecUtils.precision())
+        if nperp_round == 0:
+            return 1
+        else:
+            return 0
+
+def get_fc_perpend1(fcv):
+
+    """ gets a perpendicular FreeCAD.Vector
+    similar to get_vecname_perpend1, but there are more cases here
+
+    Args:
+        vec: 'x', '-x', 'y', '-y', 'z', '-z'
+    """
+
+    if DraftVecUtils.isNull(fcv):
+        logger.error('null vector')
+
+    if fc_isonbase(fcv) == 1: # 2 of the bases are 0
+         # just move them
+        fcp = FreeCAD.Vector(fcv.z, fcv.x, fcv.y)
+    elif fcv.x == 0:
+        fcp = FreeCAD.Vector(0, fcv.z, -fcv.y)
+    elif fcv.y == 0:
+        fcp = FreeCAD.Vector(-fcv.z, 0, fcv.x)
+    elif fcv.z == 0:
+        fcp = FreeCAD.Vector(fcv.y, -fcv.x,0)
+    else: # none of them are zero
+        fcp = FreeCAD.Vector(fcv.y, -fcv.x, 0)
+
+    return fcp
+
+def fc_isonbase (fcv):
+
+    """ just tells if a vector has 2 of the coordinates zero
+        So it is on just a base vector
+    """
+
+    if fcv.x == 0:
+        if fcv.y == 0: # (0,0, )
+            if fcv.z == 0:
+                # null vector
+                return 0  # (0,0,0)
+            else: 
+                return 1  # (0,0,Z)
+        else:  # (0,Y, )
+            if fcv.z == 0:
+                return 1  # (0,Y,0)
+            else:
+                return 0  # (0,Y,Z)
+    else: #(X, , )
+        if fcv.y == 0: # (X,0, )
+            if fcv.z == 0:
+                return 1  # (X,0,0)
+            else: 
+                return 0  # (X,0,Z)
+        else: # (X,Y, )
+            return 0
+
+      
+        

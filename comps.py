@@ -294,6 +294,9 @@ class Sk (object):
 
             self.fco = sk_final   # the FreeCad Object
 
+
+
+
 # --------------------------------------------------------------------
 # Creates a Misumi Aluminun Profile 30x30 Series 6 Width 8
 # length:   the length of the profile
