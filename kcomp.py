@@ -21,17 +21,46 @@ LAYER3D_H = 0.3
 # ---------------------- linear Bearings
 LMEUU_L = { 8: 25., 10: 29.0, 12: 32.0 }; #the length of the bearing
 LMEUU_D = { 8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
+# Large:
+LMELUU_L = {                   12: 57.0 }; #the length of the bearing
+LMELUU_D = { 8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
+
+LME8UU = {
+         'Di' : 8,  # interior diameter
+         'De' : LMEUU_D[8], # exterior diameter
+         'L' : LMEUU_L[8] # length
+           }
 
 
-LMEUU_10 = {
+LME10UU = {
          'Di' : 10,  # interior diameter
          'De' : LMEUU_D[10], # exterior diameter
          'L' : LMEUU_L[10] # length
            }
 
+LME12UU = {
+         'Di' : 12,  # interior diameter
+         'De' : LMEUU_D[12], # exterior diameter
+         'L' : LMEUU_L[12] # length
+           }
+
+LME12LUU = {
+         'Di' : 12,  # interior diameter
+         'De' : LMELUU_D[12], # exterior diameter
+         'L' : LMELUU_L[12] # length
+           }
+
+
 LMEUU = {
-         10 : LMEUU_10
+          8 : LME8UU,
+         10 : LME10UU,
+         12 : LME12UU
         }
+
+LMELUU = {
+         12 : LME12LUU
+        }
+
 
 
 # E3D V6 extrusor dimensions
@@ -358,6 +387,17 @@ def get_idlepull_maxbear_d (idlepull_list):
 #
 
 
+SC8UU = {
+        'L'          : 30.,
+        'W'          : 34.,
+        'H'          : 22.,
+        'axis_h'     : 11.,
+        'bolt_sep_l' : 18.,
+        'bolt_sep_w' : 24.,
+        'bolt_d'     : 4.,  # M4
+        'lbear'      : LME8UU  #dictionary with linear bearging dim.
+        }
+
 SC10UU = {
         'L'          : 35.,
         'W'          : 40.,
@@ -366,10 +406,32 @@ SC10UU = {
         'bolt_sep_l' : 21.,
         'bolt_sep_w' : 28.,
         'bolt_d'     : 5.,  # M5
-        'lbear'      : LMEUU_10  #dictionary with linear bearging dim.
+        'lbear'      : LME10UU  #dictionary with linear bearging dim.
+        }
+
+SC12UU = {
+        'L'          : 36.,
+        'W'          : 42.,
+        'H'          : 28.,
+        'axis_h'     : 15.,
+        'bolt_sep_l' : 26.,
+        'bolt_sep_w' : 30.5,
+        'bolt_d'     : 5.,  # M5
+        'lbear'      : LME12UU  #dictionary with linear bearging dim.
         }
 
 # modified version to print
+SC8UU_Pr = {
+        'L'          : 30.,
+        'W'          : 34.,
+        'H'          : 22.,
+        'axis_h'     : 11.,
+        'bolt_sep_l' : 18.,
+        'bolt_sep_w' : 24.,
+        'bolt_d'     : 3.,  # M3: changed from M4 to M3
+        'lbear'      : LME8UU  #dictionary with linear bearging dim.
+        }
+
 SC10UU_Pr = {
         'L'          : 35.,
         'W'          : 40.,
@@ -378,16 +440,31 @@ SC10UU_Pr = {
         'bolt_sep_l' : 21.,
         'bolt_sep_w' : 28.,
         'bolt_d'     : 3.,  # M3: changed from M5 to M3
-        'lbear'      : LMEUU_10  #dictionary with linear bearging dim.
+        'lbear'      : LME10UU  #dictionary with linear bearging dim.
+        }
+
+SC12UU_Pr = {
+        'L'          : 36.,
+        'W'          : 42.,
+        'H'          : 28.,
+        'axis_h'     : 15.,
+        'bolt_sep_l' : 26.,
+        'bolt_sep_w' : 30.5,
+        'bolt_d'     : 3.,  # M3: changed from M5 to M3
+        'lbear'      : LME12UU  #dictionary with linear bearging dim.
         }
 
 
 SCUU = {
-        10: SC10UU
+         8: SC8UU,
+        10: SC10UU,
+        12: SC10UU
        }
 
 SCUU_Pr = {
-        10: SC10UU_Pr
+         8: SC8UU_Pr,
+        10: SC10UU_Pr,
+        12: SC10UU_Pr
        }
 
 
