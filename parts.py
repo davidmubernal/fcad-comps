@@ -861,6 +861,7 @@ class ThinLinBearHouse (object):
         |  0: :0  |                            fc_bot_axis
         | :     : |
         | :     : |
+        | :     : |--------> fc_perp_axis
         | :     : |
         | :.....: |
         |__0:_:0__|
@@ -869,13 +870,13 @@ class ThinLinBearHouse (object):
          ________                           ______________
         | ::...::|                         | ::........:: |
         | ::   ::|    Upper part           |.::        ::.|
-        |-::( )::|------                   |.::   *axis_center = 1
+        |-::( )::|------> fc_perp_axis     |.::   *axis_center = 1
         | ::...::|    Lower part           | ::........:: | 
         |_::___::|                         |_::___*____::_|
-             |                                   axis_center = 0
-             |
-             V
-           always centered in this axis
+          |  |                                   axis_center = 0
+          |  |
+          V  V
+          centered in any of these axes
 
                                             ______________
         1: axis_center=1                   | ::........:: |
@@ -885,13 +886,29 @@ class ThinLinBearHouse (object):
         3: axis_center=0                   | ::        :: |
            mid_center =0                   |_:3___2____::_|
         4: axis_center=1
-           mid_center =0
+
+        And 8 more posibilities:
+        5: bolt_center = 1
+        6: bolt_center = 0
+
+          _________              
+        |  5:6:   |             
+        | :     : |
+        | :     : |
+        | :     : |--------> fc_perp_axis
+        | :     : |
+        | :.....: |
+        |__0:_:0__|
+          mid_center =0
 
 
     Arguments:
         d_lbear: dictionary with the dimensions of the linear bearing
         fc_slide_axis : FreeCAD.Vector with the direction of the slide
         fc_bot_axis: FreCAD.Vector with the direction of the bottom
+        fc_perp_axis: FreCAD.Vector with the direction of the other
+            perpendicular direction. Not useful unless bolt_center == 1
+            if = V0 it doesn't matter
         axis_h = distance from the bottom to the rod axis
                 0: take the minimum distance
                 X: (any value) take that value, if it is smaller than the 
@@ -899,6 +916,8 @@ class ThinLinBearHouse (object):
                    value
         axis_center = See picture, indicates the reference point
         mid_center  = See picture, indicates the reference point
+        bolt_center  = See picture, indicates the reference point, if it is
+                       on the bolt or on the axis
         pos = position of the reference point,
 
     Useful Attributes:
@@ -974,21 +993,30 @@ class ThinLinBearHouse (object):
     def __init__(self, d_lbear,
                  fc_slide_axis = VX,
                  fc_bot_axis =VZN,
+                 fc_perp_axis = V0,
                  axis_h = 0,
                  bolts_side = 1,
                  axis_center = 1,
                  mid_center  = 1,
+                 bolt_center  = 0,
                  pos = V0,
                  name = 'thinlinbearhouse'
                 ):
 
+        self.base_place = (0,0,0)
         # normalize, just in case
         n1_slide_axis = DraftVecUtils.scaleTo(fc_slide_axis,1)
         n1_bot_axis = DraftVecUtils.scaleTo(fc_bot_axis,1)
         n1_bot_axis_neg = DraftVecUtils.neg(n1_bot_axis)
         # vector perpendicular to the others
-        n1_perp = n1_slide_axis.cross(n1_bot_axis)
-
+        v_cross = n1_slide_axis.cross(n1_bot_axis)
+        if fc_perp_axis == V0:
+            n1_perp = v_cross
+        else:
+            n1_perp =  DraftVecUtils.scaleTo(fc_perp_axis,1)
+            if not fcfun.fc_isparal (v_cross,n1_perp):
+                logger.debug("fc_perp_axis not perpendicular")
+                n1_perp = v_cross
 
         self.rod_r = d_lbear['Di']/2.
         rod_r = self.rod_r
@@ -1089,6 +1117,7 @@ class ThinLinBearHouse (object):
                                                  boltcen_axis_dist)
         else:
             fc_tomidcenter = V0
+
         if axis_center == 1:
             fc_tobottom = DraftVecUtils.scale(n1_bot_axis,axis_h)
             fc_toaxis = V0
@@ -1096,10 +1125,15 @@ class ThinLinBearHouse (object):
             fc_tobottom = V0
             fc_toaxis = DraftVecUtils.scale(n1_bot_axis,-axis_h)
 
-        botcenter_pos = pos + fc_tomidcenter + fc_tobottom
+        if bolt_center == 1:
+            fc_toaxis_perp = DraftVecUtils.scale(n1_perp, boltcen_perp_dist)
+        else:
+            fc_toaxis_perp = V0
+
+        botcenter_pos = pos + fc_tomidcenter + fc_tobottom + fc_toaxis_perp
 
         # point 1 on the drawing
-        axiscenter_pos = pos + fc_tomidcenter + fc_toaxis
+        axiscenter_pos = pos + fc_tomidcenter + fc_toaxis + fc_toaxis_perp
         # center on the top
         topcenter_pos = botcenter_pos + DraftVecUtils.scale(n1_bot_axis_neg,
                                                             housing_h)
@@ -1191,6 +1225,12 @@ class ThinLinBearHouse (object):
         self.fco_top = fco_lbear_top
         self.fco_bot = fco_lbear_bot
 
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        vpos = FreeCAD.Vector(position)
+        self.fco_top.Placement.Base = vpos
+        self.fco_bot.Placement.Base = vpos
+
 
 
 doc = FreeCAD.newDocument()
@@ -1200,10 +1240,26 @@ doc = FreeCAD.newDocument()
 #ThinLinBearHouse (kcomp.LMEUU[10], axis_h = 10, bolts_side=0, mid_center=1)
 #ThinLinBearHouse (kcomp.LMEUU[10], axis_h = 15, bolts_side=0, mid_center=1)
 
-ThinLinBearHouse (kcomp.LMEUU[12], axis_h = 0, bolts_side=0, mid_center=1)
-ThinLinBearHouse (kcomp.LMELUU[12], axis_h = 0, bolts_side=0, mid_center=1)
-ThinLinBearHouse (kcomp.LMELUU[12], axis_h = 0, bolts_side=1, mid_center=1)
+#ThinLinBearHouse (kcomp.LMEUU[12], axis_h = 0, bolts_side=0, mid_center=1)
+#ThinLinBearHouse (kcomp.LMELUU[12], axis_h = 0, bolts_side=0, mid_center=1)
+#ThinLinBearHouse (kcomp.LMELUU[12], axis_h = 0, bolts_side=1, mid_center=1)
  
+#ThinLinBearHouse (kcomp.LMEUU[12],
+#                  fc_slide_axis = VY,
+#                  fc_bot_axis = VZN,
+#                  fc_perp_axis = VX,
+#                  axis_h = 0, bolts_side=0, mid_center=1, bolt_center = 1)
+#ThinLinBearHouse (kcomp.LMELUU[12],
+#                  fc_slide_axis = VY,
+#                  fc_bot_axis = VZN,
+#                  fc_perp_axis = VXN,
+#                  axis_h = 0, bolts_side=0, mid_center=1, bolt_center = 1)
+ThinLinBearHouse (kcomp.LMELUU[12],
+                  fc_slide_axis = VX,
+                  fc_bot_axis = VZN,
+                  fc_perp_axis = VYN,
+                  axis_h = 0, bolts_side=1,
+                  axis_center=0, mid_center=0, bolt_center = 1)
 
  
 

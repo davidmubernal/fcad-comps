@@ -3652,6 +3652,31 @@ def fc_isperp (fc1, fc2):
         else:
             return 0
 
+
+def fc_isparal (fc1, fc2):
+
+    """ return 1 if fc1 and fc2 are paralell (colinear), 0 if they are not
+    Args:
+        fc1: FreeCAD.Vector
+        fc2: FreeCAD.Vector
+    Return:
+         1 if fc1 and fc2 are parallel, 0 if they are not 
+    """
+
+    if DraftVecUtils.isNull(fc1) == 1 or DraftVecUtils.isNull(fc2) == 1:
+        # if any of them are null, they are not parallel
+        return 0
+    else:
+        # scale both to 1, normalize
+        n1 = DraftVecUtils.scaleTo(fc1,1)
+        n2 = DraftVecUtils.scaleTo(fc2,1)
+        n1neg = n1.negative()
+        if (DraftVecUtils.equals(n1,n2) or
+            DraftVecUtils.equals(n1neg,n2)):
+            return 1
+        else:
+            return 0
+
 def get_fc_perpend1(fcv):
 
     """ gets a perpendicular FreeCAD.Vector
