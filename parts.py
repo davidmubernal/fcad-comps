@@ -1076,7 +1076,7 @@ class ThinLinBearHouse (object):
         # distance of the bolts to the center, on n1_slide_axis dir
         boltcen_axis_dist = housing_l/2. - bolt2wall
         # distance of the bolts to the center, on n1_perp dir
-        boltcen_perp_dist = housing_w/2. - bolt2wall
+        boltcen_perp_dist = bolt2axis
 
         # minimum height of the housing 
         housing_min_h = bearing_d + 2 * OUT_SEP_H
@@ -1233,7 +1233,7 @@ class ThinLinBearHouse (object):
 
 
 
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 #ThinLinBearHouse (kcomp.LMEUU[10])
 #ThinLinBearHouse (kcomp.LMEUU[10], mid_center=1)
 #ThinLinBearHouse (kcomp.LMEUU[10], bolts_side=0, mid_center=1)
@@ -1254,12 +1254,12 @@ doc = FreeCAD.newDocument()
 #                  fc_bot_axis = VZN,
 #                  fc_perp_axis = VXN,
 #                  axis_h = 0, bolts_side=0, mid_center=1, bolt_center = 1)
-ThinLinBearHouse (kcomp.LMELUU[12],
-                  fc_slide_axis = VX,
-                  fc_bot_axis = VZN,
-                  fc_perp_axis = VYN,
-                  axis_h = 0, bolts_side=1,
-                  axis_center=0, mid_center=0, bolt_center = 1)
+#ThinLinBearHouse (kcomp.LMELUU[12],
+#                  fc_slide_axis = VX,
+#                  fc_bot_axis = VZN,
+#                  fc_perp_axis = VYN,
+#                  axis_h = 0, bolts_side=1,
+#                  axis_center=0, mid_center=0, bolt_center = 1)
 
  
 
@@ -1484,3 +1484,479 @@ class LinBearHouse (object):
 #doc = FreeCAD.newDocument()
 #LinBearHouse (kcomp.SCUU[10])
 #LinBearHouse (kcomp.SCUU_Pr[10])
+
+
+# ----------- thin linear bearing housing with asymmetrical distance
+# between the bolts
+
+class ThinLinBearHouseAsim (object):
+
+    """
+    There are:
+        3 axis:          3 planes (normal to axis)   3 distances to plane
+        - fc_fro_ax      - fro: front                - D: dep: depth
+        - fc_bot_ax      - hor: horizontal)          - H: hei: height
+        - fc_sid_ax      - lat: lateral (medial)     - W: wid: width
+
+        The planes are on the center of the slidding rod (height and width),
+        and on the middle of the piece (width)
+
+        The 3 axis are perpendicular, but the cross product of 2 vectors may
+        result on the other vector or its negative.
+
+        fc_fro_ax points to the front of the figure, but it is symmetrical
+           so it can point to the back
+        fc_bot_ax points to the bottom of the figure (not symmetrical)
+        fc_sid_ax points to the side of the figure. Not symmetrical if
+           bolt2cen_wid_n or bolt2cen_wid_p are not zero
+
+        Makes a housing for a linear bearing, but it is very thin
+        and intented to be attached to 2 rail
+        it has to parts, the lower and the upper part
+
+         ________                           ______________
+        | ::...::|                         | ::........:: |
+        | ::   ::|    Upper part           |.::        ::.|
+        |-::( )::|------ Horizontal plane  |.::        ::.|  --> fc_fro_ax
+        | ::...::|    Lower part           | ::........:: | 
+        |_::___::|                         |_::________::_|
+                                                   :
+                                                   :
+         _________                                 v
+        |  0: :0  |                            fc_bot_axis
+        | :     : |
+        | :     : |
+        | :     : |--------> fc_sid_ax
+        | :     : |
+        | :.....: |
+        |__0:_:0__|
+ 
+        
+         ________                           ______________
+        | ::...::|                         | ::........:: |
+        | ::   ::|    Upper part           |.::        ::.|
+        |-::( )::|------> fc_sid_ax        |.::   *refcen_hei = 1
+        | ::...::|    Lower part           | ::........:: | 
+        |_::___::|                         |_::___*____::_|
+          |  |                                   refcen_hei = 0
+          |  |
+          V  V
+          centered in any of these axes
+        refcen_hei: reference centered on the height
+                  =1: the horizontal plane (height) is on the axis of the rod
+                  =0: the horizontal plane is at the bottom 
+        refcen_dep: reference centered on the depth
+                  =1: the frontal plane (depth) is on the middle of the piece
+                  =0: the frontal plane is at the bolts
+        refcen_wid=1: reference centered on the width
+                      the lateral plane (width) is on the medial axis, dividing
+                      the piece on the right and left
+                  =0: the lateral plane is at the bolts
+
+                                            ______________
+        1: refcen_hei=1                    | ::........:: |
+           fro_center =1                   |.::        ::.|
+        2: refcen_hei=0                    |.:4   1 --> fc_fro_ax
+           fro_center =1                   | ::........:: | 
+        3: refcen_hei=0                    | ::        :: |
+           fro_center =0                   |_:3___2____::_|
+        4: refcen_hei=1
+
+        And 8 more posibilities:
+        5: refcen_wid = 0
+        6: refcen_wid = 1
+
+          _________              
+        |  5:6:   |             
+        | :     : |
+        | :     : |
+        | :     : |--------> fc_sid_ax
+        | :     : |
+        | :.....: |
+        |__0:_:0__|
+
+
+    Arguments:
+        d_lbear: dictionary with the dimensions of the linear bearing
+        fc_fro_ax : FreeCAD.Vector with the direction of the slide
+        fc_bot_ax: FreCAD.Vector with the direction of the bottom
+        fc_sid_ax: FreCAD.Vector with the direction of the other
+            perpendicular direction. Not useful unless refcen_wid == 0
+            if = V0 it doesn't matter
+        axis_h = distance from the bottom to the rod axis
+                0: take the minimum distance
+                X: (any value) take that value, if it is smaller than the 
+                   minimum it will raise an error and would not take that 
+                   value
+        refcen_hei = See picture, indicates the reference point
+        refcen_dep  = See picture, indicates the reference point
+        refcen_wid  = See picture, indicates the reference point, if it is
+                       on the bolt or on the axis
+        pos = position of the reference point,
+
+    Useful Attributes:
+        nfro_ax: FreeCAD.Vector normalized fc_fro_ax
+        nbot_ax: FreeCAD.Vector normalized fc_bot_ax
+        nsid_ax: FreeCAD.Vector
+        axis_h: float
+        bolt2cen_dep: float
+        bolt2cen_wid_n: float
+        bolt2cen_wid_p: float
+        + --- Dimensions:
+        housing_d, housing_w, housing_h
+        + --- FreeCAD objects
+        fco_top = top part of the linear bearing housing
+        fco_bot = bottom part of the linear bearing housing
+
+           ________                           ______________
+          | ::...::|                         | ::........:: |
+          | ::   ::|                         |.::        ::.|
+          |-::( )::|---:                     |.::        ::.|  --> nfro_ax
+          | ::...::|   +axis_h               | ::........:: | 
+          |_::___::|   :                     | ::        :: |
+          |_::___::|...:                     |_::________::_|
+                                                     :
+                                                     v
+           _________                               nbot_ax
+          |  0: :0  |                  
+          | :     : |
+          | :     : |........ --> nsid_ax
+          | :     : |   :
+          | :.....: |   + boltcen_dep
+          |__0:_:0__|---:
+             : : :
+             : : :
+             :.:.:
+              : + bolt2cen_wid_p: distance form the bolt to the center
+              :     on the width dimension. The bolt on the positive side
+              + bolt2cen_wid_n: distance form the bolt to the center
+             :      on the width dimension. The bolt on the negative side
+             :
+             + if refcen_wid=0 the reference will be on the bolt2cen_wid_n
+         
+                                             ...... D .......
+                                             :              :
+           ________....                      :______________:
+          | ::...::|   :                     | ::........:: |
+          | ::   ::|   :                     |.::        ::.|
+          |-::( )::|   :                     |.::        ::.|  --> nfro_ax
+          | ::...::|   + H                   | ::........:: | 
+          |_::___::|...:                     |_::________::_|
+          :        :
+          :........:
+              + 
+              W
+
+
+        bolts_side = 0            bolts_side = 1
+         _________                
+        |  0: :0  |                ___________ 
+        | :     : |               | 0:     :0 |
+        | :     : |               |  :     :  |
+        | :     : |               |  :     :  |
+        | :.....: |               |_0:_____:0_|
+        |__0:_:0__|
+ 
+
+    """
+
+    MIN_SEP_WALL = 3. # min separation of a wall
+    MIN2_SEP_WALL = 2. # min separation of a wall
+    OUT_SEP_H = kparts.OUT_SEP_H # minimun separation of the linear bearing
+    MTOL = kparts.MTOL
+    MLTOL = kparts.MLTOL
+    TOL_BEARING_L = kparts.TOL_BEARING_L
+    # Radius to fillet the sides
+    FILLT_R = kparts.FILLT_R
+
+    def __init__(self, d_lbear,
+                 fc_fro_ax = VX,
+                 fc_bot_ax =VZN,
+                 fc_sid_ax = V0,
+                 axis_h = 0,
+                 bolts_side = 1,
+                 refcen_hei = 1,
+                 refcen_dep  = 1,
+                 refcen_wid  = 1,
+                 bolt2cen_wid_n = 0,
+                 bolt2cen_wid_p = 0,
+                 pos = V0,
+                 name = 'thinlinbearhouse_asim'
+                ):
+
+        self.base_place = (0,0,0)
+        # normalize, just in case
+        nfro_ax = DraftVecUtils.scaleTo(fc_fro_ax,1)
+        nbot_ax = DraftVecUtils.scaleTo(fc_bot_ax,1)
+        nbot_ax_n = DraftVecUtils.neg(nbot_ax)
+        # vector perpendicular to the others
+        v_cross = nfro_ax.cross(nbot_ax)
+        if fc_sid_ax == V0:
+            nsid_ax = v_cross
+        else:
+            nsid_ax =  DraftVecUtils.scaleTo(fc_sid_ax,1)
+            if not fcfun.fc_isparal (v_cross,nsid_ax):
+                logger.debug("fc_sid_ax not perpendicular")
+                nsid_ax = v_cross
+
+        self.rod_r = d_lbear['Di']/2.
+        rod_r = self.rod_r
+        self.bear_r = d_lbear['Di']
+        if rod_r >= 6:
+            BOLT_D = 4
+        else:
+            BOLT_D = 3  # M3 bolts
+
+        doc = FreeCAD.ActiveDocument
+
+        MIN_SEP_WALL = self.MIN_SEP_WALL
+        MIN2_SEP_WALL = self.MIN2_SEP_WALL
+        OUT_SEP_H = self.OUT_SEP_H
+        # bolt dimensions:
+        MTOL = self.MTOL
+        MLTOL = self.MLTOL
+        BOLT_HEAD_R = kcomp.D912_HEAD_D[BOLT_D] / 2.0
+        BOLT_HEAD_L = kcomp.D912_HEAD_L[BOLT_D] + MTOL
+        BOLT_HEAD_R_TOL = BOLT_HEAD_R + MTOL/2.0 
+        BOLT_SHANK_R_TOL = BOLT_D / 2.0 + MTOL/2.0
+
+        # bearing dimensions:
+        bearing_l     = d_lbear['L'] 
+        bearing_l_tol = bearing_l + self.TOL_BEARING_L
+        bearing_d     = d_lbear['De']
+        bearing_d_tol = bearing_d + 2.0 * self.MLTOL
+        bearing_r     = bearing_d / 2.0
+        bearing_r_tol = bearing_r + self.MLTOL
+
+        # dimensions of the housing:
+        # length on the direction of the sliding rod
+        bolt2wall = fcfun.get_bolt_end_sep(BOLT_D, hasnut=0) 
+        #housing_d = bearing_l_tol + 2 * (2*BOLT_HEAD_R_TOL + 2* MIN_SEP_WALL)
+        if bolts_side == 1:
+            # bolts on the side of the linear bearing
+            # bolt2cen_wid: distance from the center (axis) to the bolt center
+            bolt2cen_wid = fcfun.get_bolt_bearing_sep (BOLT_D, hasnut=0,
+                                                    lbearing_r = bearing_r) 
+
+        else:
+            # bolts after the linear bearing (front axis)
+            # it will be longer (on D), and shorter (on W)
+            bolt2cen_wid = fcfun.get_bolt_bearing_sep (BOLT_D, hasnut=0,
+                                     lbearing_r = rod_r ) 
+                                    #lbearing_r = rod_r + kparts.ROD_SPACE_MIN) 
+
+        # check if it is going to be wider
+        if bolt2cen_wid_n > 0:
+            if bolt2cen_wid_n < bolt2cen_wid:
+                logger.debug("bolt2cen_wid_n smaller than minimum")
+                bolt2cen_wid_n = bolt2cen_wid
+            else:
+                bolt2cen_wid_n = bolt2cen_wid_n
+        else:
+            bolt2cen_wid_n = bolt2cen_wid
+        if bolt2cen_wid_p > 0:
+            if bolt2cen_wid_p < bolt2cen_wid:
+                logger.debug("bolt2cen_wid_p smaller than minimum")
+                bolt2cen_wid_p = bolt2cen_wid
+            else:
+                bolt2cen_wid_p = bolt2cen_wid_p
+        else:
+            bolt2cen_wid_p = bolt2cen_wid
+
+        if bolts_side == 1:
+            # it will be shorter (on D), and wider (on W)
+            housing_d = bearing_l + 2 * MIN_SEP_WALL
+            housing_w = 2 * bolt2wall + bolt2cen_wid_n + bolt2cen_wid_p
+        else: 
+            housing_d = bearing_l + 4*bolt2wall #bolt_r is included in bolt2wall
+            housing_w = max ((bearing_d + 2* MIN_SEP_WALL), 
+                              2 * bolt2wall + bolt2cen_wid_n + bolt2cen_wid_p)
+
+
+        print "housing_d: %", housing_d
+        print "housing_w: %", housing_w
+
+        # bolt distance
+        # distance of the bolts to the center, on nfro_ax dir
+        bolt2cen_dep = housing_d/2. - bolt2wall
+
+        # minimum height of the housing 
+        housing_min_h = bearing_d + 2 * OUT_SEP_H
+        axis_min_h = housing_min_h / 2.
+        print "min housing_h: %", housing_min_h
+        if axis_h == 0:
+            # minimum values
+            housing_h = housing_min_h
+            axis_h = axis_min_h
+        elif axis_h >= axis_min_h:
+            # the lower part will have longer height: axis_h
+            # the upper part will be the minimum: axis_min_h
+            housing_h = axis_h + axis_min_h
+            axis_h = axis_h
+        else: # the argument has an axis_h lower than the minimum possible
+            logger.debug("axis_h %s cannot be smaller than %s",
+                         str(axis_h), str(axis_min_h))
+            housing_h = housing_min_h
+            axis_h = axis_min_h
+
+        # Atributes
+        self.D = housing_d
+        self.W = housing_w
+        self.H = housing_h
+        self.axis_h = axis_h
+        self.bolt2cen_dep = bolt2cen_dep
+        self.bolt2cen_wid_n = bolt2cen_wid_n
+        self.bolt2cen_wid_p = bolt2cen_wid_p
+        self.nfro_ax = nfro_ax
+        self.nbot_ax = nbot_ax
+        self.nsid_ax = nsid_ax
+
+        #To make the boxes, we take the reference on midcenter=1 and 
+        # refcen_hei = 0. Point 2 on the drawing
+
+        if refcen_dep == 0: #the center is not on frontal plane
+            # get the vector from the reference center to the center:
+            fc_ref2cen_dep = DraftVecUtils.scale(nfro_ax,
+                                                 bolt2cen_dep)
+        else:
+            fc_ref2cen_dep = V0
+
+        if refcen_hei == 1:
+            fc_ref2bot_hei = DraftVecUtils.scale(nbot_ax,axis_h)
+            fc_ref2cen_hei = V0
+        else:
+            fc_ref2bot_hei = V0
+            fc_ref2cen_hei = DraftVecUtils.scale(nbot_ax,-axis_h)
+
+        if refcen_wid == 0:
+            fc_ref2cen_wid = DraftVecUtils.scale(nsid_ax, bolt2cen_wid_n)
+            # since it is not symmetrical the side n and the side p, we
+            # another center for the housing, not for the rod
+            fc_ref2houscen_wid = DraftVecUtils.scale(nsid_ax,
+                                        (bolt2cen_wid_n + bolt2cen_wid_p)/2.)
+        else:
+            fc_ref2cen_wid = V0
+            # since it is not symmetrical the side n and the side p, we
+            # another center for the housing, not for the rod
+            fc_ref2houscen_wid = DraftVecUtils.scale(nsid_ax,
+                                        (bolt2cen_wid_p - bolt2cen_wid_n)/2.)
+
+
+        botcenter_pos = pos + fc_ref2cen_dep + fc_ref2bot_hei + fc_ref2cen_wid
+        bothouscenter_pos =  (  pos + fc_ref2cen_dep + fc_ref2bot_hei
+                              + fc_ref2houscen_wid)
+
+        # point 1 on the drawing
+        axiscenter_pos = pos + fc_ref2cen_dep + fc_ref2cen_hei + fc_ref2cen_wid
+        axishouscenter_pos = (  pos + fc_ref2cen_dep + fc_ref2cen_hei
+                              + fc_ref2houscen_wid )
+        # center on the top
+        topcenter_pos = botcenter_pos + DraftVecUtils.scale(nbot_ax_n,
+                                                            housing_h)
+
+        shp_housing = fcfun.shp_box_dir(box_w = housing_w,
+                                        box_d = housing_d, #dir of nfro_ax
+                                        box_h = housing_h,
+                                        fc_axis_h = nbot_ax_n,
+                                        fc_axis_d = nfro_ax,
+                                        cw= 1, cd=1, ch=0,
+                                        pos = bothouscenter_pos)
+        # fillet, small
+        shp_block = fcfun.shp_filletchamfer_dir(shp_housing,
+                                                fc_axis=fc_bot_ax,
+                                                radius=2)
+
+        # the rod hole
+        shp_rod = fcfun.shp_cylcenxtr(r = rod_r + kparts.ROD_SPACE_MIN,
+                                      h = housing_d,
+                                      normal = nfro_ax,
+                                      ch = 1, xtr_top = 1, xtr_bot=1,
+                                      pos = axiscenter_pos)
+        # the linear bearing hole
+        shp_lbear = fcfun.shp_cylcenxtr(r = bearing_r_tol,
+                                        h = bearing_l_tol,
+                                        normal = nfro_ax,
+                                        ch = 1, xtr_top = 1, xtr_bot=1,
+                                        pos = axiscenter_pos)
+        shp_rodlbear = shp_rod.fuse(shp_lbear)
+
+        # 4 bolts 
+        
+        bolt_holes = []
+
+        for vec_axis in [DraftVecUtils.scale(nfro_ax,bolt2cen_dep),
+                         DraftVecUtils.scale(nfro_ax,-bolt2cen_dep)]:
+            for vec_perp in [DraftVecUtils.scale(nsid_ax,
+                                                 bolt2cen_wid_p),
+                             DraftVecUtils.scale(nsid_ax,
+                                                 -bolt2cen_wid_n)]:
+                pos_i = topcenter_pos + vec_axis + vec_perp
+                # the nut hole will be on the bottom side,
+                
+                shp_bolt = fcfun.shp_bolt_dir (
+                                  r_shank = BOLT_SHANK_R_TOL,
+                                  l_bolt  = housing_h,
+                                  r_head  = BOLT_HEAD_R_TOL,
+                                  l_head  = BOLT_HEAD_L,
+                                  hex_head = 0,
+                                  xtr_head=1,     xtr_shank=1,
+                                  support=1,
+                                  fc_normal = nbot_ax,
+                                  fc_verx1=V0,
+                                  pos = pos_i)
+                bolt_holes.append(shp_bolt)
+
+        shp_holes = shp_rodlbear.multiFuse(bolt_holes)       
+        shp_lbear_housing = shp_block.cut(shp_holes)
+        doc.recompute()
+        # making 2 parts, intersection with 2 boxes:
+        shp_box_top = fcfun.shp_box_dir(
+                                     box_w = housing_w + 2,
+                                     box_d = housing_d + 2, 
+                                     box_h = housing_h - axis_h + 1,
+                                     fc_axis_h = nbot_ax_n,
+                                     fc_axis_d = nfro_ax,
+                                     cw= 1, cd=1, ch=0,
+                                     pos = axishouscenter_pos)
+        shp_lbear_housing_top = shp_lbear_housing.common(shp_box_top)
+        shp_lbear_housing_top = shp_lbear_housing_top.removeSplitter() 
+        fco_lbear_top = doc.addObject("Part::Feature", name + '_top') 
+        fco_lbear_top.Shape = shp_lbear_housing_top
+
+
+        shp_box_bot = fcfun.shp_box_dir(
+                                     box_w = housing_w + 2,
+                                     box_d = housing_d + 2,
+                                     # larger, just in case
+                                     box_h = axis_h + 1,
+                                     fc_axis_h = nbot_ax,
+                                     fc_axis_d = nfro_ax,
+                                     cw= 1, cd=1, ch=0,
+                                     pos = axishouscenter_pos)
+        shp_lbear_housing_bot = shp_lbear_housing.common(shp_box_bot)
+        shp_lbear_housing_bot = shp_lbear_housing_bot.removeSplitter()
+        fco_lbear_bot = doc.addObject("Part::Feature", name + '_bot') 
+        fco_lbear_bot.Shape = shp_lbear_housing_bot
+
+        self.fco_top = fco_lbear_top
+        self.fco_bot = fco_lbear_bot
+
+    def BasePlace (self, position = (0,0,0)):
+        self.base_place = position
+        vpos = FreeCAD.Vector(position)
+        self.fco_top.Placement.Base = vpos
+        self.fco_bot.Placement.Base = vpos
+
+
+
+#doc = FreeCAD.newDocument()
+#ThinLinBearHouseAsim (kcomp.LMELUU[12],
+#                  fc_fro_ax = VX,
+#                  fc_bot_ax = VZN,
+#                  fc_sid_ax = VYN,
+#                  axis_h = 0, bolts_side=0,
+#                  refcen_hei=1, refcen_dep=1, refcen_wid = 1,
+#                  bolt2cen_wid_n = 0,
+#                  bolt2cen_wid_p = 25)
+
+ 
