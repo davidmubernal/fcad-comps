@@ -27,6 +27,7 @@ sys.path.append(filepath)
 # ---------------------- can be taken away after debugging
 
 import kcomp 
+import kcomp_optic
 import fcfun
 import comps
 import kparts
@@ -1960,3 +1961,261 @@ class ThinLinBearHouseAsim (object):
 #                  bolt2cen_wid_p = 25)
 
  
+
+# ----------- Linear bearing housing 
+
+class PlateJoin3CageCubes (object):
+
+    """
+    Creates a plate to join 3 Cage Cubes
+
+                          fc_top_ax   fc_fro_ax
+                               :      /
+        _______________________:_____/__________..............
+       | O            O        :  O /         O |--top_h/2   + top_h
+       |..........        .....:..... ..........|..:.........:
+       |o  ___  o:        :o  _:_ /o: :o  ___  o|
+       |  /   \  :        :  / :.\..:.:. /...\..|..... fc_sid_ax
+       |  \___/  :        :  \___/  : :  \___/  |
+       |o_______o:________:o_______o:_:o_______o|
+          :   :
+          :. .:
+            + hole_d
+                             fc_fro_ax
+                               :
+       ___________        _____:_____ __________ 
+       |o  ___  o|        |o  _:_ /o| |o  ___  o|  --> cage cubes
+       |  /   \  |        |  / : \  | |  /   \  |
+       |  \___/  |        |  \_:_/  | |  \___/  |
+       |o_______o|________|____:___ |_|o_______o|........... fc_sid_ax
+       |  :   :              :   :       :   :  |  + thick
+       |__:___:______________:___:_______:___:__|..:
+            :                  :           :
+            :.... cube_dist_n..:...........:
+                                     + cube_dist_p
+
+    Thruholes of the bolts are not drawn
+
+    The position of the plate: pos, is referenced to the center of the
+    hole of the middle plate.
+
+    There are 3 axes:
+        - fc_fro_ax: FreeCAD.Vector pointing to the direction of the cage
+          cubes, and it is on the surface touching the cubes
+        - fc_top_ax: FreeCAD.Vector pointing to the top, where there is an
+          extra length (top_h) to hold an aluminum profile
+        - fc_sid_ax: FreeCAD.Vector pointing to the side p (positive)
+
+        ________________________________________
+       | O            O           O           O |
+       |..........        ........... ..........|
+       |o  ___  o:        :o  ___  o: :o  ___  o|
+       |  /   \  :        :  /   \  : :  /   \  |
+       |  \___/  :        :  \___/  : :  \___/  |
+       |o_______o:________:_________:_:o_______o|
+            :                  :           :
+            :.... cube_dist_n..:           :
+
+    Arguments:
+        d_cagecube: dictionary with the dimensions of the cage cube
+        thick: thickness of the plate, in mm
+        cube_dist_n: distance from center to center of the middle cage cube
+               to the cube in opposite direction (negative) of fc_sid_ax
+        cube_dist_p: distance from center to center of the middle cage cube
+               to the cube in the same direction (positive) of fc_sid_ax
+        top_h: length of the extra part on top of the plate to hold a
+               aluminum profile or whatever
+        cube_face: indicates which face of the cube is facing the plate.
+               There are 3 possible faces:
+               'thruhole' : the big hole is a thruhole without threads
+               'thrurods' : the face has 4 thruholes for the rods
+               'rodscrews': the face has 4 tapped holes for screwing the
+                            end of the rods
+        hole_d: diameter of the central thruhole facing the plate.
+               0: take the value of the cagecube hole
+               X: take this value, since there may be something attached,
+                  such as a tubelens, which may have a ring that makes
+                  necesary to have larger diameter hole
+        boltatt_n: number of bolt holes on the extra top side
+        boltatt_d: diameter of the bolt holes on the top side
+        fc_fro_ax: FreeCAD.Vector pointing to the direction of the cage
+               cubes, and it is on the surface touching the cubes
+        fc_top_ax: FreeCAD.Vector pointing to the top, where there is an
+               extra length (top_h) to hold an aluminum profile
+        fc_sid_ax: FreeCAD.Vector pointing to the side p (positive)
+        pos: FreeCAD.Vector with the position of the reference. 
+               Center of the hole of the middle plate, on the face touching
+               the cagecube
+        name: str with the name of the FreeCAD.Object
+
+
+
+    """
+    def __init__(self,
+                 d_cagecube,
+                 thick,
+                 cube_dist_n,
+                 cube_dist_p,
+                 top_h = 10,
+                 cube_face = 'rodscrews',#which side of the cube faces the plate
+                 hole_d = 0, 
+                 boltatt_n = 6, 
+                 boltatt_d = 3+TOL, 
+                 fc_fro_ax = VX,
+                 fc_top_ax = VZ,
+                 fc_sid_ax = VY,
+                 pos = V0,
+                 name = 'Plate3CageCubes'
+                ):
+
+        self.d_cagecube = d_cagecube
+        cage_w = d_cagecube['L']
+
+        #get normalized vectors
+        nfro_ax = DraftVecUtils.scaleTo(fc_fro_ax,1)
+        nfro_ax_n = nfro_ax.negative()
+        ntop_ax = DraftVecUtils.scaleTo(fc_top_ax,1)
+        nsid_ax = DraftVecUtils.scaleTo(fc_sid_ax,1)
+
+        # calculate the plate dimensions
+        # and its center
+        #  ________________________________________.............
+        # | O            O           O           O |  + top_h  :
+        # |..........        ........... ..........|..:        :
+        # |o  ___  o:        :o  _ _  o: :o  ___  o|  :        + plate_h
+        # |  /   \  :        :  / : \  : :  /   \  |  + cage_w :
+        # |  \___/  :        :  \___/  : :  \___/  |  :        :
+        # |o_______o:________:o_______o:_:o_______o|..:........:
+        # :    :                  :           :    :
+        # :    :.... cube_dist_n..:...........:    :
+        # :                          +cube_dist_p  :
+        # :......plate_w...........................: 
+
+
+        plate_w = cube_dist_n + cube_dist_p + cage_w
+        plate_h = cage_w + top_h
+
+        # the center of the plate on the fc_top_ax and tc_sid_ax vectors
+        platecen_pos = ( V0
+                  + DraftVecUtils.scale(ntop_ax,top_h/2.)
+                  + DraftVecUtils.scale(nsid_ax,(cube_dist_p-cube_dist_n)/2.))
+
+        shp_box = fcfun.shp_box_dir (box_w = plate_w,
+                                     box_d = plate_h,
+                                     box_h = thick,
+                                     fc_axis_h = nfro_ax_n,
+                                     fc_axis_d = ntop_ax,
+                                     cw=1, cd=1, ch=0,
+                                     pos = platecen_pos)
+
+        # diameter of the big holes:
+        if cube_face == 'rodscrews':
+            cube_hole_d = d_cagecube['thru_thread_d']
+            bolt_d = d_cagecube['rod_thread_d'] + TOL
+        elif cube_face == 'thrurods':
+            cube_hole_d = d_cagecube['thru_thread_d']
+            bolt_d = d_cagecube['thru_rod_d']
+        elif cube_face == 'thruhole':
+            cube_hole_d = d_cagecube['thru_hole_d']
+            bolt_d = d_cagecube['rod_thread_d'] + TOL
+        else:
+            logger.debug("cube_face not supported %s", cube_face)
+            cube_hole_d = d_cagecube['thru_thread_d']
+            bolt_d = d_cagecube['rod_thread_d'] + TOL
+
+        bolt_r = bolt_d/2.
+
+        # check if the diameter is larger than the cage diameter
+        if hole_d == 0:
+            hole_d = cube_hole_d
+        elif hole_d < cube_hole_d:
+            logger.debug("hole_d smaller than cube hole, taking the minimum %s",
+                         cube_hole_d)
+            hole_d = cube_hole_d
+        else:
+            hole_d = hole_d
+        hole_r = hole_d/2.
+        # central big hole (it is on pos)
+        shp_bighole_cen = fcfun.shp_cylcenxtr (r= hole_r, h = thick,
+                                               normal = nfro_ax_n,
+                                               ch=0, xtr_top=1, xtr_bot=1,
+                                               pos = pos)
+
+        # position of the cage on the positive and negative sides:
+        pos_cage_p = pos + DraftVecUtils.scale(nsid_ax,cube_dist_p)
+        pos_cage_n = pos + DraftVecUtils.scale(nsid_ax,-cube_dist_n)
+
+        shp_bighole_p = fcfun.shp_cylcenxtr (r= hole_r, h = thick,
+                                             normal = nfro_ax_n,
+                                             ch=0, xtr_top=1, xtr_bot=1,
+                                             pos = pos_cage_p)
+
+        shp_bighole_n = fcfun.shp_cylcenxtr (r= hole_r, h = thick,
+                                             normal = nfro_ax_n,
+                                             ch=0, xtr_top=1, xtr_bot=1,
+                                             pos = pos_cage_n)
+        shp_bigholes = shp_bighole_cen.multiFuse([shp_bighole_p, shp_bighole_n])
+
+        cagebolt_sep = d_cagecube['thru_rod_sep']
+        cagebolt2cen = cagebolt_sep /2.
+        bolt_pos_top_p = DraftVecUtils.scale(ntop_ax, cagebolt2cen)
+        bolt_pos_top_n = DraftVecUtils.scale(ntop_ax, -cagebolt2cen)
+        bolt_pos_sid_p = DraftVecUtils.scale(nsid_ax, cagebolt2cen)
+        bolt_pos_sid_n = DraftVecUtils.scale(nsid_ax, -cagebolt2cen)
+
+        boltholes_list = []
+        for pos_i in [pos, pos_cage_p, pos_cage_n]:
+            for top_add in [bolt_pos_top_p, bolt_pos_top_n]:
+                for sid_add in [bolt_pos_sid_p, bolt_pos_sid_n]:
+                    pos_boltcage = pos_i + top_add + sid_add
+                    shp_boltcage = fcfun.shp_cylcenxtr (r= bolt_r, h = thick,
+                                             normal = nfro_ax_n,
+                                             ch=0, xtr_top=1, xtr_bot=1,
+                                             pos = pos_boltcage)
+                    boltholes_list.append(shp_boltcage)
+
+        # bolts to attach the aluminum profile:
+        if boltatt_n < 2:
+            boltatt_n = 2
+        # the first and the last bolt will be at the same fc_sid_ax as the
+        # cage bols.
+        # the distance between the first and the last is:
+        boltatt_dist =  cube_dist_n + cube_dist_p + cagebolt_sep
+        boltatt_sep = boltatt_dist / (boltatt_n - 1)
+        vec_boltatt_add = DraftVecUtils.scale(nsid_ax, boltatt_sep)
+        #The first bolt will be:
+        boltatt_pos = (   pos_cage_n
+                        + DraftVecUtils.scale(nsid_ax, -cagebolt2cen)
+                        + DraftVecUtils.scale(ntop_ax, cage_w/2. + top_h/2.))
+        boltatt_r = boltatt_d/2.
+        for it_boltatt in range(boltatt_n):
+            shp_boltatt = fcfun.shp_cylcenxtr (r= boltatt_r, h = thick,
+                                             normal = nfro_ax_n,
+                                             ch=0, xtr_top=1, xtr_bot=1,
+                                             pos = boltatt_pos)
+            boltatt_pos = boltatt_pos + vec_boltatt_add
+            boltholes_list.append(shp_boltatt)
+
+
+        shp_holes = shp_bigholes.multiFuse(boltholes_list)
+        shp_plate = shp_box.cut(shp_holes)
+
+        
+
+                           
+
+doc = FreeCAD.newDocument()
+PlateJoin3CageCubes(d_cagecube = kcomp_optic.CAGE_CUBE_60,
+                 thick = 5,
+                 cube_dist_n = 120,
+                 cube_dist_p = 80,
+                 top_h = 10,
+                 cube_face = 'rodscrews',#which side of the cube faces the plate
+                 hole_d = 0, 
+                 boltatt_n = 6,
+                 boltatt_d = 3+TOL,
+                 fc_fro_ax = VX,
+                 fc_top_ax = VZ,
+                 fc_sid_ax = VY,
+                 pos = V0,
+                 name = 'Plate3CageCubes')
