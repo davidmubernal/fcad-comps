@@ -72,7 +72,9 @@ class CageCube (object):
            Thru-rods can be on X, Y or Z axis
            thru-hole can be on X, Y, or Z axis, but not in the same as thru-rods
     """
-
+    ROD_SCREWS = kcomp_optic.ROD_SCREWS
+    THRU_RODS = kcomp_optic.THRU_RODS
+    THRU_HOLE = kcomp_optic.THRU_HOLE  
 
     def __init__ (self, side_l,
                         thru_hole_d,
@@ -101,6 +103,8 @@ class CageCube (object):
         # getting the freecad vector of the axis
         self.v_thru_rods = fcfun.getfcvecofname(axis_thru_rods)
         self.v_thru_hole = fcfun.getfcvecofname(axis_thru_hole)
+        # get the 3rd perpendicular vector
+        self.v_rod_screws =  self.v_thru_rods.cross (self.v_thru_hole)
 
         # cage
         shp_cage_box = fcfun.shp_boxcen(x=side_l,
@@ -222,6 +226,60 @@ class CageCube (object):
         self.base_place = position
         self.fco.Placement.Base = FreeCAD.Vector(position)
 
+    def vec_face (self, fcv):
+        """Return which face of the cube corresponds to the direction fcv
+
+        Arguments:
+        fcf -- FreeCAD.Vector pointing to the normal of the cube face
+               we want to check
+
+        returns: a string indicating the face. There are 3 different cube
+               faces:
+            'thruhole' : the face with the big central hole is a thruhole
+                         without threads
+            'thrurods' : the face that has 4 thruholes for the rods and a 
+                         threaded big central hole 
+            'rodscrews': the face has 4 tapped holes for screwing the
+                         end of the rods and a threaded big central hole
+            'none': the vector isn't parallel to any of the faces of the cube
+ 
+        """
+        #normalize the vector:
+        nv = DraftVecUtils.scaleTo(fcv,1)
+        if fcfun.fc_isparal(self.v_thru_hole, nv):
+            return self.THRU_HOLE
+        elif fcfun.fc_isparal(self.v_thru_rods, nv):
+            return self.THRU_RODS
+        elif fcfun.fc_isparal(self.v_rod_screws, nv):
+            return self.ROD_SCREWS
+        else:
+            return 0
+
+    def get_cenhole_d (self, face):
+        """ Given a face defined in kcomp_optic.py, returns the size of the
+            central hole
+
+        Arguments:
+            face: THRU_HOLE (3), THRU_RODS (2), ROD_SCREWS (1)
+
+        """
+
+        if face == self.THRU_HOLE:
+            return self.thru_hole_d
+        elif face == self.THRU_RODS or face == self.ROD_SCREWS:
+            return self.thru_thread_d
+        else:
+            logger.debug('wrong value of face of cage cube')
+            return 0
+
+        
+
+
+# ------------------ END CageCube ------------------------------
+
+
+
+# ------------------ f_cagecube   ------------------------------
 
 def f_cagecube (d_cagecube,
                 axis_thru_rods = 'x',

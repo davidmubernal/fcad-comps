@@ -1964,7 +1964,7 @@ class ThinLinBearHouseAsim (object):
 
 # ----------- Linear bearing housing 
 
-class PlateJoin3CageCubes (object):
+class Plate3CageCubes (object):
 
     """
     Creates a plate to join 3 Cage Cubes
@@ -2026,10 +2026,10 @@ class PlateJoin3CageCubes (object):
         top_h: length of the extra part on top of the plate to hold a
                aluminum profile or whatever
         cube_face: indicates which face of the cube is facing the plate.
-               There are 3 possible faces:
-               'thruhole' : the big hole is a thruhole without threads
-               'thrurods' : the face has 4 thruholes for the rods
-               'rodscrews': the face has 4 tapped holes for screwing the
+               There are 3 possible faces (defined in kparts.py):
+               THRUHOLE (1) : the big hole is a thruhole without threads
+               THRURODS (2) : the face has 4 thruholes for the rods
+               RODSCREWS(3): the face has 4 tapped holes for screwing the
                             end of the rods
         hole_d: diameter of the central thruhole facing the plate.
                0: take the value of the cagecube hole
@@ -2048,16 +2048,20 @@ class PlateJoin3CageCubes (object):
                the cagecube
         name: str with the name of the FreeCAD.Object
 
-
-
     """
+
+    ROD_SCREWS = kcomp_optic.ROD_SCREWS
+    THRU_RODS = kcomp_optic.THRU_RODS
+    THRU_HOLE = kcomp_optic.THRU_HOLE
+
     def __init__(self,
                  d_cagecube,
                  thick,
                  cube_dist_n,
                  cube_dist_p,
                  top_h = 10,
-                 cube_face = 'rodscrews',#which side of the cube faces the plate
+                 #which side of the cube faces the plate
+                 cube_face = kcomp_optic.ROD_SCREWS,
                  hole_d = 0, 
                  boltatt_n = 6, 
                  boltatt_d = 3+TOL, 
@@ -2096,7 +2100,7 @@ class PlateJoin3CageCubes (object):
         plate_h = cage_w + top_h
 
         # the center of the plate on the fc_top_ax and tc_sid_ax vectors
-        platecen_pos = ( V0
+        platecen_pos = ( pos
                   + DraftVecUtils.scale(ntop_ax,top_h/2.)
                   + DraftVecUtils.scale(nsid_ax,(cube_dist_p-cube_dist_n)/2.))
 
@@ -2109,13 +2113,13 @@ class PlateJoin3CageCubes (object):
                                      pos = platecen_pos)
 
         # diameter of the big holes:
-        if cube_face == 'rodscrews':
+        if cube_face == self.ROD_SCREWS:
             cube_hole_d = d_cagecube['thru_thread_d']
             bolt_d = d_cagecube['rod_thread_d'] + TOL
-        elif cube_face == 'thrurods':
+        elif cube_face == self.THRU_RODS:
             cube_hole_d = d_cagecube['thru_thread_d']
             bolt_d = d_cagecube['thru_rod_d']
-        elif cube_face == 'thruhole':
+        elif cube_face == self.THRU_HOLE:
             cube_hole_d = d_cagecube['thru_hole_d']
             bolt_d = d_cagecube['rod_thread_d'] + TOL
         else:
@@ -2200,22 +2204,28 @@ class PlateJoin3CageCubes (object):
         shp_holes = shp_bigholes.multiFuse(boltholes_list)
         shp_plate = shp_box.cut(shp_holes)
 
+
+        doc = FreeCAD.ActiveDocument
+        fco_plate =  doc.addObject("Part::Feature", name) 
+        fco_plate.Shape = shp_plate
+        self.fco = fco_plate
+
         
 
                            
 
-doc = FreeCAD.newDocument()
-PlateJoin3CageCubes(d_cagecube = kcomp_optic.CAGE_CUBE_60,
-                 thick = 5,
-                 cube_dist_n = 120,
-                 cube_dist_p = 80,
-                 top_h = 10,
-                 cube_face = 'rodscrews',#which side of the cube faces the plate
-                 hole_d = 0, 
-                 boltatt_n = 6,
-                 boltatt_d = 3+TOL,
-                 fc_fro_ax = VX,
-                 fc_top_ax = VZ,
-                 fc_sid_ax = VY,
-                 pos = V0,
-                 name = 'Plate3CageCubes')
+#doc = FreeCAD.newDocument()
+#Plate3CageCubes(d_cagecube = kcomp_optic.CAGE_CUBE_60,
+#                thick = 5,
+#                cube_dist_n = 120,
+#                cube_dist_p = 80,
+#                top_h = 10,
+#                cube_face = 'rodscrews',#which side of the cube faces the plate
+#                hole_d = 0, 
+#                boltatt_n = 6,
+#                boltatt_d = 3+TOL,
+#                fc_fro_ax = VX,
+#                fc_top_ax = VZ,
+#                fc_sid_ax = VY,
+#                pos = V0,
+#                name = 'Plate3CageCubes')

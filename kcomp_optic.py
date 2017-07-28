@@ -39,6 +39,12 @@ CAGE_CUBE_60 = {
                  }
 
 
+# Faces of the cage cubes:
+ROD_SCREWS = 1
+THRU_RODS = 2
+THRU_HOLE = 3
+
+
 CAGE_CUBE_HALF_60 = {
            # 76.2 Length of each side (3 inch)
            'L'              : CAGE_CUBE_60['L'],
