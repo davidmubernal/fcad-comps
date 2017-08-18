@@ -13,6 +13,8 @@
 import FreeCAD;
 import Part;
 import Draft;
+import DraftVecUtils;
+import logging
 
 
 import os
@@ -35,6 +37,28 @@ from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, fillet_len
 from fcfun import addBolt, addBoltNut_hole, NutHole
 from kcomp import TOL
 
+logger = logging.getLogger(__name__)
+
+# Belt dimensions:
+
+# space for the 2 belts to clamp them
+# the GT2 belt is 1.38mm width. 2 together facing teeth will be about 2mm
+# I make it 2.8mm
+# Internal Width of the Clamp Block
+CB_IW = 2.8
+# Width of the exterior clamp blocks (Y axis)
+CB_W = 4.0
+# Length of the clamp blocks (X axis)
+CB_L = 12.0
+# GT2 height is 6 mm, making the heigth 8mm
+C_H = 8.0
+# GT2 Clamp Cylinder radius
+CCYL_R = 4.0
+# separation between the clamp blocks and the clamp cylinder
+CS = 3.0
+
+# separation of the nut hole from the edge
+NUT_HOLE_EDGSEP = 3 
 
 
 # --------------------------- belt clamp and tensioner
@@ -451,11 +475,379 @@ def fco_topbeltclamp (railaxis = 'x', bot_norm = '-z', pos = V0, extra=1,
     fcotopbeltclamp.Shape = shptopbeltclamp
 
 
-
 #doc = FreeCAD.newDocument()
 #shp = shp_topbeltclamp (railaxis = 'x', bot_norm= '-z', pos=FreeCAD.Vector(2,0,4))
 
 
 
+# ----------- shp_topbeltclamp_dir
+
+class shp_topbeltclamp_base (object):
+
+    """ Similar to shp_topbeltclamp, but with any direction, and 
+        can have a base
+        Creates a shape of a belt clamp. Just the rail and the cylinder
+        and may have a rectangular base
+        just one way: 2 clamp blocks
+        It is references on the base of the clamp, but it may have 5 different
+        positions
+
+    Arguments:
+        fc_fro_ax: FreeCAD.Vector pointing to the front, see pricture
+        fc_top_ax: FreeCAD.Vector pointing to the top, see pricture
+        base_h: height of the base,
+                if 0 and bolt_d=0: no base
+                if 0 and bolt_d!= 0: minimum base to have the bolt head and
+                not touching with the belt (countersunk) if bolt_csunk > 0
+        base_l: length of the base, if base_h not 0.
+                if 0 and bolt_d=0: will have the minimum length, defined by the
+                clamp
+                if 0 and bolt_d!=0: will have the minimum length, defined by
+                the clamp plus the minimum separation due to the bolt holes
+        base_l: length of the base, if base_h not 0.
+        bolt_d: diameter of the bolts, if zero, no bolts
+        bolt_csunk: if the bolt is countersunk
+                if >0: there is a whole to countersink the head of the bolt
+                      there will be an extra height if not enough
+                      bolt_d has to be > 0
+                if 0: no whole for the height, and no extra height
+                if >0, the size will determine the minimum height of the 
+                       base, below the countersink hole
+        extra: if extra, it will have an extra height below the zero height,
+                this is to be joined to some other piece
+
+
+                                fc_top_ax
+                                   :
+                      _____       _:_ ..........
+                     |     |     | : |         + C_H
+                 ____|_____|_____|_:_|____.....:
+                | ::               :   :: |    + base_h
+    fc_fro_ax...|_::_______________*___::_|....:
+                           
+                 CLAMPBLOCK          
+                     CB            * ref
+
+                 clamp2end             clamp2end
+                ..+...               ...+...
+                :     :              :     :
+                :   bolt2end         :    bolt2end 
+                :+..+.               :.+..+.
+                :  :  :              :  :  :
+                :__:__:______________:__:__:...................
+                |  :   ____       ___      |                  :
+       CB_W  {  |  :  |____|     /   \     |                  :
+       CB_IW {  |  O   ____      | * |  O  | CCYL: CLAMPCYL   + base_w
+       CB_W  {  |     |____|     \___/     |                  :
+                |__________________________|..................:
+                :     :    :     : :       :
+                :     :CB_L:.CS..:.:       :
+                :                 +        :
+                :                 CCYL_R   :
+                :......... base_l .........:
+
+                 __________________________
+                |      ____       ___      |
+       CB_W  {  |     |____|     /   \     |
+       CB_IW {  4  3  2____      | 1 |  5  6 CCYL: CLAMPCYL  
+       CB_W  {  |     |____|     \___/     |
+                |__________________________|
+                      :    :
+                      :CB_L:.CS.:
+
+       References:
+       1: cencyl: center of cylinder
+       2: frontclamp: front of the clamps
+       3: frontbolt
+       4: frontbase
+       5: backbolt
+       6: backbase
+
+
+                                fc_top_ax
+                                   :
+                      _____       _:_
+                     |     |     | : |
+                 ____|_____|_____|_:_|____
+                |:..:              :  :..:|..... 
+    fc_fro_ax...|_::_______________*___::_|....+ bolt_csunk (if not 0)
+
+    """
+    # minimum base 
+    MIN_BASE_H = 2.
+
+    def __init__(self,
+                 fc_fro_ax,
+                 fc_top_ax,
+                 base_h = 2,
+                 base_l = 0,
+                 base_w = 0,
+                 bolt_d = 3,
+                 bolt_csunk = 0,
+                 ref = 1,
+                 pos = V0,
+                 extra=1):
+
+        doc = FreeCAD.ActiveDocument
+
+        # normalize and get the other base vector
+        nfro_ax = DraftVecUtils.scaleTo(fc_fro_ax,1)
+        nfro_ax_n = nfro_ax.negative()
+        ntop_ax = DraftVecUtils.scaleTo(fc_top_ax,1)
+        ntop_ax_n = ntop_ax.negative()
+        nsid_ax = nfro_ax.cross(ntop_ax)
+
+        clamponly_l = CB_L + CS + 2 * CCYL_R
+        clamponly_w = max((CB_IW+2*CB_W), (2*CCYL_R))
+
+        bolt2end = 0 # they will change in case they are used
+        clamp2end = 0
+        if base_h == 0 and bolt_d == 0:
+            # No base
+            base = 0
+            base_l = 0
+        else:
+            base = 1
+            if bolt_d > 0 :
+                d_bolt = kcomp.D912[bolt_d]
+                bolt_shank_r = d_bolt['shank_r_tol']
+                bolt_head_r = d_bolt['head_r_tol']
+                bolt_head_l = d_bolt['head_l']
+                # there are bolt holes, calculate the extra length needed
+                # from the end to the clamp / cylinder
+                bolt2end = fcfun.get_bolt_end_sep(bolt_d,hasnut=0)
+                # bolt space on one side
+                clamp2end = 2 * bolt2end
+                base_min_len = clamponly_l + 2 * clamp2end
+                if base_l < base_min_len:
+                    logger.debug("base_l too short, taking min len %s",
+                                  base_min_len)
+                    base_l = base_min_len
+                else:
+                    clamp2end = (base_l - clamponly_l) /2.
+                    bolt2end = clamp2end / 2.
+                if bolt_csunk > 0:
+                    # there are countersunk holes for the bolts
+                    if base_h == 0:
+                        # minimum height:
+                        base_h = bolt_csunk + bolt_head_l
+                    else:
+                        # check if there is enough base height
+                        if base_h < bolt_csunk + bolt_head_l:
+                            base_h = bolt_csunk + bolt_head_l
+                            logger.debug("base_h too short,taking height %s",
+                                  base_h)
+                else:
+                    if base_h < self.MIN_BASE_H:
+                        base_h = self.MIN_BASE_H
+                        logger.debug("taking base height %s",
+                                  base_h)
+            else: # No bolt
+                bolt2end = 0
+                if base_l < clamponly_l:
+                    if base_l > 0:
+                        logger.debug("base_l too short, Taking min len %s",
+                                      clamponly_l) 
+                    base_l = clamponly_l
+                    clamp2end = 0
+                else: #base larger than clamp
+                    clamp2end = (base_l - clamponly_l) /2.
+            if base_w == 0:
+                base_w = clamponly_w
+            elif base_w < clamponly_w:
+                logger.debug("base_w too short, Taking min width %s",
+                              clamponly_w)
+                base_w = clamponly_w
+
+        ###
+        cencyl2froclamp = CB_L+CS+CCYL_R
+        #vectors to references:
+        # from the center of the cylinder to the front clamp
+        vec_1to2 = DraftVecUtils.scale(nfro_ax,cencyl2froclamp)
+        vec_2to1 = vec_1to2.negative()
+        # from the front clamp to the front bolt
+        vec_2to3 = DraftVecUtils.scale(nfro_ax, bolt2end)
+        vec_3to2 = vec_2to3.negative()
+        # Since not always there is a bolt, from the clamp
+        vec_2to4 = DraftVecUtils.scale(nfro_ax, clamp2end)
+        vec_4to2 = vec_2to4.negative()
+        # from the center of the cylinder to the back bolt
+        vec_5to1 = DraftVecUtils.scale(nfro_ax,CCYL_R) + vec_2to3
+        vec_1to5 = vec_5to1.negative()
+        # from the back bolt to the back end
+        vec_6to1 = DraftVecUtils.scale(nfro_ax,CCYL_R) + vec_2to4
+        vec_1to6 = vec_6to1.negative()
+
+        # default values
+        vec_tocencyl = V0
+        vec_tofrontclamp = V0
+        vec_tofrontbolt = V0
+        vec_tofrontbase = V0
+        vec_tobackbolt = V0
+        vec_tobackbase = V0
+        if ref==1: #ref on the center of the cylinder
+            vec_tocencyl = V0
+            vec_tofrontclamp = vec_1to2 
+            vec_tofrontbolt = vec_1to2 + vec_2to3
+            vec_tofrontbase = vec_1to2 + vec_2to4
+            vec_tobackbolt = vec_1to5
+            vec_tobackbase = vec_1to6
+        elif ref==2: #ref on the front of the clamps
+            vec_tocencyl = vec_2to1
+            vec_tofrontclamp = V0
+            vec_tofrontbolt = vec_2to3
+            vec_tofrontbase = vec_2to4
+            vec_tobackbolt = ve_2to1 + vec_1to5
+            vec_tobackbase = ve_2to1 + vec_1to6
+        elif ref == 3:
+            if clamp2end == 0 or bolt2end == 0:
+                logger.error('reference on the bolts, there are no bolts')
+            else:
+                vec_tocencyl = vec_3to2 + vec_2to1
+                vec_tofrontclamp = vec_3to2
+                vec_tofrontbolt = V0
+                vec_tofrontbase = vec_2to3 #same as 3 to 4
+                vec_tobackbolt = vec_3to2 + vec_2to1 + vec_1to5
+                vec_tobackbase = vec_3to2 + vec_2to1 + vec_1to6
+        elif ref == 4:
+            if clamp2end == 0:
+                logger.debug('reference at the end, same as the clamps')
+            vec_tocencyl = vec_4to2 + vec_2to1
+            vec_tofrontclamp = vec_4to2
+            vec_tofrontbolt = vec_3to2 # same as 4 to 3
+            vec_tofrontbase = V0
+            vec_tobackbolt = vec_4to2 + vec_2to1 + vec_1to5
+            vec_tobackbase = vec_4to2 + vec_2to1 + vec_1to6
+        elif ref == 5:
+            if clamp2end == 0 or bolt2end == 0:
+                logger.error('reference on the bolts, there are no bolts')
+            else:
+                vec_tocencyl = vec_5to1
+                vec_tofrontclamp = vec_5to1 + vec_1to2
+                vec_tofrontbolt = vec_5to1 + vec_1to2 + vec_2to3
+                vec_tofrontbase = vec_5to1 + vec_1to2 + vec_2to4
+                vec_tobackbolt = V0
+                vec_tobackbase = vec_3to2 #5to6: same as 3to2
+        elif ref == 6:
+            if clamp2end == 0:
+                logger.debug('reference at the end, same as the clamps')
+            vec_tocencyl = vec_6to1
+            vec_tofrontclamp = vec_6to1 + vec_1to2
+            vec_tofrontbolt = vec_6to1 + vec_1to2 + vec_2to3
+            vec_tofrontbase = vec_6to1 + vec_1to2 + vec_2to4
+            vec_tobackbolt = vec_2to3 # same as 6 to 5
+            vec_tobackbase = V0
+        else:
+            logger.error('reference out of range')
+          
+
+
+        if extra == 0:
+            extra_pos = V0
+        else:
+            extra_pos = DraftVecUtils.scale(ntop_ax, -extra)
+        pos_extra = pos + extra_pos
+        base_top_add = DraftVecUtils.scale(ntop_ax, base_h + extra)
+        
+        
+        # total height of the clamp, including the base
+        clamp_tot_h = C_H + base_h + extra
+        # position of the clamp cylinder:
+        clampcyl_pos = pos_extra + vec_tocencyl
+        shp_cyl = fcfun.shp_cyl(CCYL_R, clamp_tot_h, ntop_ax, clampcyl_pos)
+        # position of the clamp blocks, without going to the side axis
+        clampblock_pos = pos_extra + vec_tofrontclamp
+        clampblock_side_add = DraftVecUtils.scale(nsid_ax, (CB_IW + CB_W)/2.)
+        clampblock_1_pos = clampblock_pos + clampblock_side_add
+        clampblock_2_pos = clampblock_pos - clampblock_side_add
+        shp_clampblock_1 = fcfun.shp_box_dir(box_w = CB_W,
+                                             box_d = CB_L,
+                                             box_h = clamp_tot_h,
+                                             fc_axis_h = ntop_ax,
+                                             fc_axis_d = nfro_ax_n,
+                                             cw=1, cd=0, ch=0,
+                                             pos = clampblock_1_pos)
+        shp_clampblock_2 = fcfun.shp_box_dir(box_w = CB_W,
+                                             box_d = CB_L,
+                                             box_h = clamp_tot_h,
+                                             fc_axis_h = ntop_ax,
+                                             fc_axis_d = nfro_ax_n,
+                                             cw=1, cd=0, ch=0,
+                                             pos = clampblock_2_pos)
+
+        shp_clamp = shp_cyl.multiFuse([shp_clampblock_1, shp_clampblock_2])
+
+
+        #position of the base, we will take it on the point 4 and make it not 
+        # centered
+        if base == 1:
+            base_pos = pos_extra + vec_tofrontbase 
+            shp_base = fcfun.shp_box_dir(box_w = base_w,
+                                         box_d = base_l,
+                                         box_h = base_h + extra,
+                                         fc_axis_h = ntop_ax,
+                                         fc_axis_d = nfro_ax_n,
+                                         cw=1, cd=0, ch=0,
+                                         pos = base_pos)
+            if base_l > clamponly_l: # chamfer
+                shp_base = fcfun.shp_filletchamfer_dir (shp_base,
+                                              fc_axis=ntop_ax,
+                                              fillet=1, radius= 2)
+
+            # shape of the bolt holes, if there are
+            if bolt_d > 0:
+                pos_bolt_front = pos_extra + vec_tofrontbolt + base_top_add
+                pos_bolt_back = pos_extra + vec_tobackbolt + base_top_add
+                if bolt_csunk > 0 :
+                    shp_bolt_front = fcfun.shp_bolt_dir(
+                                              r_shank = bolt_shank_r,
+                                              l_bolt = base_h + extra,
+                                              r_head = bolt_head_r,
+                                              l_head = bolt_head_l,
+                                              support=0,
+                                              fc_normal = ntop_ax_n,
+                                              pos=pos_bolt_front)
+                    shp_bolt_back = fcfun.shp_bolt_dir(
+                                              r_shank = bolt_shank_r,
+                                              l_bolt = base_h + extra,
+                                              r_head = bolt_head_r,
+                                              l_head = bolt_head_l,
+                                              support=0,
+                                              fc_normal = ntop_ax_n,
+                                              pos=pos_bolt_back)
+                else: # no head, just a cylinder:
+                    shp_bolt_front = fcfun.shp_cylcenxtr (
+                                              r = bolt_shank_r,
+                                              h = base_h + extra,
+                                              normal = ntop_ax_n,
+                                              ch = 0,
+                                              xtr_top=1, xtr_bot=1,
+                                              pos = pos_bolt_front)
+                    shp_bolt_back = fcfun.shp_cylcenxtr (
+                                              r = bolt_shank_r,
+                                              h = base_h + extra,
+                                              normal = ntop_ax_n,
+                                              ch = 0,
+                                              xtr_top=1, xtr_bot=1,
+                                              pos = pos_bolt_back)
+
+
+                # fuse the bolts:
+                shp_bolts = shp_bolt_front.fuse(shp_bolt_back)
+                shp_base = shp_base.cut(shp_bolts)
+            shp_clamp = shp_base.fuse(shp_clamp)
+
+              
+ 
+
+        doc.recompute()
+        shp_clamp = shp_clamp.removeSplitter()
+        Part.show (shp_clamp)
+        self.shp = shp_clamp
+
+
+
+# Revisar el caso con agujeros de bolt
+shp_topbeltclamp_base (VX, VY, base_h = 0, bolt_d=3, bolt_csunk = 2)
 
 
