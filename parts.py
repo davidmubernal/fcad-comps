@@ -342,6 +342,10 @@ class IdlePulleyHolder (object):
             self.fco = pulley_holder
 
         doc.recompute()
+
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
+
             
             
         
@@ -833,6 +837,9 @@ class ThinLinBearHouse1rail (object):
         self.fco_top = fco_lbear_top
         self.fco_bot = fco_lbear_bot
 
+    def color (self, color = (1,1,1)):
+        self.fco_top.ViewObject.ShapeColor = color
+        self.fco_bot.ViewObject.ShapeColor = color
 
 
 
@@ -929,8 +936,7 @@ class ThinLinBearHouse (object):
         boltcen_axis_dist: float
         boltcen_perp_dist: float
         + --- Dimensions:
-        tot_h, tot_w, tot_l
-        housing_l, base_h
+        H, W, L
         + --- FreeCAD objects
         fco_top = top part of the linear bearing housing
         fco_bot = bottom part of the linear bearing housing
@@ -1232,6 +1238,10 @@ class ThinLinBearHouse (object):
         self.fco_top.Placement.Base = vpos
         self.fco_bot.Placement.Base = vpos
 
+    def color (self, color = (1,1,1)):
+        self.fco_top.ViewObject.ShapeColor = color
+        self.fco_bot.ViewObject.ShapeColor = color
+
 
 
 #doc = FreeCAD.newDocument()
@@ -1481,6 +1491,10 @@ class LinBearHouse (object):
         self.fco_top = fco_lbear_top
         self.fco_bot = fco_lbear_bot
         doc.recompute()
+
+    def color (self, color = (1,1,1)):
+        self.fco_top.ViewObject.ShapeColor = color
+        self.fco_bot.ViewObject.ShapeColor = color
 
 #doc = FreeCAD.newDocument()
 #LinBearHouse (kcomp.SCUU[10])
@@ -1948,6 +1962,10 @@ class ThinLinBearHouseAsim (object):
         self.fco_top.Placement.Base = vpos
         self.fco_bot.Placement.Base = vpos
 
+    def color (self, color = (1,1,1)):
+        self.fco_top.ViewObject.ShapeColor = color
+        self.fco_bot.ViewObject.ShapeColor = color
+
 
 
 #doc = FreeCAD.newDocument()
@@ -2210,7 +2228,8 @@ class Plate3CageCubes (object):
         fco_plate.Shape = shp_plate
         self.fco = fco_plate
 
-        
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
 
                            
 

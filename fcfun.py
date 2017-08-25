@@ -77,6 +77,10 @@ YELLOW_05 = (1.0, 1.0, 0.5)
 MAGENT_05 = (1.0, 0.5, 1.0)
 CIAN_05   = (0.5, 1.0, 1.0)
 
+YELLOW_08 = (1.0, 1.0, 0.8)
+MAGENT_08 = (1.0, 0.8, 1.0)
+CIAN_08   = (0.8, 1.0, 1.0)
+
 # no rotation vector
 V0ROT = FreeCAD.Rotation(VZ,0)
 

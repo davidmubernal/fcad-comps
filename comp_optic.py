@@ -226,6 +226,9 @@ class CageCube (object):
         self.base_place = position
         self.fco.Placement.Base = FreeCAD.Vector(position)
 
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
+
     def vec_face (self, fcv):
         """Return which face of the cube corresponds to the direction fcv
 
@@ -298,6 +301,9 @@ def f_cagecube (d_cagecube,
            There are 6 posible orientations:
            Thru-rods can be on X, Y or Z axis
            thru-hole can be on X, Y, or Z axis, but not in the same as thru-rods
+
+    Returns a class of a CageCube. The freeCAD object can be accessed by the
+        attribute .fco
     """
 
     cage = CageCube(side_l = d_cagecube['L'],
@@ -535,6 +541,9 @@ class CageCubeHalf (object):
         self.base_place = position
         self.fco.Placement.Base = FreeCAD.Vector(position)
 
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
+
 
 
 
@@ -759,6 +768,8 @@ class Lb1cPlate (object):
         fco_plate.Shape = shp_plate
         self.fco = fco_plate
 
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
 
 #doc = FreeCAD.newDocument()
 #doc = FreeCAD.ActiveDocument
@@ -1020,6 +1031,9 @@ class Lb2cPlate (object):
         self.base_place = position
         self.fco.Placement.Base = FreeCAD.Vector(position)
 
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
+
 #doc = FreeCAD.newDocument()
 #doc = FreeCAD.ActiveDocument
 #Lb2cPlate (fc_axis_h = VZ, fc_axis_l = VX, cl=1, cw=1, ch=0, pos=V0,
@@ -1156,6 +1170,8 @@ class SM1TubelensSm2 (object):
         self.base_place = position
         self.fco.Placement.Base = FreeCAD.Vector(position)
 
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
 
 # ---------------------- ThLed30 --------------------------
 
@@ -1267,6 +1283,8 @@ class ThLed30 (object):
         fco_led.Shape = shp_led
         self.fco = fco_led
 
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
 
 
 #doc = FreeCAD.newDocument()
@@ -1471,7 +1489,14 @@ class PrizLed (object):
         shp_block = shp_block.cut(shp_holes)
         doc.recompute() 
 
-        Part.show(shp_block)
+        fco_prizled = doc.addObject("Part::Feature", name)
+        fco_prizled.Shape = shp_block
+        self.fco = fco_prizled
+
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
+
+        
     
 
 #doc = FreeCAD.newDocument()
@@ -1658,6 +1683,8 @@ class BreadBoard (object):
         fco_breadboard.Shape = shp_breadboard
         self.fco = fco_breadboard
 
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
 
 
 

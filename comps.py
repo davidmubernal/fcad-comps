@@ -728,7 +728,11 @@ class AluProf (object):
         fco_profile.Shape = shp_profile
         
         self.fco = fco_profile
-        
+
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
+
+
 # ----------- end class AluProf ----------------------------------------
 
 # Function that having a dictionary of the aluminum profile, just calls

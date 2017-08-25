@@ -482,7 +482,7 @@ def fco_topbeltclamp (railaxis = 'x', bot_norm = '-z', pos = V0, extra=1,
 
 # ----------- shp_topbeltclamp_dir
 
-class shp_topbeltclamp_base (object):
+class BeltClamp (object):
 
     """ Similar to shp_topbeltclamp, but with any direction, and 
         can have a base
@@ -504,7 +504,7 @@ class shp_topbeltclamp_base (object):
                 clamp
                 if 0 and bolt_d!=0: will have the minimum length, defined by
                 the clamp plus the minimum separation due to the bolt holes
-        base_l: length of the base, if base_h not 0.
+        base_w: width of the base, if base_h not 0.
         bolt_d: diameter of the bolts, if zero, no bolts
         bolt_csunk: if the bolt is countersunk
                 if >0: there is a whole to countersink the head of the bolt
@@ -513,8 +513,12 @@ class shp_topbeltclamp_base (object):
                 if 0: no whole for the height, and no extra height
                 if >0, the size will determine the minimum height of the 
                        base, below the countersink hole
+        ref: reference of the position (see picture below)
         extra: if extra, it will have an extra height below the zero height,
                 this is to be joined to some other piece
+        wfco: if 1: With FreeCad Object: a freecad object is created
+             if 0: only the shape
+        name: name of the freecad object, if created
 
 
                                 fc_top_ax
@@ -586,7 +590,9 @@ class shp_topbeltclamp_base (object):
                  bolt_csunk = 0,
                  ref = 1,
                  pos = V0,
-                 extra=1):
+                 extra=1,
+                 wfco = 1,
+                 name = 'belt_clamp' ):
 
         doc = FreeCAD.ActiveDocument
 
@@ -842,12 +848,25 @@ class shp_topbeltclamp_base (object):
 
         doc.recompute()
         shp_clamp = shp_clamp.removeSplitter()
-        Part.show (shp_clamp)
         self.shp = shp_clamp
+
+        self.wfco = wfco
+        if wfco == 1:
+            # a freeCAD object is created
+            fco_clamp = doc.addObject("Part::Feature", name )
+            fco_clamp.Shape = shp_clamp
+            self.fco = fco_clamp
+
+    def color (self, color = (1,1,1)):
+        if self.wfco == 1:
+            self.fco.ViewObject.ShapeColor = color
+        else:
+            logger.debug("Clamp object with no fco")
+        
 
 
 
 # Revisar el caso con agujeros de bolt
-shp_topbeltclamp_base (VX, VY, base_h = 0, bolt_d=3, bolt_csunk = 2)
+#BeltClamp (VX, VY, base_h = 0, bolt_d=3, bolt_csunk = 2)
 
 
