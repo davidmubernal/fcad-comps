@@ -13,6 +13,7 @@
 import FreeCAD;
 import Part;
 import Draft;
+import Mesh
 import DraftVecUtils
 import logging
 
@@ -1010,6 +1011,7 @@ class ThinLinBearHouse (object):
                  name = 'thinlinbearhouse'
                 ):
 
+        self.name = name
         self.base_place = (0,0,0)
         # normalize, just in case
         n1_slide_axis = DraftVecUtils.scaleTo(fc_slide_axis,1)
@@ -1242,6 +1244,19 @@ class ThinLinBearHouse (object):
         self.fco_top.ViewObject.ShapeColor = color
         self.fco_bot.ViewObject.ShapeColor = color
 
+    def export_stl (self, name = ""):
+        #filepath = os.getcwd()
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName_top = stlPath + name + "_top" + ".stl"
+        # any of these options are valid
+        #Mesh.export([self.fco_top], stlFileName_top)
+        self.fco_top.Shape.exportStl(stlFileName_top)
+        stlFileName_bot = stlPath + name + "_bot" + ".stl"
+        #Mesh.export([self.fco_bot], stlFileName_bot)
+        self.fco_bot.Shape.exportStl(stlFileName_bot)
+
 
 
 #doc = FreeCAD.newDocument()
@@ -1341,6 +1356,7 @@ class LinBearHouse (object):
         self.bolt_sep_w =  d_lbearhousing['bolt_sep_w']
         self.bolt_d =  d_lbearhousing['bolt_d']
         axis_h = self.axis_h
+        self.name = name
 
 
         # normalize, just in case they are not
@@ -1495,6 +1511,20 @@ class LinBearHouse (object):
     def color (self, color = (1,1,1)):
         self.fco_top.ViewObject.ShapeColor = color
         self.fco_bot.ViewObject.ShapeColor = color
+
+    def export_stl (self, name = ""):
+        #filepath = os.getcwd()
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName_top = stlPath + name + "_top" + ".stl"
+        # any of these options are valid
+        #Mesh.export([self.fco_top], stlFileName_top)
+        self.fco_top.Shape.exportStl(stlFileName_top)
+        stlFileName_bot = stlPath + name + "_bot" + ".stl"
+        #Mesh.export([self.fco_bot], stlFileName_bot)
+        self.fco_bot.Shape.exportStl(stlFileName_bot)
+
 
 #doc = FreeCAD.newDocument()
 #LinBearHouse (kcomp.SCUU[10])
@@ -1699,6 +1729,7 @@ class ThinLinBearHouseAsim (object):
                  name = 'thinlinbearhouse_asim'
                 ):
 
+        self.name = name
         self.base_place = (0,0,0)
         # normalize, just in case
         nfro_ax = DraftVecUtils.scaleTo(fc_fro_ax,1)
@@ -1966,6 +1997,18 @@ class ThinLinBearHouseAsim (object):
         self.fco_top.ViewObject.ShapeColor = color
         self.fco_bot.ViewObject.ShapeColor = color
 
+    def export_stl (self, name = ""):
+        #filepath = os.getcwd()
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName_top = stlPath + name + "_top" + ".stl"
+        self.fco_top.Shape.exportStl(stlFileName_top)
+        stlFileName_bot = stlPath + name + "_bot" + ".stl"
+        self.fco_bot.Shape.exportStl(stlFileName_bot)
+
+
+
 
 
 #doc = FreeCAD.newDocument()
@@ -2091,6 +2134,7 @@ class Plate3CageCubes (object):
                 ):
 
         self.d_cagecube = d_cagecube
+        self.name = name
         cage_w = d_cagecube['L']
 
         #get normalized vectors
@@ -2230,6 +2274,14 @@ class Plate3CageCubes (object):
 
     def color (self, color = (1,1,1)):
         self.fco.ViewObject.ShapeColor = color
+
+    # exports the shape to STL format
+    def export_stl (self, name = ""):
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName = stlPath + name + ".stl"
+        self.fco.Shape.exportStl(stlFileName)
 
                            
 

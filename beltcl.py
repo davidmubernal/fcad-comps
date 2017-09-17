@@ -595,6 +595,7 @@ class BeltClamp (object):
                  name = 'belt_clamp' ):
 
         doc = FreeCAD.ActiveDocument
+        self.name = name
 
         # normalize and get the other base vector
         nfro_ax = DraftVecUtils.scaleTo(fc_fro_ax,1)
@@ -863,8 +864,14 @@ class BeltClamp (object):
         else:
             logger.debug("Clamp object with no fco")
         
-
-
+    # exports the shape into stl format
+    def export_stl (self, name = ""):
+        #filepath = os.getcwd()
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName = stlPath + name + ".stl"
+        self.shp.exportStl(stlFileName)
 
 # Revisar el caso con agujeros de bolt
 #BeltClamp (VX, VY, base_h = 0, bolt_d=3, bolt_csunk = 2)
