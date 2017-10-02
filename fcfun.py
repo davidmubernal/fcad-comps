@@ -2921,6 +2921,137 @@ def shp_filletchamfer_dirs (shp, fc_axis_l, fillet = 1, radius=1):
         return
 
 
+
+
+def shp_filletchamfer_dirpt (shp, fc_axis = VZ, fc_pt = V0,  fillet = 1,
+                             radius=1):
+    """
+        Fillet or chamfer edges on a certain axis and a point contained
+        in that axis
+        For a shape
+    Arguments:
+        shp:   is the original shape we want to fillet or chamfer
+        fc_axis  : FreeCAD.Vector the axis where the fillet will be
+        fc_pt  : FreeCAD.Vector of the point
+        fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+        radius: the radius of the fillet or chamfer
+
+    """
+
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
+    edgelist = []
+    # normalize the axis:
+    nnorm = DraftVecUtils.scaleTo(fc_axis,1)
+    # get the negative of the normalized vector
+    nnorm_neg = nnorm.negative()
+    #logger.debug('filletchamfer: elen: %s',  e_len)
+    for edge in shp.Edges:
+        #logger.debug('filletchamfer: edge Length: %s ind %s',
+        #             edge.Length, edge_ind)
+        # get the FreeCAD.Vector with the point
+        p0 = edge.Vertexes[0].Point
+        p1 = edge.Vertexes[1].Point
+        v_vertex = p1.sub(p0)  #substraction
+        # I could calculate the angle, but I think it will take more
+        # time than normalizing and checking if they are the same
+        v_vertex.normalize()
+        # check if they are the same vector (they are parallel):
+        if ( DraftVecUtils.equals(v_vertex, nnorm) or
+             DraftVecUtils.equals(v_vertex, nnorm_neg)):
+            # Now check if this vertex goes through the point
+            # get the vector from a vertex to the point
+            if DraftVecUtils.equals(p1, fc_pt): # same point
+                edgelist.append(edge)
+                break # vertex found
+            else:
+                v_vertex_pt = p1.sub(fc_pt)
+                v_vertex_pt.normalize()
+                if ( DraftVecUtils.equals(v_vertex_pt, nnorm) or
+                     DraftVecUtils.equals(v_vertex_pt, nnorm_neg)):
+                    edgelist.append(edge)
+                    break #only one
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            #logger.debug('%', str(edgelist))
+            shp_fillcham = shp.makeFillet(radius, edgelist)
+        else:
+            shp_fillcham = shp.makeChamfer(radius, edgelist)
+        doc.recompute()
+        return shp_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
+
+
+def shp_filletchamfer_dirpts (shp, fc_axis, fc_pts,  fillet = 1,
+                             radius=1):
+    """
+        Fillet or chamfer edges on a certain axis and a list of point contained
+        in that axis
+        For a shape
+    Arguments:
+        shp:   is the original shape we want to fillet or chamfer
+        fc_axis  : FreeCAD.Vector the axis where the fillet will be
+        fc_pts  : FreeCAD.Vector list of the points
+        fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+        radius: the radius of the fillet or chamfer
+
+    """
+
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
+    edgelist = []
+    # normalize the axis:
+    nnorm = DraftVecUtils.scaleTo(fc_axis,1)
+    # get the negative of the normalized vector
+    nnorm_neg = nnorm.negative()
+    #logger.debug('filletchamfer: elen: %s',  e_len)
+    for edge in shp.Edges:
+        #logger.debug('filletchamfer: edge Length: %s ind %s',
+        #             edge.Length, edge_ind)
+        # get the FreeCAD.Vector with the point
+        p0 = edge.Vertexes[0].Point
+        p1 = edge.Vertexes[1].Point
+        v_vertex = p1.sub(p0)  #substraction
+        # I could calculate the angle, but I think it will take more
+        # time than normalizing and checking if they are the same
+        v_vertex.normalize()
+        # check if they are the same vector (they are parallel):
+        if ( DraftVecUtils.equals(v_vertex, nnorm) or
+             DraftVecUtils.equals(v_vertex, nnorm_neg)):
+            # Now check if this vertex goes through the point
+            # get the vector from a vertex to the point
+            for pti in fc_pts:
+                if DraftVecUtils.equals(p1, pti):
+                    # same point
+                    edgelist.append(edge)
+                    break # vertex found
+                else:
+                    v_vertex_pt = p1.sub(pti)
+                    v_vertex_pt.normalize()
+                    if ( DraftVecUtils.equals(v_vertex_pt, nnorm) or
+                         DraftVecUtils.equals(v_vertex_pt, nnorm_neg)):
+                        edgelist.append(edge)
+                        break # vertex found
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            #logger.debug('%', str(edgelist))
+            shp_fillcham = shp.makeFillet(radius, edgelist)
+        else:
+            shp_fillcham = shp.makeChamfer(radius, edgelist)
+        doc.recompute()
+        return shp_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return shp
+
+
+
 #  --- Fillet or chamfer edges of a certain length, on a certain axis
 #  --- and a certain coordinate
 #  For a shape
@@ -3736,4 +3867,24 @@ def fc_isonbase (fcv):
             return 0
 
       
+
+def fuseshplist (shp_list):
+
+    """ since multifuse methods needs to be done by a shape and a list,
+        and usually I have a list that I want to fuse, I make this function
+        to save the inconvenience of doing everytime what I will do here
+    """
+
+    if len(shp_list) > 0:
+        shp1 = shp_list.pop() #remove and get the first element
+        if len(shp_list) > 0:
+            shpfuse = shp1.multiFuse(shp_list)
+        else: #only one element, no fuse:
+            logger.debug('only one element to fuse')
+            shpfuse = shp1
+    else:
+        logger.debug('empty list to fuse')
+        return
+
+    return (shpfuse)
         

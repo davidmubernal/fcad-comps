@@ -518,6 +518,9 @@ class BeltClamp (object):
                 this is to be joined to some other piece
         wfco: if 1: With FreeCad Object: a freecad object is created
              if 0: only the shape
+        intol : internal extra tolerance to the dimension CB_IW, substracting
+                to CB_W
+                if negative, makes CB_IW smaller.
         name: name of the freecad object, if created
 
 
@@ -592,10 +595,17 @@ class BeltClamp (object):
                  pos = V0,
                  extra=1,
                  wfco = 1,
+                 intol = 0,
                  name = 'belt_clamp' ):
 
         doc = FreeCAD.ActiveDocument
         self.name = name
+
+        # if more tolerance is needed in the center
+        cb_in_w = CB_IW + intol
+        self.cb_in_w = cb_in_w
+        cb_wall_w = CB_W - intol/2
+        self.cb_wall_w = cb_wall_w
 
         # normalize and get the other base vector
         nfro_ax = DraftVecUtils.scaleTo(fc_fro_ax,1)
@@ -605,7 +615,7 @@ class BeltClamp (object):
         nsid_ax = nfro_ax.cross(ntop_ax)
 
         clamponly_l = CB_L + CS + 2 * CCYL_R
-        clamponly_w = max((CB_IW+2*CB_W), (2*CCYL_R))
+        clamponly_w = max((cb_in_w+2*cb_wall_w), (2*CCYL_R))
 
         bolt2end = 0 # they will change in case they are used
         clamp2end = 0
@@ -764,17 +774,18 @@ class BeltClamp (object):
         shp_cyl = fcfun.shp_cyl(CCYL_R, clamp_tot_h, ntop_ax, clampcyl_pos)
         # position of the clamp blocks, without going to the side axis
         clampblock_pos = pos_extra + vec_tofrontclamp
-        clampblock_side_add = DraftVecUtils.scale(nsid_ax, (CB_IW + CB_W)/2.)
+        clampblock_side_add = DraftVecUtils.scale(nsid_ax, 
+                                                  (cb_in_w + cb_wall_w)/2.)
         clampblock_1_pos = clampblock_pos + clampblock_side_add
         clampblock_2_pos = clampblock_pos - clampblock_side_add
-        shp_clampblock_1 = fcfun.shp_box_dir(box_w = CB_W,
+        shp_clampblock_1 = fcfun.shp_box_dir(box_w = cb_wall_w,
                                              box_d = CB_L,
                                              box_h = clamp_tot_h,
                                              fc_axis_h = ntop_ax,
                                              fc_axis_d = nfro_ax_n,
                                              cw=1, cd=0, ch=0,
                                              pos = clampblock_1_pos)
-        shp_clampblock_2 = fcfun.shp_box_dir(box_w = CB_W,
+        shp_clampblock_2 = fcfun.shp_box_dir(box_w = cb_wall_w,
                                              box_d = CB_L,
                                              box_h = clamp_tot_h,
                                              fc_axis_h = ntop_ax,
