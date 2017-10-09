@@ -2896,17 +2896,18 @@ def shp_filletchamfer_dirs (shp, fc_axis_l, fillet = 1, radius=1):
         #logger.debug('filletchamfer: edge Length: %s ind %s',
         #             edge.Length, edge_ind)
         # get the FreeCAD.Vector with the point
-        p0 = edge.Vertexes[0].Point
-        p1 = edge.Vertexes[1].Point
-        v_vertex = p1.sub(p0)  #substraction
-        # I could calculate the angle, but I think it will take more
-        # time than normalizing and checking if they are the same
-        v_vertex.normalize()
-        # check if they are the same vector (they are parallel):
-        for naxis in n_axis_list:
-            if ( DraftVecUtils.equals(v_vertex, naxis)):
-                edgelist.append(edge)
-                break # breaks inside this for, but not the outer
+        if len(edge.Vertexes) == 2:
+            p0 = edge.Vertexes[0].Point
+            p1 = edge.Vertexes[1].Point
+            v_vertex = p1.sub(p0)  #substraction
+            # I could calculate the angle, but I think it will take more
+            # time than normalizing and checking if they are the same
+            v_vertex.normalize()
+            # check if they are the same vector (they are parallel):
+            for naxis in n_axis_list:
+                if ( DraftVecUtils.equals(v_vertex, naxis)):
+                    edgelist.append(edge)
+                    break # breaks inside this for, but not the outer
 
     if len(edgelist) != 0:
         if fillet == 1:
@@ -2951,27 +2952,28 @@ def shp_filletchamfer_dirpt (shp, fc_axis = VZ, fc_pt = V0,  fillet = 1,
         #logger.debug('filletchamfer: edge Length: %s ind %s',
         #             edge.Length, edge_ind)
         # get the FreeCAD.Vector with the point
-        p0 = edge.Vertexes[0].Point
-        p1 = edge.Vertexes[1].Point
-        v_vertex = p1.sub(p0)  #substraction
-        # I could calculate the angle, but I think it will take more
-        # time than normalizing and checking if they are the same
-        v_vertex.normalize()
-        # check if they are the same vector (they are parallel):
-        if ( DraftVecUtils.equals(v_vertex, nnorm) or
-             DraftVecUtils.equals(v_vertex, nnorm_neg)):
-            # Now check if this vertex goes through the point
-            # get the vector from a vertex to the point
-            if DraftVecUtils.equals(p1, fc_pt): # same point
-                edgelist.append(edge)
-                break # vertex found
-            else:
-                v_vertex_pt = p1.sub(fc_pt)
-                v_vertex_pt.normalize()
-                if ( DraftVecUtils.equals(v_vertex_pt, nnorm) or
-                     DraftVecUtils.equals(v_vertex_pt, nnorm_neg)):
+        if len(edge.Vertexes) == 2:
+            p0 = edge.Vertexes[0].Point
+            p1 = edge.Vertexes[1].Point
+            v_vertex = p1.sub(p0)  #substraction
+            # I could calculate the angle, but I think it will take more
+            # time than normalizing and checking if they are the same
+            v_vertex.normalize()
+            # check if they are the same vector (they are parallel):
+            if ( DraftVecUtils.equals(v_vertex, nnorm) or
+                 DraftVecUtils.equals(v_vertex, nnorm_neg)):
+                # Now check if this vertex goes through the point
+                # get the vector from a vertex to the point
+                if DraftVecUtils.equals(p1, fc_pt): # same point
                     edgelist.append(edge)
-                    break #only one
+                    break # vertex found
+                else:
+                    v_vertex_pt = p1.sub(fc_pt)
+                    v_vertex_pt.normalize()
+                    if ( DraftVecUtils.equals(v_vertex_pt, nnorm) or
+                         DraftVecUtils.equals(v_vertex_pt, nnorm_neg)):
+                        edgelist.append(edge)
+                        break #only one
 
     if len(edgelist) != 0:
         if fillet == 1:

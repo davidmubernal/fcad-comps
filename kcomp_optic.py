@@ -128,6 +128,23 @@ LB1CM_PLATE = {
            'cbore_hole_sep_s' : CAGE_CUBE_60['tap_sep_s']
            }
 
+
+# LCP01M plate dimensions
+
+LCP01M_PLATE = {
+           'L' : 2.8*INCH, # 71.12mm, 
+           'thick'  : 0.5*INCH, # 12.7mm
+           'thruhole_d' : CAGE_CUBE_60['thru_thread_d'],
+           'mhole_d' : 4., # mounting hole M4
+           'mhole_depth' : 6.5, # mounting hole M4
+           'sym_hole_d' : 6. ,  #ER Rods
+           'sym_hole_sep' :  CAGE_CUBE_60['thru_rod_sep'],
+           'chamfer_r' : 2., #aprox
+           }
+
+
+
+
 # 2inch diameter stackabel lens tubes> SM2LXX
 #
 #                     ______________

@@ -338,14 +338,14 @@ def f_cagecube (d_cagecube,
     return cage
 
 
-doc = FreeCAD.newDocument()
-doc = FreeCAD.ActiveDocument
+#doc = FreeCAD.newDocument()
+#doc = FreeCAD.ActiveDocument
 # Cage cube to print, with tolerances
-dcube = kcomp_optic.CAGE_CUBE_60
-h_cage_c = f_cagecube(dcube,
-                                 axis_thru_rods= 'z', axis_thru_hole='x',
-                                 name = "cube60_tol",
-                                 toprint_tol = 1)
+#dcube = kcomp_optic.CAGE_CUBE_60
+#h_cage_c = f_cagecube(dcube,
+#                                 axis_thru_rods= 'z', axis_thru_hole='x',
+#                                 name = "cube60_tol",
+#                                 toprint_tol = 1)
 
 
 # ---------------------- CageCubeHalf -------------------------------
@@ -654,7 +654,7 @@ class Lb1cPlate (object):
          |  0                0  | ....               :
          |                      |    :               :
          |                      |    :               :
-         |         ( )          |    +sym_hole_sep   + cbore_hole_sep_s
+         |         ( )          |    +sym_hole_sep   + cbore_hole_sep_l
          |                      |    :               :
          |  0                0  | ....               :
          |       O      O       | -------------------
@@ -1063,6 +1063,399 @@ class Lb2cPlate (object):
 #Lb2cPlate (fc_axis_h = VZ, fc_axis_l = VX, cl=1, cw=1, ch=0, pos=V0,
 #            name = 'lb2c_plate')
  
+
+
+
+class PlateThruholeMhole (object):
+
+    """
+    draws a square plate, with a thru-hole in the center.
+    1 hole on the side to mount it
+    4 sets of holes in symetrical positions for screws
+    4 sets of holes for cap-screws
+
+    if any of these holes are zero, they will not be made
+
+                   fc_axis_m: axis on the mounting hole
+                    :
+                    :
+            :-- sy_hole_sep -:
+            :                :
+            :cbore_hole_sep_s:
+            :    :      :    :
+          _______________________
+         |       O      O       | -------------------
+         |  0      ....      0  | ....               :
+         |       /      \       |    :               :
+         6      |   2    |      |    :               :
+         |      |        |      |    +sym_hole_sep   + cbore_hole_sep_l
+         |       \ .... /       |    :               :
+         |  0                0  | ....               :
+         |       O ...  O       | -------------------
+         5_________:1:__________|
+                    mounting hole
+                   / \
+                    : fc_axis_m
+
+
+                   /\ fc_axis_h
+                    :
+         ___________:____________....
+        |                       |    :
+        |           4           |    : thick
+        |___________3___________|....: 
+
+                    mounting hole (4)
+
+    Arguments:
+        side_l: length of the plate (two sides)
+        thick : thickness (height of the plate)
+        thruhole_d: diamenter of the central hole
+                    if 0: no hole
+        mhole_d: diameter of the mounting hole
+        mhole_l: length (depth) of the mounting hole
+                    if 0: no hole
+        sym_hole_d: diamenter of the symetrical holes
+                    if 0: no hole
+        sym_hole_sep: distance between the centers of the symetrical holes 
+        cbore_hole_d: diameter of the shank of the counter bored hole
+                    if 0: no hole
+        cbore_hole_head_d: diameter of the cap of the counterbored screw
+        cbore_hole_head_l: length of the cap (head) of the counterbored screw
+        cbore_hole_sep_l: large separation of the counterbored holes
+        cbore_hole_sep_s: small separation of the counterbored holes
+        cbore_hole_sep_l_axis_m: if the long separation of the cbore holes
+            are in the direction of the axis_m or not
+            1: like the drawing
+            0: switchin cbore_hole_sep_l for cbore_hole_sep_s in the drawing
+        chmf_r: if >0 vertical edges are chamfered
+        fc_axis_h: FreeCAD.Vector on the direction of the vertical (thickness)
+                   from the inside of the plate
+        fc_axis_m: FreeCAD.Vector on the direction of the mounting hole
+                goes in the mounting hole
+        fc_axis_p: FreeCAD.Vector on the perpendicular direction of
+                axis_h and axis_m, only used if not centered on this axis
+        
+        cm: 1: centered on the fc_axis_m direction (point 2)
+            0: it will be on the mounting hole (point 1)
+        cp: 1: centered on the perpendicular direction of fc_axis_m
+               and fc_axis_h), if 0, fc_axis_p needs to be defined
+            0: points 5 (cm==0)  or 6 (cm==1)
+        ch: 1: centered on the vertical direction (thickness)
+        
+        pos :  position of the center. FreeCAD.Vector
+        name: name 
+
+
+         _______________________
+         |       O      O       | -------------------
+         |  0      ....      0  | ....               :
+         |       /      \       |    :               :
+         |      |        |      |    :               :
+         |      |        |      |    +sym_hole_sep   + cbore_hole_sep_l
+         |       \ .... /       |    :               :
+         |  0                0  | ....               :
+         |       O ...  O       | -------------------
+         |_________:1:__________|
+                    :
+                    V
+                   fc_axis_m: axis on the mounting hole, goes outside
+         ________________________....
+        |___________O___________|....: thick
+
+
+    """
+
+
+    def __init__(self,
+                 side_l, 
+                 thick,
+                 thruhole_d,
+                 mhole_d,
+                 mhole_l,
+                 sym_hole_d,
+                 sym_hole_sep,
+                 cbore_hole_d,
+                 cbore_hole_head_d,
+                 cbore_hole_head_l,
+                 cbore_hole_sep_l,
+                 cbore_hole_sep_s,
+                 cbore_hole_sep_l_axis_m =1,
+                 chmf_r = 0,
+                 fc_axis_h = VZ,
+                 fc_axis_m =VX,
+                 fc_axis_p = V0,
+                 cm=1, cp=1, ch=1,
+                 pos = V0,
+                 wfco=1,
+                 name = 'plate'):
+
+        doc = FreeCAD.ActiveDocument
+
+        # normalize de axis
+        axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+        axis_m = DraftVecUtils.scaleTo(fc_axis_m,1)
+        axis_m_n = axis_m.negative()
+        if cp == 0:
+            axis_p = DraftVecUtils.scaleTo(fc_axis_p,1)
+        else:
+            # no need to use fc_axis_p
+            axis_p = axis_m.cross(axis_h)
+
+        if cbore_hole_d > 0:
+            if cbore_hole_sep_l_axis_m == 1:
+                # long axis on axis_m
+                axis_l = axis_m
+                axis_s = axis_p
+            else:
+                axis_l = axis_p
+                axis_s = axis_m
+        else:
+            axis_l = V0
+            axis_s = V0
+
+        self.h = thick
+        self.l = side_l
+        self.axis_h = axis_h
+        self.axis_m = axis_m
+        self.axis_p = axis_p
+        self.axis_l = axis_l
+        self.axis_s = axis_s
+        self.pos = pos
+
+
+
+        shp_box = fcfun.shp_box_dir(box_w=side_l, box_d = side_l, box_h= thick,
+                                  fc_axis_h = axis_h, fc_axis_d= axis_m,
+                                  cw = cp, cd = cm, ch = ch,
+                                  pos = pos)
+
+        if chmf_r > 0:
+            shp_box = fcfun.shp_filletchamfer_dir(shp_box, axis_h,
+                                                  fillet = 0, radius = chmf_r)
+
+        doc.recompute()
+
+
+        # getting the offset of the center coordinates
+        if cm == 1:
+           m_0 = V0 # already centered
+           m_mhole = DraftVecUtils.scaleTo(axis_m, -side_l/2.)
+        else:
+           m_0 = DraftVecUtils.scaleTo(axis_m, side_l/2.)
+           m_mhole = V0
+        if cp == 1:
+           p_0 = V0
+        else:
+           p_0 = DraftVecUtils.scaleTo(axis_p, side_l/2.)
+        if ch == 1: # for the height, we want the lower side
+           h_0 = DraftVecUtils.scaleTo(axis_h, -thick/2.)
+           h_cen = V0
+           h_top = DraftVecUtils.scaleTo(axis_h, thick/2.)
+        else:
+           h_0 = V0
+           h_cen = DraftVecUtils.scaleTo(axis_h, thick/2.)
+           h_top = DraftVecUtils.scaleTo(axis_h, thick)
+
+        # reference positions:
+        # vector from the reference (pos) to the center
+        fc_ref2center = m_0 + p_0 + h_cen
+        # vector from the reference (pos) to the center at the bottom 
+        fc_ref2botcen = m_0 + p_0 + h_0
+        # vector from the reference (pos) to the center at the bottom 
+        fc_ref2topcen = m_0 + p_0 + h_top
+        # vector from the reference (pos) to the mounting hole
+        fc_ref2mhole = m_mhole + p_0 + h_0
+
+        self.fc_ref2center = fc_ref2center
+        self.fc_ref2botcen = fc_ref2botcen
+        self.fc_ref2topcen = fc_ref2topcen
+        self.fc_ref2mhole = fc_ref2mhole
+
+        # position at the center, except for axis_h: at its lower point
+        botcen_pos = pos + fc_ref2botcen # m_0 + p_0 + h_0
+        topcen_pos = pos + fc_ref2topcen # m_0 + p_0 + h_top
+        # position at the center
+        center_pos = pos + fc_ref2center # m_0 + p_0 + h_cen
+        # it doesnt matter if there is no mounting hole
+        mount_pos = pos + fc_ref2mhole
+
+        self.botcen_pos = botcen_pos
+        self.topcen_pos = topcen_pos
+        self.center_pos = center_pos
+        self.mount_pos = mount_pos
+
+
+        holes = []
+        # central hole
+        if thruhole_d > 0:
+            shp_cenhole = fcfun.shp_cylcenxtr(r=thruhole_d/2., h=thick,
+                                          normal=axis_h,
+                                          ch = 0,
+                                          xtr_top=1., xtr_bot=1., 
+                                          pos=botcen_pos)
+            holes.append(shp_cenhole)
+
+        # mounting hole
+        if mhole_d > 0:
+            shp_mhole = fcfun.shp_cylcenxtr(r=mhole_d/2., h=mhole_l,
+                                          normal=axis_m,
+                                          ch = 0,
+                                          xtr_top=0, xtr_bot=1., 
+                                          pos=mount_pos)
+            holes.append(shp_mhole)
+
+
+        # symetrical holes
+        if sym_hole_d > 0:
+            for add_m in (DraftVecUtils.scaleTo(axis_m,  sym_hole_sep/2),
+                      DraftVecUtils.scaleTo(axis_m, - sym_hole_sep/2)) :
+                for add_p in (DraftVecUtils.scaleTo(axis_p,  sym_hole_sep/2),
+                          DraftVecUtils.scaleTo(axis_p, - sym_hole_sep/2)) :
+                    pos_hole = botcen_pos + add_m + add_p
+                    shp_hole = fcfun.shp_cylcenxtr(r=sym_hole_d/2., h=thick,
+                                          normal=axis_h,
+                                          ch = 0,
+                                          xtr_top=1., xtr_bot=1., 
+                                          pos=pos_hole)
+                    holes.append(shp_hole)
+
+        # asymetrical holes
+        if cbore_hole_d > 0:
+            for add_l in (DraftVecUtils.scaleTo(axis_l,  cbore_hole_sep_l/2),
+                          DraftVecUtils.scaleTo(axis_l, - cbore_hole_sep_l/2)) :
+                for add_s in (DraftVecUtils.scaleTo(axis_s, cbore_hole_sep_s/2),
+                          DraftVecUtils.scaleTo(axis_s, - cbore_hole_sep_s/2)) :
+                    pos_hole = botcen_pos + add_l + add_s
+                    shp_hole = fcfun.shp_cylcenxtr(r=cbore_hole_d/2., h=thick,
+                                              normal=axis_h,
+                                              ch = 0,
+                                              xtr_top=1., xtr_bot=1., 
+                                              pos=pos_hole)
+                    pos_head = (  pos_hole
+                       + DraftVecUtils.scaleTo(axis_h, thick-cbore_hole_head_l))
+                    shp_hole_head = fcfun.shp_cylcenxtr(r=cbore_hole_head_d/2.,
+                                              h=cbore_hole_head_l,
+                                              normal=axis_h,
+                                              ch = 0,
+                                              xtr_top=1., xtr_bot=0, 
+                                              pos=pos_head)
+                    shp_cbore_hole = shp_hole.fuse(shp_hole_head)
+
+                    holes.append(shp_cbore_hole)
+
+
+        shp_holes = fcfun.fuseshplist(holes)
+
+        shp_plate = shp_box.cut(shp_holes)
+        self.shp = shp_plate
+        self.wfco = wfco
+        if wfco == 1:
+            # a freeCAD object is created
+            fco_plate = doc.addObject("Part::Feature", name )
+            fco_plate.Shape = shp_plate
+            self.fco = fco_plate
+
+    def color (self, color = (1,1,1)):
+        if self.wfco == 1:
+            self.fco.ViewObject.ShapeColor = color
+        else:
+            logger.debug("Plate object with no fco")
+        
+    # exports the shape into stl format
+    def export_stl (self, name = ""):
+        #filepath = os.getcwd()
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName = stlPath + name + ".stl"
+        self.shp.exportStl(stlFileName)
+
+
+def lcp01m_plate (d_lcp01m_plate = kcomp_optic.LCP01M_PLATE,
+                  fc_axis_h = VZ,
+                  fc_axis_m = VX,
+                  fc_axis_p = V0,
+                  cm=1, cp=1, ch=1,
+                  pos = V0,
+                  wfco= 1,
+                  name = 'LCP01M_PLATE'
+                   ):
+
+    """ creates a lcp01m_plate
+        side,
+        it creates from a dictionary
+
+    Args
+        d_lcp01m_plate: dictionary with the dimensions of the plate
+                    defined in kcomp_optic.py
+        fc_axis_h: FreeCAD.Vector on the direction of the vertical (thickness)
+                   from the inside of the plate
+        fc_axis_m: FreeCAD.Vector on the direction of the mounting hole
+                goes in the mounting hole
+        fc_axis_p: FreeCAD.Vector on the perpendicular direction of
+                axis_h and axis_m, only used if not centered on this axis
+        
+        cm: 1: centered on the fc_axis_m direction (point 2)
+            0: it will be on the mounting hole (point 1)
+        cp: 1: centered on the perpendicular direction of fc_axis_m
+               and fc_axis_h), if 0, fc_axis_p needs to be defined
+            0: points 5 (cm==0)  or 6 (cm==1)
+        ch: 1: centered on the vertical direction (thickness)
+        
+        pos :  position of the center. FreeCAD.Vector
+        wfco: 1: a FreeCAD object is created
+              0: only de shape is created
+        name: name of the freecad object (if created)
+
+    """
+
+    h_plate = PlateThruholeMhole(
+                 side_l = d_lcp01m_plate['L'], 
+                 thick = d_lcp01m_plate['thick'],
+                 thruhole_d = d_lcp01m_plate['thruhole_d'],
+                 mhole_d = d_lcp01m_plate['mhole_d'],
+                 mhole_l = d_lcp01m_plate['mhole_depth'],
+                 sym_hole_d = d_lcp01m_plate['sym_hole_d'],
+                 sym_hole_sep = d_lcp01m_plate['sym_hole_sep'],
+                 cbore_hole_d = 0,
+                 cbore_hole_head_d = 0,
+                 cbore_hole_head_l = 0,
+                 cbore_hole_sep_l = 0,
+                 cbore_hole_sep_s = 0,
+                 cbore_hole_sep_l_axis_m =1,
+                 chmf_r = d_lcp01m_plate['chamfer_r'] ,
+                 fc_axis_h = fc_axis_h,
+                 fc_axis_m = fc_axis_m,
+                 fc_axis_p = fc_axis_p,
+                 cm=cm, cp=cp, ch=ch,
+                 pos = pos,
+                 wfco=wfco,
+                 name = name)
+
+    return h_plate
+
+
+#doc = FreeCAD.newDocument()
+#lcp01m_plate (
+#                  fc_axis_h = VX,
+#                  fc_axis_m = VY,
+#                  fc_axis_p = VZN,
+#                  cm=0, cp=0, ch=0,
+#                  pos = V0,
+#                  wfco= 1,
+#                  name = 'LCP01M_PLATE')
+
+
+
+
+
+
+
+
+
+
+
 
 
 # ---------------------- Sm1TubelensSm2 --------------------------

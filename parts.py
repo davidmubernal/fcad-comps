@@ -89,7 +89,11 @@ class AluProfBracketPerp (object):
         bolt_d: metric of the bolt 3, 4, ... (integer)
         nbolts_lin: 1: just one bolt on the fc_lin_ax, or two bolts
                    2: two bolts on the fc_lin_ax, or two bolts
-        xtr_bolt_head : extra space for the bolt head, and making a space for it
+        xtr_bolt_head : extra space for the bolt head length,
+                        and making a space for it
+        xtr_bolt_head_d : extra space for the bolt head diameter,
+                          and making a space for it. For the wall bolt
+        reinforce = 1,
         fc_perp_ax: axis of the bracket on the perpendicular prof, see picture
         fc_line_ax: axis of the bracket on the aligned profile, see picture
         pos : position of the center of the bracket on the intersection
@@ -107,12 +111,16 @@ class AluProfBracketPerp (object):
                  bolt_d = 3, #metric of the bolt
                  nbolts_lin = 1,
                  xtr_bolt_head = 3,
+                 xtr_bolt_head_d = 0,
+                 reinforce = 1,
                  fc_perp_ax = VZ,
                  fc_lin_ax = VX,
                  pos = V0,
                  wfco=1,
                  name = 'bracket'):
 
+        doc = FreeCAD.ActiveDocument
+        self.name = name
         bolt_dict = kcomp.D912[3]
         bolthead_r = bolt_dict['head_r']
         bolthead_r_tol = bolt_dict['head_r_tol']
@@ -187,11 +195,11 @@ class AluProfBracketPerp (object):
         # cut the box inside
         # Inside width
         # add one, to have it a minimum of one mm
-        if alusize_lin > 2*(bolthead_r + kcomp.TOL) + 1 :
+        if reinforce == 1 and (alusize_lin > 2*(bolthead_r + kcomp.TOL) + 1 ):
             inside_w =  2*(bolthead_r + kcomp.TOL)
             print ("inside width " + str(inside_w))
         else:
-            print ("no space for reinforcement")
+            #no space for reinforcement, or reinforcement 0
             inside_w = alusize_lin + 2 # +2 to make the cut
 
         # chamfer of the inside box
@@ -229,7 +237,7 @@ class AluProfBracketPerp (object):
                        + DraftVecUtils.scale(axis_lin,br_perp_thick+bolthead_l))
         shp_boltperp = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
                             l_bolt = br_perp_thick + bolthead_l,
-                            r_head = bolthead_r_tol,
+                            r_head = bolthead_r_tol + xtr_bolt_head_d/2.,
                             l_head = bolthead_l,
                             xtr_head = xtr_bolt_head,
                             xtr_shank = 1,
@@ -291,23 +299,41 @@ class AluProfBracketPerp (object):
         stlFileName = stlPath + name + ".stl"
         self.shp.exportStl(stlFileName)
        
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 
-AluProfBracketPerp ( alusize_lin = 10, alusize_perp = 10,
-                 br_perp_thick = 5.,
-                 br_lin_thick = 3.,
-                 bolt_d = 3,
-                 nbolts_lin = 2,
-                 xtr_bolt_head = 4,
-                 fc_perp_ax = VZ,
-                 fc_lin_ax = VX,
-                 pos = V0,
-                 wfco=1,
-                 name = 'bracket')
+#AluProfBracketPerp ( alusize_lin = 10, alusize_perp = 10,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_d = 3,
+#                 nbolts_lin = 1,
+#                 xtr_bolt_head = 4,
+#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+#                 reinforce = 0,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_lin3_1bolt_noreinfore')
+
+
+#AluProfBracketPerp ( alusize_lin = 10, alusize_perp = 10,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_d = 3,
+#                 nbolts_lin = 2,
+#                 xtr_bolt_head = 3,
+#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+#                 reinforce = 0,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_lin3_2bolts_noreinfore')
+
 
 # ----------- class AluProfBracketPerpWide -----------------------------------
 
-class AluProfBracketPerpWide (object):
+class AluProfBracketPerpFlap (object):
 
     """ Bracket to join 2 aluminum profiles that are perpendicular,
         that is, they are not on the same plane
@@ -352,7 +378,14 @@ class AluProfBracketPerpWide (object):
         bolt_d: metric of the bolt 3, 4, ... (integer)
         nbolts_lin: 1: just one bolt on the fc_lin_ax, or two bolts
                    2: two bolts on the fc_lin_ax, or two bolts
-        xtr_bolt_head : extra space for the bolt head, and making a space for it
+        xtr_bolt_head : extra space for the bolt head on the line to the wall
+                        (perpendicular)
+        sunk : 1: if the top part is removed,
+               0: just drilled
+               2: No reinforcement at all
+        flap : if it has flaps, if it hasnt flaps, it is kind of useless
+               because it is just the middle part without bolts on the
+               wall, but it can be used to make an union with other parts
         fc_perp_ax: axis of the bracket on the perpendicular prof, see picture
         fc_line_ax: axis of the bracket on the aligned profile, see picture
         pos : position of the center of the bracket on the intersection
@@ -369,13 +402,17 @@ class AluProfBracketPerpWide (object):
                  br_lin_thick = 3.,
                  bolt_d = 3, #metric of the bolt
                  nbolts_lin = 1,
+                 xtr_bolt_head = 1,
                  sunk = 1,
+                 flap = 1,
                  fc_perp_ax = VZ,
                  fc_lin_ax = VX,
                  pos = V0,
                  wfco=1,
                  name = 'bracket_flap'):
 
+        doc = FreeCAD.ActiveDocument
+        self.name = name
         bolt_dict = kcomp.D912[3]
         bolthead_r = bolt_dict['head_r']
         bolthead_r_tol = bolt_dict['head_r_tol']
@@ -389,21 +426,22 @@ class AluProfBracketPerpWide (object):
         axis_wid   = axis_perp.cross(axis_lin)
 
         #Calculate the length of the brlin_l
-        #         br_perp_thick :bolthead_l
-        #                  :  : : bolthead_r
+        #                  :+  br_perp_thick :bolthead_l
+        #                  :  :+xtr_bolt_head
+        #                  :  : : + bolthead_r
         #              ....:__: :  :
-        #              :   |  |_   :
-        # alusize_perp +   |  |_| _:_
+        #              :   |  |    :
+        # alusize_perp +   |  |   _:_
         #              :   |  |__|___|___ 
         #              :...|_____________|
         #                  :.......:
-        #                   + boltlin_dist = br_perp_thick+bolthead_r
+        #                   +boltlin_dist=br_perp_thick+xtr_bolt_head+bolthead_r
         #                          :  :  :
         #                        2 x bolthead_r
         #                  :.............:
         #                      + brlin_l
 
-        boltlin_dist = br_perp_thick + bolthead_r + 1
+        boltlin_dist = br_perp_thick + xtr_bolt_head + bolthead_r 
 
         brlin_l = boltlin_dist + 2 * bolthead_r
         if nbolts_lin > 1:
@@ -424,7 +462,7 @@ class AluProfBracketPerpWide (object):
         #                                 :.....................:
         #                                   totalflap_w
 
-        shp_box = fcfun.shp_box_dir (box_w = alusize_lin,
+        shp_boxbr = fcfun.shp_box_dir (box_w = alusize_lin,
                                      box_d = brlin_l,
                                      box_h = alusize_perp,
                                      fc_axis_h = axis_perp,
@@ -433,33 +471,36 @@ class AluProfBracketPerpWide (object):
                                      pos = pos)
 
 
-        oneflap_w = min(4*bolthead_r, alusize_lin)
-        totalflap_w = alusize_lin + 2 * oneflap_w
-        shp_flap = fcfun.shp_box_dir (box_w = totalflap_w,
-                                      box_d = br_perp_thick,
-                                      box_h = alusize_perp,
-                                      fc_axis_h = axis_perp,
-                                      fc_axis_d = axis_lin,
-                                      cw = 1, cd = 0, ch = 0,
-                                      pos = pos)
+        oneflap_w = 0
+        if flap == 1:
+            oneflap_w = min(4*bolthead_r, alusize_lin)
+            totalflap_w = alusize_lin + 2 * oneflap_w
+            shp_flap = fcfun.shp_box_dir (box_w = totalflap_w,
+                                          box_d = br_perp_thick,
+                                          box_h = alusize_perp,
+                                          fc_axis_h = axis_perp,
+                                          fc_axis_d = axis_lin,
+                                          cw = 1, cd = 0, ch = 0,
+                                          pos = pos)
 
-        shp_boxflap = shp_box.fuse(shp_flap)
+            shp_boxbr = shp_boxbr.fuse(shp_flap)
 
 
-        chmf_pts = []
-        for isg in [-0.5,0.5]:
-            chmf_pt_pos = (pos + DraftVecUtils.scaleTo(axis_lin, br_perp_thick)
-                         + DraftVecUtils.scaleTo(axis_wid, isg * alusize_lin))
-            chmf_pts.append(chmf_pt_pos)
+            chmf_pts = []
+            for isg in [-0.5,0.5]:
+                chmf_pt_pos = (pos
+                           + DraftVecUtils.scale(axis_lin, br_perp_thick)
+                           + DraftVecUtils.scale(axis_wid, isg * alusize_lin))
+                chmf_pts.append(chmf_pt_pos)
 
-        shp_boxflap = fcfun.shp_filletchamfer_dirpts(shp_boxflap,
-                                                    fc_axis = axis_perp,
-                                                    fc_pts = chmf_pts,
-                                                    fillet = 0,
-                                                    radius = bolthead_r )
+            shp_boxbr = fcfun.shp_filletchamfer_dirpts(shp_boxbr,
+                                                       fc_axis = axis_perp,
+                                                       fc_pts = chmf_pts,
+                                                       fillet = 0,
+                                                       radius = bolthead_r )
 
-        doc.recompute()
-        shp_boxflap =shp_boxflap.removeSplitter()
+            doc.recompute()
+            shp_boxbr =shp_boxbr.removeSplitter()
 
 
 
@@ -468,15 +509,11 @@ class AluProfBracketPerpWide (object):
         chmf_out_pos = (   pos + DraftVecUtils.scaleTo(axis_lin, brlin_l)
                          + DraftVecUtils.scaleTo(axis_perp, alusize_perp))
 
-        shp_boxflap = fcfun.shp_filletchamfer_dirpt(shp_boxflap,
+        shp_boxbr = fcfun.shp_filletchamfer_dirpt(shp_boxbr,
                                                    fc_axis = axis_wid,
                                                    fc_pt = chmf_out_pos,
                                                    fillet = 0,
                                                    radius = chmf_out_r)
-
-
-        
-
 
         #              ....:__: : :        _____________________
         #              :   |  |   :       |     ||       ||     |
@@ -486,22 +523,23 @@ class AluProfBracketPerpWide (object):
         #                  :.............:       :.........:
         #                    + brlin_l             + alusize_lin
 
-        # cut the box inside
-        # Inside width
-        # add one, to have it a minimum of one mm
-        if alusize_lin > 2*(bolthead_r + kcomp.TOL) + 1 :
-            inside_w =  2*(bolthead_r + kcomp.TOL)
-            print ("inside width " + str(inside_w))
-        else:
-            print ("no space for reinforcement")
-            inside_w = alusize_lin + 2 # +2 to make the cut
-
-        # chamfer of the inside box
-        chmf_in_r = alusize_perp/2. - br_lin_thick -bolthead_r_tol
-        logger.debug ("chamfer radius" + str(chmf_in_r))
-
+        boltholes = []
         # inside box: (sunk == 1)
-        if sunk == 1:
+        if sunk > 0:
+            # cut the box inside
+            # Inside width
+            # add one, to have it a minimum of one mm
+            if (sunk == 1) and (alusize_lin > 2*(bolthead_r + kcomp.TOL) + 1):
+                inside_w =  2*(bolthead_r + kcomp.TOL)
+                print ("inside width " + str(inside_w))
+            else:
+                # no space for reinforcement, or no reinforcement (sunk == 2)
+                inside_w = alusize_lin + oneflap_w + 2 # +2 to make the cut
+
+            # chamfer of the inside box
+            chmf_in_r = alusize_perp/2. - br_lin_thick -bolthead_r_tol
+            logger.debug ("chamfer radius" + str(chmf_in_r))
+
             insbox_pos = ( pos + DraftVecUtils.scale(axis_lin,br_perp_thick)
                            + DraftVecUtils.scale(axis_perp,br_lin_thick))
             shp_insbox = fcfun.shp_box_dir (box_w = inside_w,
@@ -517,33 +555,33 @@ class AluProfBracketPerpWide (object):
                                                      fc_pt = insbox_pos,
                                                      fillet = 0,
                                                      radius = chmf_in_r)
-            shp_boxflap = shp_boxflap.cut(shp_insbox)
+            shp_boxbr = shp_boxbr.cut(shp_insbox)
 
-        #pos_boltperp =  pos + DraftVecUtils.scale(axis_perp,alusize_perp/2.) 
-        #shp_boltperp= fcfun.shp_cylcenxtr(r=boltshank_r_tol,
-        #                    h=brack_thick,
-        #                    normal = axis_lin,
-        #                    ch = 0, xtr_top = 1, xtr_bot=1,
-        #                    pos = pos_boltperp)
+            #pos_boltperp = pos +DraftVecUtils.scale(axis_perp,alusize_perp/2.) 
+            #shp_boltperp= fcfun.shp_cylcenxtr(r=boltshank_r_tol,
+            #                    h=brack_thick,
+            #                    normal = axis_lin,
+            #                    ch = 0, xtr_top = 1, xtr_bot=1,
+            #                    pos = pos_boltperp)
 
-        boltholes = []
-        boltperp_dist_w = (alusize_lin+oneflap_w)/2
-        for iboltperp in [-boltperp_dist_w,boltperp_dist_w]:
-            pos_boltperp =  (pos
-                    + DraftVecUtils.scale(axis_perp,alusize_perp/2.)
-                    + DraftVecUtils.scale(axis_lin,br_perp_thick+bolthead_l)
-                    + DraftVecUtils.scale(axis_wid, iboltperp))
-            shp_boltperp = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
-                            l_bolt = br_perp_thick + bolthead_l,
-                            r_head = bolthead_r_tol + kcomp.TOL, #extra TOL
-                            l_head = bolthead_l,
-                            xtr_head = 2,
-                            xtr_shank = 1,
-                            support = 0,
-                            fc_normal = axis_lin_neg,
-                            fc_verx1 = axis_perp, #it doesnt matter
-                            pos = pos_boltperp)
-            boltholes.append(shp_boltperp)
+        if flap == 1:
+            boltperp_dist_w = (alusize_lin+oneflap_w)/2
+            for iboltperp in [-boltperp_dist_w,boltperp_dist_w]:
+                pos_boltperp =  (pos
+                        + DraftVecUtils.scale(axis_perp,alusize_perp/2.)
+                        + DraftVecUtils.scale(axis_lin,br_perp_thick+bolthead_l)
+                        + DraftVecUtils.scale(axis_wid, iboltperp))
+                shp_boltperp = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
+                                l_bolt = br_perp_thick + bolthead_l,
+                                r_head = bolthead_r_tol + kcomp.TOL, #extra TOL
+                                l_head = bolthead_l,
+                                xtr_head = 2,
+                                xtr_shank = 1,
+                                support = 0,
+                                fc_normal = axis_lin_neg,
+                                fc_verx1 = axis_perp, #it doesnt matter
+                                pos = pos_boltperp)
+                boltholes.append(shp_boltperp)
 
 
         pos_boltlin = ( pos + DraftVecUtils.scale(axis_lin,boltlin_dist) +
@@ -559,8 +597,6 @@ class AluProfBracketPerpWide (object):
                             fc_verx1 = axis_lin, #it doesnt matter
                             pos = pos_boltlin)
         boltholes.append(shp_boltlin)
-
-        shp_boltfuse = shp_boltlin.fuse(shp_boltperp)
 
         #if nbolts_lin > 1:
         for ibolt in range (1, nbolts_lin):
@@ -581,7 +617,7 @@ class AluProfBracketPerpWide (object):
 
         shp_boltfuse = fcfun.fuseshplist(boltholes)
 
-        shp_bracket = shp_boxflap.cut(shp_boltfuse)
+        shp_bracket = shp_boxbr.cut(shp_boltfuse)
         doc.recompute()
         shp_bracket =shp_bracket.removeSplitter()
 
@@ -608,18 +644,34 @@ class AluProfBracketPerpWide (object):
         stlFileName = stlPath + name + ".stl"
         self.shp.exportStl(stlFileName)
 
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 
-AluProfBracketPerpWide ( alusize_lin = 10, alusize_perp = 10,
-                         br_perp_thick = 5.,
-                         br_lin_thick = 3.,
-                         nbolts_lin = 2,
-                         sunk = 0,
-                         fc_perp_ax = VZ,
-                         fc_lin_ax = VX,
-                         pos = V0,
-                         wfco=1,
-                         name = 'bracket_flap')
+#AluProfBracketPerpFlap ( alusize_lin = 10, alusize_perp = 10,
+#                         br_perp_thick = 3.,
+#                         br_lin_thick = 3.,
+#                         nbolts_lin = 2,
+#                         xtr_bolt_head = 1,
+#                         sunk = 0,
+#                         flap = 1, 
+#                         fc_perp_ax = VZ,
+#                         fc_lin_ax = VX,
+#                         pos = V0,
+#                         wfco=1,
+#                         name = 'bracket3_flap')
+
+#AluProfBracketPerpFlap ( alusize_lin = 10, alusize_perp = 10,
+#                         br_perp_thick = 3.,
+#                         br_lin_thick = 3.,
+#                         nbolts_lin = 2,
+#                         xtr_bolt_head = 1,
+#                         sunk = 2,
+#                         flap = 1, 
+#                         fc_perp_ax = VZ,
+#                         fc_lin_ax = VX,
+#                         pos = V0,
+#                         wfco=1,
+#                         name = 'bracket3_flap_sunk')
+
 
 
 # ----------- class AluProfBracketPerpTwin -----------------------------------
@@ -665,6 +717,19 @@ class AluProfBracketPerpTwin (object):
                       :   |  |______\..
                       :...|_________|..: br_lin_thick .........> fc_lin_ax
                           :.........:
+
+                                             * bolt_perp_line
+                                            1: * there is a bolt hole
+                                            0: * no bolt hole there
+                     ....:__: : :         __________________________
+                     :   |  |   :         ||       ||     ||       ||
+        alusize_perp +   |  |  _:_        ||   *   ||  O  ||   *   ||
+                     :   |  |_|___|___    ||_______||     ||_______||
+                     :...|____________|   |___:_:___|_____|___:_:__||..axis_wid
+                         :.............:  :.........:..+..:
+                           + brlin_l           +     union_w          
+                                           alusize_lin         :   
+                                               :..alu_sep......:
                              
            
 
@@ -676,7 +741,14 @@ class AluProfBracketPerpTwin (object):
         bolt_d: metric of the bolt 3, 4, ... (integer)
         nbolts_lin: 1: just one bolt on the fc_lin_ax, or two bolts
                    2: two bolts on the fc_lin_ax, or two bolts
+        bolt_perp_line: 1: if it has a bolt on the wall (perp) but in line
+                   with the line aluminum profiles
+                   0: no bolt 
         xtr_bolt_head : extra space for the bolt head, and making a space for it
+                   only makes sense if bolt_perp_line == 1
+        sunk : 0: No sunk, just drill holes: bolt_perp_line should be 0
+               1: sunk, but with reinforcement if possible
+               2: no reinforcement
         fc_perp_ax: axis of the bracket on the perpendicular prof, see picture
         fc_line_ax: axis of the bracket on the aligned profile, see picture
         fc_wide_ax: axis of the bracket on wide direction, see picture
@@ -694,13 +766,18 @@ class AluProfBracketPerpTwin (object):
                  br_lin_thick = 3.,
                  bolt_d = 3, #metric of the bolt
                  nbolts_lin = 1,
+                 bolt_perp_line = 0,
                  xtr_bolt_head = 3,
+                 sunk = 0,
                  fc_perp_ax = VZ,
                  fc_lin_ax = VX,
                  fc_wide_ax = VY,
                  pos = V0,
                  wfco=1,
                  name = 'bracket_twin'):
+
+        doc = FreeCAD.ActiveDocument
+        self.name = name
 
         bolt_dict = kcomp.D912[3]
         bolthead_r = bolt_dict['head_r']
@@ -714,40 +791,74 @@ class AluProfBracketPerpTwin (object):
         axis_lin_neg = axis_lin.negative()
         axis_wid  = DraftVecUtils.scaleTo(fc_wide_ax,1) 
 
-        h_brlin1 = AluProfBracketPerp(alusize_lin = alusize_lin,
+        # position of the other profile
+        brlin2_pos = pos + DraftVecUtils.scale(axis_wid, alu_sep)
+        if bolt_perp_line == 1: # there is bolt
+            if sunk == 2:
+                reinforce = 0
+            else:
+                reinforce = 1
+            h_brlin1 = AluProfBracketPerp(alusize_lin = alusize_lin,
                                         alusize_perp = alusize_perp,
                                         br_perp_thick = br_perp_thick,
                                         br_lin_thick = br_lin_thick,
                                         bolt_d = bolt_d,
                                         nbolts_lin = nbolts_lin,
                                         xtr_bolt_head = xtr_bolt_head,
+                                        reinforce = reinforce,
                                         fc_perp_ax = axis_perp,
                                         fc_lin_ax = axis_lin,
                                         pos = pos,
                                         wfco = 0)
-        shp_brlin1 = h_brlin1.shp
-
-        # position of the other profile
-        brlin2_pos = pos + DraftVecUtils.scale(axis_wid, alu_sep)
-
-        h_brlin2 = AluProfBracketPerp(alusize_lin = alusize_lin,
+            h_brlin2 = AluProfBracketPerp(alusize_lin = alusize_lin,
                                         alusize_perp = alusize_perp,
                                         br_perp_thick = br_perp_thick,
                                         br_lin_thick = br_lin_thick,
                                         bolt_d = bolt_d,
                                         nbolts_lin = nbolts_lin,
+                                        reinforce = reinforce,
                                         xtr_bolt_head = xtr_bolt_head,
                                         fc_perp_ax = axis_perp,
                                         fc_lin_ax = axis_lin,
                                         pos = brlin2_pos,
                                         wfco = 0)
+        else: # no hole:
+            h_brlin1 = AluProfBracketPerpFlap (
+                                        alusize_lin = alusize_lin,
+                                        alusize_perp = alusize_perp,
+                                        br_perp_thick = br_perp_thick,
+                                        br_lin_thick = br_lin_thick,
+                                        nbolts_lin = nbolts_lin,
+                                        sunk = sunk,
+                                        flap = 0, #no flap
+                                        xtr_bolt_head = xtr_bolt_head,
+                                        fc_perp_ax = axis_perp,
+                                        fc_lin_ax = axis_lin,
+                                        pos = pos,
+                                        wfco = 0)
+            h_brlin2 = AluProfBracketPerpFlap (
+                                        alusize_lin = alusize_lin,
+                                        alusize_perp = alusize_perp,
+                                        br_perp_thick = br_perp_thick,
+                                        br_lin_thick = br_lin_thick,
+                                        nbolts_lin = nbolts_lin,
+                                        sunk = sunk,
+                                        xtr_bolt_head = xtr_bolt_head,
+                                        flap = 0, #no flap
+                                        fc_perp_ax = axis_perp,
+                                        fc_lin_ax = axis_lin,
+                                        pos = brlin2_pos,
+                                        wfco = 0)
+
+        shp_brlin1 = h_brlin1.shp
         shp_brlin2 = h_brlin2.shp
 
         # center of the 2, to make the union between both
         pos_mid = pos + DraftVecUtils.scale(axis_wid, alu_sep/2.)
 
         # box_w has +2 to make the union
-        shp_union = fcfun.shp_box_dir (box_w = alu_sep-alusize_lin+2,
+        union_w = alu_sep-alusize_lin
+        shp_union = fcfun.shp_box_dir (box_w = union_w + 2,
                                        box_d = br_perp_thick,
                                        box_h = alusize_perp,
                                        fc_axis_h = axis_perp,
@@ -759,8 +870,8 @@ class AluProfBracketPerpTwin (object):
         
         doc.recompute()
         shp_twinbr = shp_twinbr.removeSplitter()
-        Part.show(shp_twinbr)
 
+        # chamfer the union 
         chmf_pts = []
         chmf_pt_pos = (pos + DraftVecUtils.scaleTo(axis_lin, br_perp_thick)
                     + DraftVecUtils.scaleTo(axis_wid, alu_sep- alusize_lin/2.))
@@ -779,11 +890,14 @@ class AluProfBracketPerpTwin (object):
         doc.recompute()
         shp_twinbr = shp_twinbr.removeSplitter()
 
-        pos_boltperp =  (pos
+        bolthole_list = []
+        if bolt_perp_line == 1 or union_w < 8 * bolthead_r:
+            # one bolt in the middle
+            pos_boltperp =  (pos
                     + DraftVecUtils.scale(axis_perp,alusize_perp/2.)
                     + DraftVecUtils.scale(axis_lin,br_perp_thick+bolthead_l)
                     + DraftVecUtils.scale(axis_wid, alu_sep/2.))
-        shp_boltperp = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
+            shp_boltperp = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
                             l_bolt = br_perp_thick + bolthead_l,
                             r_head = bolthead_r_tol + kcomp.TOL, #extra TOL
                             l_head = bolthead_l,
@@ -793,8 +907,29 @@ class AluProfBracketPerpTwin (object):
                             fc_normal = axis_lin_neg,
                             fc_verx1 = axis_perp, #it doesnt matter
                             pos = pos_boltperp)
+            bolthole_list.append(shp_boltperp)
+        else:
+            # 2 holes:
+            boltperp_w_pos1 = alusize_lin/2. + 2* bolthead_r
+            boltperp_w_pos2 = alu_sep - alusize_lin/2. - 2* bolthead_r
+            for w_pos in [boltperp_w_pos1, boltperp_w_pos2]:
+                pos_boltperp =  (pos
+                    + DraftVecUtils.scale(axis_perp,alusize_perp/2.)
+                    + DraftVecUtils.scale(axis_lin,br_perp_thick+bolthead_l)
+                    + DraftVecUtils.scale(axis_wid, w_pos))
+                shp_boltperp = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
+                            l_bolt = br_perp_thick + bolthead_l,
+                            r_head = bolthead_r_tol + kcomp.TOL, #extra TOL
+                            l_head = bolthead_l,
+                            xtr_head = 2,
+                            xtr_shank = 1,
+                            support = 0,
+                            fc_normal = axis_lin_neg,
+                            fc_verx1 = axis_perp, #it doesnt matter
+                            pos = pos_boltperp)
+                bolthole_list.append(shp_boltperp)
 
-
+        shp_boltperp = fcfun.fuseshplist(bolthole_list)
 
         shp_twinbr = shp_twinbr.cut(shp_boltperp)
         doc.recompute()
@@ -824,21 +959,40 @@ class AluProfBracketPerpTwin (object):
         self.shp.exportStl(stlFileName)
 
     
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 
-AluProfBracketPerpTwin ( alusize_lin = 10, alusize_perp = 10,
-                 alu_sep = 20.,
-                 br_perp_thick = 5.,
-                 br_lin_thick = 3.,
-                 bolt_d = 3,
-                 nbolts_lin = 2,
-                 xtr_bolt_head = 4,
-                 fc_perp_ax = VZ,
-                 fc_lin_ax = VX,
-                 fc_wide_ax = VY,
-                 pos = V0,
-                 wfco=1,
-                 name = 'bracket_twin')
+#AluProfBracketPerpTwin ( alusize_lin = 10, alusize_perp = 10,
+#                 alu_sep = 40.,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_d = 3,
+#                 nbolts_lin = 2,
+#                 bolt_perp_line = 0,
+#                 xtr_bolt_head = 2, 
+#                 sunk = 2,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 fc_wide_ax = VY,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_twin3')
+
+#AluProfBracketPerpTwin ( alusize_lin = 10, alusize_perp = 10,
+#                 alu_sep = 40.,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_d = 3,
+#                 nbolts_lin = 2,
+#                 bolt_perp_line = 1,
+#                 xtr_bolt_head = 4, # more extra because of the perp bolt
+#                 sunk = 2,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 fc_wide_ax = VY,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_twin3_perp')
+
 
 
 # ----------- class IdlePulleyHolder ---------------------------
@@ -1146,20 +1300,18 @@ class IdlePulleyHolder (object):
             
             
         
-"""
 
 doc = FreeCAD.newDocument()
 
 idp = IdlePulleyHolder( profile_size=30.,
                         pulleybolt_d=3.,
                         holdbolt_d = 5,
-                        above_h = 37.,
-                        mindepth = 27.5,
+                        above_h = 47-15-9.5,
+                        mindepth = 0,
                         attach_dir = '-y',
                         endstop_side = 0,
-                        endstop_posh = 9.,
+                        endstop_posh = 0,
                         name = "idlepulleyhold")
-"""
 
 
 
@@ -2443,6 +2595,7 @@ class ThinLinBearHouseAsim (object):
         bolt2cen_dep: float
         bolt2cen_wid_n: float
         bolt2cen_wid_p: float
+        bolt2bolt_wid: bolt2cen_wid_n + bolt2cen_wid_p
         + --- Dimensions:
         D: housing_d
         W: housing_w
@@ -2651,6 +2804,7 @@ class ThinLinBearHouseAsim (object):
         self.bolt2cen_dep = bolt2cen_dep
         self.bolt2cen_wid_n = bolt2cen_wid_n
         self.bolt2cen_wid_p = bolt2cen_wid_p
+        self.bolt2bolt_wid = bolt2cen_wid_p + bolt2cen_wid_n
         self.nfro_ax = nfro_ax
         self.nbot_ax = nbot_ax
         self.nsid_ax = nsid_ax
