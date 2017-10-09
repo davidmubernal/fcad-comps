@@ -1301,17 +1301,17 @@ class IdlePulleyHolder (object):
             
         
 
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 
-idp = IdlePulleyHolder( profile_size=30.,
-                        pulleybolt_d=3.,
-                        holdbolt_d = 5,
-                        above_h = 47-15-9.5,
-                        mindepth = 0,
-                        attach_dir = '-y',
-                        endstop_side = 0,
-                        endstop_posh = 0,
-                        name = "idlepulleyhold")
+#idp = IdlePulleyHolder( profile_size=30.,
+#                        pulleybolt_d=3.,
+#                        holdbolt_d = 5,
+#                        above_h = 47-15-9.5,
+#                        mindepth = 0,
+#                        attach_dir = '-y',
+#                        endstop_side = 0,
+#                        endstop_posh = 0,
+#                        name = "idlepulleyhold")
 
 
 
@@ -2960,9 +2960,6 @@ class ThinLinBearHouseAsim (object):
         self.fco_bot.Shape.exportStl(stlFileName_bot)
 
 
-
-
-
 #doc = FreeCAD.newDocument()
 #ThinLinBearHouseAsim (kcomp.LMELUU[12],
 #                  fc_fro_ax = VX,
@@ -2973,7 +2970,284 @@ class ThinLinBearHouseAsim (object):
 #                  bolt2cen_wid_n = 0,
 #                  bolt2cen_wid_p = 25)
 
- 
+
+
+# ----------- NemaMotorHolder
+
+class NemaMotorHolder (object):
+
+    """
+
+
+
+         __________________
+        ||                ||
+        || O     __     O ||
+        ||    /      \    ||
+        ||   |   1    |   ||
+        ||    \      /    ||
+        || O     __     O ||
+        ||________________|| .....
+        ||_______2________|| ..... wall_thick
+
+
+
+         ________3_________        3_________________ ....
+        |  ::  :    :  ::  |       |      :     :    |    + motor_thick
+        |__::__:_1__:__::__|       2......:..1..:....|....:..........> fc_axis_n
+        ||                ||       | :              /
+        || ||          || ||       | :           /
+        || ||          || ||       | :        /
+        || ||          || ||       | :      /
+        || ||          || ||       | :   /
+        ||________________||       |_: /
+        ::                         :                 :
+         + reinf_thick             :....tot_d........:
+
+
+                fc_axis_h
+                 :
+         ________:_________ ..................................
+        |  ::  :    :  ::  |                                  :
+        |__::__:_1__:__::__|....................              :
+        ||                ||....+ motor_min_h  :              :
+        || ||          || ||                   :              +tot_h
+        || ||          || ||                   + motor_max_h  :
+        || ||          || ||                   :              :
+        || ||          || ||...................:              :
+        ||________________||..................................:
+        :                  :
+        :.....tot_w........:
+
+        
+       1: ref_axis = 1 & ref_bolt = 0 
+       2: ref_axis = 0 & ref_bolt = 0 
+       --3: ref_axis = 0 & ref_bolt = 0 
+
+    """
+
+    def __init__ (self,
+                  nema_size = 17,
+                  wall_thick = 4.,
+                  motor_thick = 4.,
+                  reinf_thick = 4.,
+                  motor_min_h =10.,
+                  motor_max_h =20.,
+                  motor_xtr_space = 2., # counting on one side
+                  bolt_wall_d = 4.,
+                  bolt_wall_sep = 30., # optional
+                  chmf_r = 1.,
+                  fc_axis_h = VZ,
+                  fc_axis_n = VX,
+                  #fc_axis_p = VY,
+                  ref_axis = 1, 
+                  #ref_bolt = 0,
+                  pos = V0,
+                  wfco = 1,
+                  name = 'nema_holder'):
+
+        doc = FreeCAD.ActiveDocument
+
+        # normalize de axis
+        axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+        axis_n = DraftVecUtils.scaleTo(fc_axis_n,1)
+        axis_p = axis_h.cross(axis_n) #perpendicular
+        axis_n_n = axis_n.negative()
+        axis_h_n = axis_h.negative()
+
+        # best axis to print:
+        self.axis_print = axis_h_n
+
+        motor_w = kcomp.NEMA_W[nema_size]
+        motor_bolt_sep = kcomp.NEMA_BOLT_SEP[nema_size]
+        motor_bolt_d = kcomp.NEMA_BOLT_D[nema_size]
+
+        self.axis_h = axis_h
+        self.axis_n = axis_n
+        self.pos = pos
+
+        boltwallshank_r_tol = kcomp.D912[bolt_wall_d]['shank_r_tol']
+        boltwallhead_l = kcomp.D912[bolt_wall_d]['head_l']
+        boltwallhead_r = kcomp.D912[bolt_wall_d]['head_r']
+        washer_thick = kcomp.WASH_D125_T[bolt_wall_d]
+
+        # calculation of the bolt wall separation
+        max_bolt_wall_sep = motor_w - 2 * boltwallhead_r
+      
+        if bolt_wall_sep == 0:
+            bolt_wall_sep = max_bolt_wall_sep
+        elif bolt_wall_sep > max_bolt_wall_sep:
+            logger.debug('bolt wall separtion too large: ' + str(bolt_wall_sep))
+            bolt_wall_sep = max_bolt_wall_sep
+            logger.debug('taking larges value: ' + str(bolt_wall_sep))
+        elif bolt_wall_sep <  4 * boltwallhead_r:
+            logger.debug('bolt wall separtion too short: ' + str(bolt_wall_sep))
+            bolt_wall_sep = max_bolt_wall_sep
+            logger.debug('taking larges value: ' + str(bolt_wall_sep))
+        # else: the given separation is good
+
+        # making the big box that will contain everything and will be cut
+        tot_h = motor_thick + motor_max_h + 2 * bolt_wall_d
+        tot_w = 2* reinf_thick + motor_w + 2 * motor_xtr_space
+        tot_d = (   wall_thick + motor_w + motor_xtr_space
+                  + boltwallhead_l + washer_thick)
+
+        # getting the offset of the reference
+        # distance of the motor axis to de wall
+        motax2wall_dist = (wall_thick + motor_w/2. + motor_xtr_space
+                               + boltwallhead_l + washer_thick)
+        if ref_axis == 1:
+            ref2motax = V0  #point 1
+            ref2motaxwall = DraftVecUtils.scale(axis_n_n, motax2wall_dist) 
+        else:
+            ref2motax = DraftVecUtils.scale(axis_n, motax2wall_dist)
+            ref2motaxwall = V0 # point 2
+
+        motax_pos = pos + ref2motax
+        motaxwall_pos = pos + ref2motaxwall
+
+        # point centered on the symmetrical plane, on top of axis_h and
+        # on the wall (pint 3)
+        ref2topwallcent = (  ref2motaxwall
+                             + DraftVecUtils.scale(axis_h, motor_thick))
+        topwallcent_pos = pos + ref2topwallcent
+
+        # make the whole box, extra height and depth to cut all the way
+        # back and down:
+        shp_box = fcfun.shp_box_dir (box_w = tot_w,
+                                     box_d = tot_d,
+                                     box_h = tot_h,
+                                     fc_axis_h = axis_h_n,
+                                     fc_axis_d = axis_n,
+                                     cw=1, cd=0, ch=0, pos = topwallcent_pos)
+        # little chamfer at the corners, if fillet there are some problems
+        shp_box = fcfun.shp_filletchamfer_dir(shp_box, axis_h,
+                                              fillet=0,
+                                              radius = chmf_r)
+        doc.recompute()
+        shp_box = shp_box.removeSplitter()
+
+        # chamfer of the box to make a 'triangular' reinforcement
+        chmf_reinf_r = min(tot_d- wall_thick, tot_h-motor_thick)
+        # look for the point:
+        chmf_pos = (  topwallcent_pos
+                          + DraftVecUtils.scale(axis_h_n, tot_h)
+                          + DraftVecUtils.scale(axis_n, tot_d))
+        shp_box = fcfun.shp_filletchamfer_dirpt(shp_box, axis_p,
+                                              fc_pt =chmf_pos,
+                                              fillet=0,
+                                              radius = chmf_reinf_r)
+        doc.recompute()
+
+        # holes:
+        holes = []
+        motaxinwall_pos = (motaxwall_pos
+                           + DraftVecUtils.scale(axis_n, wall_thick))
+        # the space for the motor
+        shp_motor = fcfun.shp_box_dir (box_w = motor_w +  2 * motor_xtr_space,
+                                       box_d = tot_d + chmf_r,
+                                       box_h = tot_h,
+                                       fc_axis_h = axis_h_n,
+                                       fc_axis_d = axis_n,
+                                       cw=1, cd=0, ch=0,
+                                       pos = motaxinwall_pos)
+
+        shp_motor = fcfun.shp_filletchamfer_dir(shp_motor, fc_axis=axis_h,
+                                                fillet=0, radius=chmf_r)
+        doc.recompute()
+        holes.append(shp_motor)
+
+        # central circle of the motor
+        shp_hole = fcfun.shp_cylcenxtr(r=(motor_bolt_sep - motor_bolt_d)/2.,
+                                       h = motor_thick,
+                                       normal = axis_h,
+                                       ch = 0,
+                                       xtr_top = 1,
+                                       xtr_bot = 1,
+                                       pos = motax_pos)
+        holes.append(shp_hole)
+
+        # motor bolt holes
+        for add_n in (DraftVecUtils.scale(axis_n, motor_bolt_sep/2.),
+                      DraftVecUtils.scale(axis_n,-motor_bolt_sep/2.)):
+            for add_p in (DraftVecUtils.scale(axis_p, motor_bolt_sep/2.),
+                      DraftVecUtils.scale(axis_p,-motor_bolt_sep/2.)):
+                hole_pos = motax_pos + add_n + add_p
+                shp_hole = fcfun.shp_cylcenxtr( r = motor_bolt_d/2.+TOL,
+                                                h = motor_thick,
+                                                normal = axis_h,
+                                                ch = 0,
+                                                xtr_top = 1,
+                                                xtr_bot = 1,
+                                                pos = hole_pos)
+                holes.append(shp_hole)
+
+        # rail holes. To mount the motor holder to a profile or whatever
+        for add_p in (DraftVecUtils.scale(axis_p, motor_bolt_sep/2.),
+                      DraftVecUtils.scale(axis_p,-motor_bolt_sep/2.)):
+            # hole for the rails
+            hole_pos = (motaxwall_pos + add_p
+                        + DraftVecUtils.scale(axis_h_n, motor_min_h))
+            shp_hole = fcfun.shp_box_dir_xtr(box_w = boltwallshank_r_tol * 2.,
+                                       box_d = wall_thick,
+                                       box_h = motor_max_h - motor_min_h,
+                                       fc_axis_h = axis_h_n,
+                                       fc_axis_d = axis_n,
+                                       cw=1, cd=0, ch=0,
+                                       xtr_d =1, xtr_nd=1, #to cut
+                                       pos = hole_pos)
+            
+            holes.append(shp_hole)
+            # hole for the ending of the rails (semicircles)
+            for add_h in (DraftVecUtils.scale(axis_h_n, motor_min_h),
+                          DraftVecUtils.scale(axis_h_n, motor_max_h)):
+                hole_pos = motaxwall_pos + add_h + add_p
+                shp_hole = fcfun.shp_cylcenxtr( r = boltwallshank_r_tol,
+                                                h = wall_thick,
+                                                normal = axis_n,
+                                                ch = 0,
+                                                xtr_top = 1,
+                                                xtr_bot = 1,
+                                                pos = hole_pos)
+                holes.append(shp_hole)
+
+        
+                
+
+        shp_holes = fcfun.fuseshplist(holes)
+
+        shp_motorholder = shp_box.cut(shp_holes)
+        
+
+        if wfco == 1:
+            # a freeCAD object is created
+            fco_motorholder = doc.addObject("Part::Feature", name )
+            fco_motorholder.Shape = shp_motorholder
+            self.fco = fco_motorholder
+
+
+
+
+doc = FreeCAD.newDocument()
+NemaMotorHolder ( 
+                  nema_size = 17,
+                  wall_thick = 6.,
+                  motor_thick = 4.,
+                  reinf_thick = 4.,
+                  motor_min_h =25.,
+                  motor_max_h = 55,
+                  motor_xtr_space = 2., # counting on one side
+                  bolt_wall_d = 4.,
+                  chmf_r = 1.,
+                  fc_axis_h = VZ,
+                  fc_axis_n = VX,
+                  #fc_axis_p = VY,
+                  ref_axis = 1, 
+                  #ref_bolt = 0,
+                  pos = V0,
+                  wfco = 1,
+                  name = 'nema_holder')
+
 
 # ----------- Linear bearing housing 
 
