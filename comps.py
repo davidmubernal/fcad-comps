@@ -296,6 +296,272 @@ class Sk (object):
 
 
 
+class Sk_dir (object):
+
+    """
+     Similar to Sk, but in any direction
+     SK dimensions:
+     dictionary for the dimensions
+     mbolt: is mounting bolt. it corresponds to its metric
+     tbolt: is the tightening bolt.
+    SK12 = { 'd':12.0, 'H':37.5, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
+             'h':23.0, 'A':21.0, 'b': 5.0, 'g':6.0,  'I':20.0,
+              'mbolt': 5, 'tbolt': 4} 
+
+
+            fc_axis_h
+            :
+         ___:___       _______________________________  tot_h 
+        |  ___  |                     
+        | /   \ |      __________ HoleH = h
+        | \___/ |  __
+      __|       |__ /| __
+     |_____________|/  __ TotD = L ___________________
+ 
+          ___:___                     ___
+         |  ___  |                   |...|       
+         | / 2 \ |                   3 1 |.....> fc_axis_d
+         | \_*_/ |                   |...|
+     ____|       |____               |___|
+    8_:5_____4_____::_|..fc_axis_w   6_7_|....... fc_axis_d
+    :                 :              :   :
+    :... tot_w .......:              :...:
+                                       tot_d
+ 
+    fc_axis_h = axis on the height direction
+    fc_axis_d = axis on the depth (rod) direction
+    fc_axis_w = width (perpendicular) dimension, only useful if I finally
+                include the tightening bolt, or if ref_wc != 1
+    ref_hr : 1: reference at the Rod Height dimension (rod center):
+                points 1, 2, 3
+             0: reference at the base: points 4, 5
+    ref_wc: 1: reference at the center on the width dimension (fc_axis_w)
+                   points: 2, 4,
+            0, reference at one of the bolt holes, point 5
+            -1, reference at one end. point 8
+    ref_dc: 1: reference at the center of the depth dimension
+                   (fc_axis_d) points: 1,7
+                0: reference at one of the ends on the depth dimension
+                   points 3, 6
+
+    """
+
+    # separation of the upper side (it is not defined). Change it
+    # measured for sk12 is 1.2
+    up_sep_dist = 1.2
+
+    # tolerances for holes 
+    holtol = 1.1
+
+    def __init__(self, size,
+                 fc_axis_h = VZ,
+                 fc_axis_d = VX,
+                 fc_axis_w = V0,
+                 ref_hr = 1,
+                 ref_wc = 1,
+                 ref_dc = 1,
+                 pos = V0,
+                 wfco = 1,
+                 name= "shaft_holder"):
+        self.size = size
+        self.wfco = wfco
+        self.name = name
+        self.ref_hr = ref_hr
+        self.ref_wc = ref_wc
+        self.ref_dc = ref_dc
+
+        doc = FreeCAD.ActiveDocument
+        skdict = kcomp.SK.get(size)
+        if skdict == None:
+            logger.error("Sk size %d not supported", size)
+
+        doc = FreeCAD.ActiveDocument
+        # normalize de axis
+        axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+        axis_d = DraftVecUtils.scaleTo(fc_axis_d,1)
+        if fc_axis_w == V0:
+            axis_w = axis_h.cross(axis_d)
+        axis_h_n = axis_h.negative()
+        axis_d_n = axis_d.negative()
+        axis_w_n = axis_w.negative()
+        # Total height:
+        sk_h = skdict['H'];
+        self.tot_h = sk_h
+        # Total width (Y):
+        sk_w = skdict['W'];
+        self.tot_w = sk_w
+        # Total depth (x):
+        sk_d = skdict['L'];
+        self.tot_d = sk_d
+        # Base height
+        sk_base_h = skdict['g'];
+        # center width
+        sk_center_w = skdict['I'];
+        # Axis height:
+        sk_axis_h = skdict['h'];
+        self.axis_h = sk_axis_h;
+        # Mounting bolts separation
+        sk_mbolt_sep = skdict['B']
+    
+        # tightening bolt with added tolerances:
+        tbolt_d = skdict['tbolt']
+        # Bolt's head radius
+        tbolt_head_r = (self.holtol
+                        * kcomp.D912_HEAD_D[skdict['tbolt']])/2.0
+        # Bolt's head lenght
+        tbolt_head_l = (self.holtol
+                        * kcomp.D912_HEAD_L[skdict['tbolt']] )
+        # Mounting bolt radius with added tolerance
+        mbolt_r = self.holtol * skdict['mbolt']/2.
+
+        if ref_hr == 1:  # distance vectors on axis_h
+            ref2rod_h = V0
+            ref2base_h = DraftVecUtils.scale(axis_h, -sk_axis_h)
+        else:
+            ref2rod_h = DraftVecUtils.scale(axis_h, sk_axis_h)
+            ref2base_h = V0
+        if ref_wc == 1:  # distance vectors on axis_w
+            ref2cen_w = V0
+            ref2bolt_w = DraftVecUtils.scale(axis_w, -sk_mbolt_sep/2.)
+            ref2end_w = DraftVecUtils.scale(axis_w, -sk_w/2.)
+        elif ref_wc == 0:
+            ref2cen_w =  DraftVecUtils.scale(axis_w, sk_mbolt_sep/2.)
+            ref2bolt_w = V0
+            ref2end_w = DraftVecUtils.scale(axis_w, -(sk_w-sk_mbolt_sep)/2.)
+        else: # ref_wc == -1 at the end on the width dimension
+            ref2cen_w =  DraftVecUtils.scale(axis_w, sk_w/2.)
+            ref2bolt_w = DraftVecUtils.scale(axis_w, (sk_w-sk_mbolt_sep)/2.)
+        if ref_dc == 1:  # distance vectors on axis_d
+            ref2cen_d = V0
+            ref2end_d = DraftVecUtils.scale(axis_d, -sk_d/2.)
+        else:
+            ref2cen_d = DraftVecUtils.scale(axis_d, sk_d/2.)
+            ref2end_d = V0
+
+        basecen_pos = pos + ref2base_h + ref2cen_w + ref2cen_d
+        # Making the tall box:
+        shp_tall = fcfun.shp_box_dir (box_w = sk_center_w, 
+                                  box_d = sk_d,
+                                  box_h = sk_h,
+                                  fc_axis_w = axis_w,
+                                  fc_axis_h = axis_h,
+                                  fc_axis_d = axis_d,
+                                  cw = 1, cd= 1, ch=0, pos = basecen_pos)
+        # Making the wide box:
+        shp_wide = fcfun.shp_box_dir (box_w = sk_w, 
+                                  box_d = sk_d,
+                                  box_h = sk_base_h,
+                                  fc_axis_w = axis_w,
+                                  fc_axis_h = axis_h,
+                                  fc_axis_d = axis_d,
+                                  cw = 1, cd= 1, ch=0, pos = basecen_pos)
+        shp_sk = shp_tall.fuse(shp_wide)
+        doc.recompute()
+        shp_sk = shp_sk.removeSplitter()
+
+        
+        holes = []
+
+        # Shaft hole, 
+        rodcen_pos = pos + ref2rod_h + ref2cen_w + ref2cen_d
+        rod_hole = fcfun.shp_cylcenxtr(r= size/2.,
+                                         h = sk_d,
+                                         normal = axis_d,
+                                         ch = 1,
+                                         xtr_top = 1,
+                                         xtr_bot = 1,
+                                         pos = rodcen_pos)
+        holes.append(rod_hole)
+
+        # the upper sepparation
+        shp_topopen = fcfun.shp_box_dir_xtr (
+                                  box_w = self.up_sep_dist, 
+                                  box_d = sk_d,
+                                  box_h = sk_h-sk_axis_h,
+                                  fc_axis_w = axis_w,
+                                  fc_axis_h = axis_h,
+                                  fc_axis_d = axis_d,
+                                  cw = 1, cd= 1, ch=0,
+                                  xtr_h = 1, xtr_d = 1, xtr_nd = 1,
+                                  pos = rodcen_pos)
+        holes.append(shp_topopen)
+
+        # Tightening bolt hole
+        # tbolt_d is the diameter of the bolt: (M..) M4, ...
+        # tbolt_head_r: is the radius of the tightening bolt's head
+        # (including tolerance), which its bottom either
+        #- is at the middle point between
+        #  - A: the total height :sk_h
+        #  - B: the top of the shaft hole: axis_h + size/2.
+        #  - so the result will be (A + B)/2
+        # tot_h - (axis_h + size/2.)
+        #       _______..A........................
+        #      |  ___  |.B.......+ rodtop2top_dist = sk_h - (axis_h + size/2.) 
+        #      | /   \ |.......+ size/2.
+        #      | \___/ |       :
+        #    __|       |__     + axis_h
+        #   |_____________|....:
+
+        rodtop2top_dist = sk_h - (sk_axis_h + size/2.)
+        tbolt_pos = (   rodcen_pos
+                      + DraftVecUtils.scale(axis_w, sk_center_w/2.)
+                      + DraftVecUtils.scale(axis_h, size/2.)
+                      + DraftVecUtils.scale(axis_h, rodtop2top_dist/2.))
+        shp_tbolt = fcfun.shp_bolt_dir(r_shank= tbolt_d/2.,
+                                        l_bolt = sk_center_w,
+                                        r_head = tbolt_head_r,
+                                        l_head = tbolt_head_l,
+                                        hex_head = 0,
+                                        xtr_head = 1,
+                                        xtr_shank = 1,
+                                        support = 0,
+                                        fc_normal = axis_w_n,
+                                        fc_verx1 = axis_h,
+                                        pos = tbolt_pos)
+        holes.append(shp_tbolt)
+ 
+        #Mounting bolts
+        cen2mbolt_w = DraftVecUtils.scale(axis_w, sk_mbolt_sep/2.)
+        for w_pos in [cen2mbolt_w.negative(), cen2mbolt_w]:
+            mbolt_pos = basecen_pos + w_pos
+            mbolt_hole = fcfun.shp_cylcenxtr(r= mbolt_r,
+                                           h = sk_d,
+                                           normal = axis_h,
+                                           ch = 0,
+                                           xtr_top = 1,
+                                           xtr_bot = 1,
+                                           pos = mbolt_pos)
+            holes.append(mbolt_hole)
+ 
+
+        shp_holes = fcfun.fuseshplist(holes)
+        shp_sk = shp_sk.cut(shp_holes)
+        self.shp = shp_sk
+
+        if wfco == 1:
+            # a freeCAD object is created
+            fco = doc.addObject("Part::Feature", name )
+            fco.Shape = self.shp
+            self.fco = fco
+
+    def color (self, color = (1,1,1)):
+        if self.wfco == 1:
+            self.fco.ViewObject.ShapeColor = color
+        else:
+            logger.debug("Object with no fco")
+
+doc =FreeCAD.newDocument()
+h_sk = Sk_dir (size = 12,
+                 fc_axis_h = VZ,
+                 fc_axis_d = VX,
+                 fc_axis_w = V0,
+                 ref_hr = 1,
+                 ref_wc = 1,
+                 ref_dc = 1,
+                 pos = V0,
+                 wfco = 1,
+                 name= "shaft_holder")
+
 
 # --------------------------------------------------------------------
 # Creates a Misumi Aluminun Profile 30x30 Series 6 Width 8

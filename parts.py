@@ -3055,16 +3055,18 @@ class NemaMotorHolder (object):
         axis_n_n = axis_n.negative()
         axis_h_n = axis_h.negative()
 
+        self.axis_h = axis_h
+        self.axis_n = axis_n
+        self.axis_p = axis_p
         # best axis to print:
         self.axis_print = axis_h_n
+
+        self.pos = pos
+        self.name = name
 
         motor_w = kcomp.NEMA_W[nema_size]
         motor_bolt_sep = kcomp.NEMA_BOLT_SEP[nema_size]
         motor_bolt_d = kcomp.NEMA_BOLT_D[nema_size]
-
-        self.axis_h = axis_h
-        self.axis_n = axis_n
-        self.pos = pos
 
         boltwallshank_r_tol = kcomp.D912[bolt_wall_d]['shank_r_tol']
         boltwallhead_l = kcomp.D912[bolt_wall_d]['head_l']
@@ -3092,6 +3094,7 @@ class NemaMotorHolder (object):
         tot_d = (   wall_thick + motor_w + motor_xtr_space
                   + boltwallhead_l + washer_thick)
 
+
         # getting the offset of the reference
         # distance of the motor axis to de wall
         motax2wall_dist = (wall_thick + motor_w/2. + motor_xtr_space
@@ -3111,6 +3114,17 @@ class NemaMotorHolder (object):
         ref2topwallcent = (  ref2motaxwall
                              + DraftVecUtils.scale(axis_h, motor_thick))
         topwallcent_pos = pos + ref2topwallcent
+
+        # atributes with dimensions, distances and positions
+        self.tot_h = tot_h
+        self.tot_w = tot_w
+        self.tot_d = tot_d
+        self.ref2motax = ref2motax
+        self.ref2motaxwall = ref2motaxwall
+        self.ref2topwallcent = ref2topwallcent
+        self.motax_pos = motax_pos
+        self.motaxwall_pos = motaxwall_pos
+        self.topwallcent_pos = topwallcent_pos
 
         # make the whole box, extra height and depth to cut all the way
         # back and down:
@@ -3218,7 +3232,7 @@ class NemaMotorHolder (object):
 
         shp_motorholder = shp_box.cut(shp_holes)
         
-
+        self.shp = shp_motorholder
         if wfco == 1:
             # a freeCAD object is created
             fco_motorholder = doc.addObject("Part::Feature", name )
@@ -3227,9 +3241,45 @@ class NemaMotorHolder (object):
 
 
 
+    def color (self, color = (1,1,1)):
+        if self.wfco == 1:
+            self.fco.ViewObject.ShapeColor = color
+        else:
+            logger.debug("Object with no fco")
+
+    # exports the shape to STL format
+    def export_stl (self, name = ""):
+        # ------------------------------------------
+        # check how to do this
+        axis_up = self.axis_print
+        rotation = DraftVecUtils.getRotation(axis_up, VZ)
+        if (DraftVecUtils.equals(axis_up, VZN)):
+            #we have to flip it, but rotation doesnt get it done:
+            rotation = FreeCAD.Rotation(VX,180)
+            
+        shp = self.shp
+        #shp.Placement.Rotation = rotation
+        #Part.show(shp)
+        shp.Placement.Base = self.topwallcent_pos.negative()
+        Part.show(shp)
+        shp.Placement.Rotation = rotation
+        Part.show(shp)
+        
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName = stlPath + name + ".stl"
+        print (stlFileName)
+        self.shp.exportStl(stlFileName)
+        #self.fco.Shape.exportStl(stlFileName)
+
+
+
+
+
 
 doc = FreeCAD.newDocument()
-NemaMotorHolder ( 
+h_nema = NemaMotorHolder ( 
                   nema_size = 17,
                   wall_thick = 6.,
                   motor_thick = 4.,
@@ -3239,12 +3289,12 @@ NemaMotorHolder (
                   motor_xtr_space = 2., # counting on one side
                   bolt_wall_d = 4.,
                   chmf_r = 1.,
-                  fc_axis_h = VZ,
-                  fc_axis_n = VX,
+                  fc_axis_h = FreeCAD.Vector(1,1,0),
+                  fc_axis_n = FreeCAD.Vector(1,-1,0),
                   #fc_axis_p = VY,
                   ref_axis = 1, 
                   #ref_bolt = 0,
-                  pos = V0,
+                  pos = FreeCAD.Vector(3,2,5),
                   wfco = 1,
                   name = 'nema_holder')
 
