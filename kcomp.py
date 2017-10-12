@@ -92,7 +92,7 @@ extrud_sep = 40.0
 D912_HEAD_D = {3: 5.5, 4: 7.0, 5: 8.5, 6:10.0, 8:13.0, 10:18.0} 
 # length: the index is the M, i.e: M3, M4, ..., the value is the length of the head of the bolt
 # well, it is the same as the M, never mind...
-D912_HEAD_L =  {3: 3.0,4: 4.0, 5: 5.0,  6:6.0, 8:8.0,  10:10.0} 
+D912_HEAD_L =  {3: 3.0, 4: 4.0, 5: 5.0,  6:6.0, 8:8.0,  10:10.0} 
 
 M3_HEAD_R = D912_HEAD_D[3] / 2.0
 M3_HEAD_L = D912_HEAD_L[3] + TOL

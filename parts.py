@@ -1433,46 +1433,52 @@ class SimpleEndstopHolder (object):
                     :          :
                     estp_tot_h
 
-                               fc_axis_h
-                               :
-       ________________________:.............
-       | :..........:       :: |.....       + h
-       |__:________:________::_|.....base_h.:
+       ref_d points:          fc_axis_h
+                              :
+       1___2______3_______4___5.............     ref_h = 2
+       | :..........:    : : |:.....       + h
+       |__:________:_____:_:_|:.....base_h.:     ref_h = 1
 
 
+       ref_w points
                              fc_axis_w
         _____________________ :
        |   ________     |    |:
        |  (________) ---| 0  |:
-       |   ________  ---|    |1-----> fc_axis_d
-       |  (3______2) ---| 5  |:
-       |________________|____|4
-                    :        ::
-                             holder_out
+       1   ________  ---|    |:-----> fc_axis_d.
+       3  (________) ---| 2  |:
+       4________________|____|:
+
+
 
 
         d_endstop: dictionary of the endstop
+        rail_l: length of the rail, but only the internal length, not counting
+               the arches to make the semicircles for the bolts
+               just from semicircle center to the other semicircle center
         h: total height, if 0 it will be the minimum height
         base_h: height for the base (for the mounting bolts)
-        holder_out: the endstop holder will end a little bit before to avoid
+        holder_out: the endstop holder can end a little bit before to avoid
                it to be the endstop
         mbolt_d: diameter (metric) of the mounting bolts (for the holder
                not for the endstop
-        ref_h: reference on fc_axis_h
-                1: on top
-               -1: at the bottom
-        ref_d: reference on fc_axis_d
-               1 = at the end of the endstop (the holder ends before that)
-                   : points 1, 4 
-               2 = at the beginning of the rail (rail0): point 2
-               3 = at the end of the rail (rail1): point 3
-               4 = at the bolt of the endstop: point 5
-        ref_w: reference on fc_axis_w
-               1 = centered, point 1
-               2 = at the end: point 4
-               3 = at the rail: 2, 3
-               4 = at the endstop bolt: 5
-        the reference on fc_axis_h will always be at the bottom
+        ref_h: reference (zero) of fc_axis_h
+                1: at the bottom
+                2: on top
+        ref_d: reference (zero) of fc_axis_d
+               1 = at the end on the side of the rails
+               2 = at the circle center of one rail (closer to 1)
+               3 = at the circle center of the other rail, closer to endstop
+               4 = at the bolt of the endstop
+               5 = at the end of the endstop (the holder ends before that)
+        ref_w: reference on fc_axis_w. it is symmetrical, only the negative side
+               1 = centered
+               2 = at one endstop bolt
+                   the other endstop bolt will be on the direction of fc_axis_w
+               3 = at one rail center
+                   the rail center will be on the direction of fc_axis_w
+               4 = at the end
+                   the end will be on the direction of fc_axis_w
 
         the rails can be countersunk to make space for the bolts
 
@@ -1512,12 +1518,12 @@ class SimpleEndstopHolder (object):
         self.axis_h = axis_h
         self.axis_d = axis_d
         self.axis_w = axis_w
-        # best axis to print:
-        self.axis_print = axis_h_n
+        # best axis to print, to be pointing up:
+        self.axis_print = axis_h
 
         self.d_endstop = d_endstop
 
-        #      rail1   rail0           :holder_out
+        #                              :holder_out
         #      __:________:____________: :..................
         #     |   _________      |     |                   :
         #     |  (_________) ----| 0   |                   + tot_w
@@ -1585,120 +1591,108 @@ class SimpleEndstopHolder (object):
         self.tot_d = tot_d
             
         # ------------ DISTANCES ON AXIS_D
+        # ref_d points:          fc_axis_h
+                               
+        #  1___2______3_______4__.5.............     ref_h = 2
+        #  | :..........:    : : |:.....       + h
+        #  |__:________:_____:_:_|:.....base_h.:     ref_h = 1
+
         # the end it is not on the holder because of -holder_out
-        # distance on axis_d
-        end2estpbolt_d = estp_d - estp_bolt_dist 
-        # vector
-        fc_end2estpbolt_d =DraftVecUtils.scale(axis_d_n, end2estpbolt_d)
+        # distance from 1 to 2 in axis_d
+        dis_1_2_d = 2* mbolt_head_r
+        dis_1_3_d = dis_1_2_d + rail_l
+        #dis_2_3_d = rail_l
+        dis_1_5_d = tot_d + holder_out
+        dis_1_4_d = dis_1_5_d - (estp_d - estp_bolt_dist)
 
+        fc_1_2_d = DraftVecUtils.scale(axis_d, dis_1_2_d)
+        fc_1_3_d = DraftVecUtils.scale(axis_d, dis_1_3_d)
+        fc_1_4_d = DraftVecUtils.scale(axis_d, dis_1_4_d)
+        fc_1_5_d = DraftVecUtils.scale(axis_d, dis_1_5_d)
+        # vector from the reference point to point 1 on axis_d
+        if ref_d == 1: 
+            refto_1_d = V0
+        elif ref_d == 2:
+            refto_1_d = fc_1_2_d.negative()
+        elif ref_d == 3:
+            refto_1_d = fc_1_3_d.negative()
+        elif ref_d == 4:
+            refto_1_d = fc_1_4_d.negative()
+        elif ref_d == 5:
+            refto_1_d = fc_1_5_d.negative()
+        else:
+            logger.error('wrong reference point')
 
-        # rail0 is the begining of the rail, center of the circle, not the end
-        estpbolt2rail0_d = estp_tot_d - end2estpbolt_d + mbolt_head_r
-        fc_estpbolt2rail0_d =DraftVecUtils.scale(axis_d_n, estpbolt2rail0_d)
-        end2rail0_d = estp_tot_d + mbolt_head_r
-        fc_end2rail0_d =DraftVecUtils.scale(axis_d_n, end2rail0_d)
-        fc_rail02rail1_d =DraftVecUtils.scale(axis_d_n, rail_l)
-
-        print('tot_d ' + str(tot_d))
-        print('end2estpbolt_d ' + str(end2estpbolt_d))
-        print('estpbolt2rail0_d ' + str(estpbolt2rail0_d))
-        print('end2rail0_d' + str(end2rail0_d))
-
-        # reference on axis_d
-        if ref_d == 1:  # reference at the end (the end of the endstop)
-            # the holder is a holder_out shorter
-            ref2end_d = V0
-            #to the beginnig of the rail
-            ref2estpbolt_d = fc_end2estpbolt_d
-            ref2rail0_d = fc_end2rail0_d
-            ref2rail1_d = fc_end2rail0_d + fc_rail02rail1_d
-        elif ref_d == 4: # reference at the endstop bolt
-            ref2end_d = fc_end2estpbolt_d.negative()
-            ref2estpbolt_d = V0
-            ref2rail0_d = fc_estpbolt2rail0_d
-            ref2rail1_d = fc_estpbolt2rail0_d + fc_rail02rail1_d
-        elif ref_d == 2: # reference at begining of the rail
-            ref2end_d = fc_end2rail0_d.negative()
-            ref2estpbolt_d = fc_estpbolt2rail0_d.negative()
-            ref2rail0_d = V0
-            ref2rail1_d = fc_rail02rail1
-        else: # ref_d == 3: # reference at the end of the rail
-            ref2end_d = fc_rail02rail1.negative() + fc_end2rail0_d.negative()
-            ref2estpbolt_d = (  fc_rail02rail1.negative()
-                              + fc_estpbolt2rail0_d.negative())
-            ref2rail0_d = fc_rail02rail1.negative()
-            ref2rail1_d = V0
-        # the real end, in the holder, not outside with the endstop 
-        ref2realend_d = ref2end_d + DraftVecUtils.scale(axis_d_n, holder_out)
         # ------------ DISTANCES ON AXIS_W
-        cen2end_w = tot_w/2.
-        # to the mounting bolts (rail bolts)
-        # vector. axis_w_n (negated), taking this reference
-        fc_cen2end_w =DraftVecUtils.scale(axis_w_n, cen2end_w)
-        cen2mbolt_w = tot_w/2. - 2* mbolt_head_r
-        fc_cen2mbolt_w = DraftVecUtils.scale(axis_w_n, cen2mbolt_w)
-        # to the endstop bolts
-        cen2estpbolt_w = estp_bolt_sep/2.
-        fc_cen2estpbolt_w = DraftVecUtils.scale(axis_w_n, cen2estpbolt_w)
-        # distance from the end to:
-        end2mbolt_w = 2*mbolt_head_r
-        fc_end2mbolt_w = DraftVecUtils.scale(axis_w, end2mbolt_w)
-        end2estpbolt_w = tot_w/2. - estp_bolt_sep/2.
-        fc_end2estpbolt_w = DraftVecUtils.scale(axis_w, end2estpbolt_w)
-        # distance from the mbolt to the endstop bolt:
-        mbolt2estpbolt_w = end2mbolt_w - end2estpbolt_w
-        fc_mbolt2estpbolt_w = DraftVecUtils.scale(axis_w, mbolt2estpbolt_w)
-        # reference on axis_w
-        if ref_w == 1:  # reference at the center
-            ref2cen_w = V0
-            ref2estpbolt_w = fc_cen2estpbolt_w
-            ref2mbolt_w = fc_cen2mbolt_w
-            ref2end_w = fc_cen2end_w
-        elif ref_w == 3: # reference at the mbolt (rails)
-            ref2cen_w = fc_cen2mbolt_w.negative()
-            ref2estpbolt_w = fc_mbolt2estpbolt_w
-            ref2mbolt_w = V0
-            ref2end_w = fc_end2mbolt_w.negative()
-        elif ref_w == 4: # reference at endstop bolts
-            ref2cen_w = fc_cen2estpbolt_w.negative()
-            ref2estpbolt_w = V0
-            ref2mbolt_w = fc_mbolt2estpbolt_w.negative()
-            ref2end_w = fc_end2estpbolt_w.negative()
-        else: # ref_w == 2: # reference at the end
-            ref2cen_w = fc_cen2end_w.negative()
-            ref2estpbolt_w = fc_end2estpbolt_w
-            ref2mbolt_w = fc_end2mbolt_w
-            ref2end_w = V0
-        # ------------ DISTANCES ON AXIS_H
-        # reference on axis_w
-        if ref_h == 1: # on top
-            ref2top_h = V0
-            ref2bot_h = DraftVecUtils.scale(axis_h_n, tot_h)
-        else: # == -1: at the bottom
-            ref2top_h = DraftVecUtils.scale(axis_h, tot_h)
-            ref2bot_h = V0
+        # ref_w points
+        #                      fc_axis_w
+        #  _____________________ :
+        # |   ________     |    |:
+        # |  (________) ---| 0  |:
+        # 1   ________  ---|    |:-----> fc_axis_d.
+        # 3  (________) ---| 2  |:
+        # 4________________|____|:
 
-        #to draw the box we need to be at the real end, not at the end of the
-        # endstop. We will be at the real end on axis_d, and at the center on
-        # axis_w, and at the bottom
-        realend_pos = pos + ref2realend_d + ref2cen_w + ref2bot_h
+        # distance from 1 to 2 on axis_w
+        dis_1_2_w = estp_bolt_sep/2.
+        dis_1_4_w = tot_w/2.
+        dis_1_3_w = dis_1_4_w - 2* mbolt_head_r
+
+        fc_1_2_w = DraftVecUtils.scale(axis_w_n, dis_1_2_w)
+        fc_1_3_w = DraftVecUtils.scale(axis_w_n, dis_1_3_w)
+        fc_1_4_w = DraftVecUtils.scale(axis_w_n, dis_1_4_w)
+        # vector from the reference point to point 1 on axis_w
+        if ref_w == 1: 
+            refto_1_w = V0
+        elif ref_w == 2:
+            refto_1_w = fc_1_2_w.negative()
+        elif ref_w == 3:
+            refto_1_w = fc_1_3_w.negative()
+        elif ref_w == 4:
+            refto_1_w = fc_1_4_w.negative()
+        else:
+            logger.error('wrong reference point')
+
+        # ------------ DISTANCES ON AXIS_H
+        fc_1_2_h = DraftVecUtils.scale(axis_h, tot_h)
+        fc_2_1_h = fc_1_2_h.negative()
+        if ref_h == 1: 
+            refto_2_h = fc_1_2_h
+        elif ref_h == 2:
+            refto_2_h = V0
+        else:
+            logger.error('wrong reference point')
+
+
+        # Situation of the point on d=1, s=1, h=2
+        #       ____________
+        #      /
+        #     * d1_w1_h2
+        #    /____________
+        #    |
+        #
+        # this is an absolute position
+        d1_w1_h2_pos = pos + refto_1_d + refto_1_w + refto_2_h
+        d1_w1_h1_pos = d1_w1_h2_pos + fc_2_1_h
+
+
+        # draw the box from this point d1 s1 h2
         shp_box = fcfun.shp_box_dir(box_w = tot_w,
                                     box_d = tot_d,
                                     box_h = tot_h,
-                                    fc_axis_h = axis_h,
-                                    fc_axis_d = axis_d_n,
+                                    fc_axis_h = axis_h_n,
+                                    fc_axis_d = axis_d,
                                     cw = 1, cd = 0, ch = 0,
-                                    pos = realend_pos)
+                                    pos = d1_w1_h2_pos)
 
         shp_box = fcfun.shp_filletchamfer_dir(shp_box, fc_axis = axis_h,
                                               fillet=1,
                                               radius = 2)
 
         holes = []
-        # holes for the endstop bolts:
-        for fc_estpbolts_wi in [fc_cen2estpbolt_w,fc_cen2estpbolt_w.negative()]:
-            pos_estpbol = (  pos + ref2bot_h + ref2estpbolt_d
-                           + ref2cen_w + fc_estpbolts_wi)
+        # holes for the endstop bolts, point: d4 w2 h1
+        for fc_1_2_wi in [fc_1_2_w, fc_1_2_w.negative()]:
+            pos_estpbolt = d1_w1_h1_pos + fc_1_4_d + fc_1_2_wi
             # hole with the nut hole
             shp_estpbolt = fcfun.shp_bolt_dir (
                                 r_shank= (estp_bolt_d+TOL)/2.,
@@ -1709,28 +1703,41 @@ class SimpleEndstopHolder (object):
                                 xtr_head = 1, xtr_shank = 1,
                                 fc_normal = axis_h,
                                 fc_verx1 = axis_d,
-                                pos = pos_estpbol)
+                                pos = pos_estpbolt)
             holes.append(shp_estpbolt)
-        # holes for the rails:
-        for fc_mbolts_wi in [fc_cen2mbolt_w, fc_cen2mbolt_w.negative()]:
+        # holes for the rails, point d2 w3 h2
+        for fc_1_3_wi in [fc_1_3_w, fc_1_3_w.negative()]:
             #hole for the rails, use the function stadium
-            hole_pos = ( pos + ref2top_h + ref2rail0_d + ref2cen_w
-                        + fc_mbolts_wi)
+            rail_pos = d1_w1_h2_pos + fc_1_2_d + fc_1_3_wi
             shp_rail_sunk = fcfun.shp_stadium_dir (
-                                  l = rail_l,
-                                  r = mbolt_head_r_tol,
-                                  h = mbolt_head_l,
-                                  fc_axis_l = axis_d_n,
+                                  length = rail_l,
+                                  radius = mbolt_head_r_tol,
+                                  height = mbolt_head_l,
+                                  fc_axis_l = axis_d,
+                                  fc_axis_h = axis_h_n,
+                                  ref_l = 2, #at the center of semicircle
+                                  ref_s = 1, # symmetrical on the short side
+                                  ref_h = 2,
+                                  xtr_h = 0,
+                                  xtr_nh = 1,
+                                  pos = rail_pos)
+            shp_rail = fcfun.shp_stadium_dir (
+                                  length = rail_l,
+                                  radius = mbolt_r_tol,
+                                  height = tot_h,
+                                  fc_axis_l = axis_d,
                                   fc_axis_h = axis_h_n,
                                   ref_l = 2,
                                   ref_s = 1,
                                   ref_h = 2,
-                                  xtr_nh = 1,
-                                  pos = hole_pos)
+                                  xtr_h = 1,
+                                  xtr_nh = 0,
+                                  pos = rail_pos)
+
                                   
                                   
+            holes.append(shp_rail)
             holes.append(shp_rail_sunk)
-            #Part.show(shp_rail_sunk)
 
         shp_holes = fcfun.fuseshplist(holes)
         shp_holder = shp_box.cut(shp_holes)
@@ -1753,13 +1760,22 @@ class SimpleEndstopHolder (object):
         else:
             logger.debug("Object with no fco")
 
+    # exports the shape to STL format
+    def export_stl (self, name = ""):
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName = stlPath + name + ".stl"
+        self.fco.Shape.exportStl(stlFileName)
+
+
 
 
 doc = FreeCAD.newDocument()
 h_estp = SimpleEndstopHolder(
                  d_endstop = kcomp.ENDSTOP_A,
                  rail_l = 15,
-                 base_h = 5.,
+                 base_h = 3.,
                  h = 0,
                  holder_out = 2.,
                  #csunk = 1,
