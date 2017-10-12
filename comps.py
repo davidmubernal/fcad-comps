@@ -375,12 +375,14 @@ class Sk_dir (object):
         if skdict == None:
             logger.error("Sk size %d not supported", size)
 
-        doc = FreeCAD.ActiveDocument
         # normalize de axis
         axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
         axis_d = DraftVecUtils.scaleTo(fc_axis_d,1)
         if fc_axis_w == V0:
             axis_w = axis_h.cross(axis_d)
+        else:
+            axis_w = DraftVecUtils.scaleTo(fc_axis_w,1)
+
         axis_h_n = axis_h.negative()
         axis_d_n = axis_d.negative()
         axis_w_n = axis_w.negative()
@@ -555,9 +557,9 @@ h_sk = Sk_dir (size = 12,
                  fc_axis_h = VZ,
                  fc_axis_d = VX,
                  fc_axis_w = V0,
-                 ref_hr = 1,
-                 ref_wc = 1,
-                 ref_dc = 1,
+                 ref_hr = 0,
+                 ref_wc = 0,
+                 ref_dc = 0,
                  pos = V0,
                  wfco = 1,
                  name= "shaft_holder")

@@ -565,7 +565,7 @@ def shp_box_dir_xtr (box_w, box_d, box_h,
     # make the face of the wire
     shp_facebase = Part.Face(wire_base)
     # length of the extrusion
-    v_extr = DraftVecUtils.scale(axis_h, box_h + xtr_h)
+    v_extr = DraftVecUtils.scale(axis_h, box_h + xtr_h + xtr_nh)
     shp_box = shp_facebase.extrude(v_extr)
 
     return(shp_box)
@@ -1229,7 +1229,7 @@ def shp_stadium_wire (l, r, axis_rect='x', pos_z=0):
 
     wire_stadium = Part.Wire (list_elem)
 
-    Part.show(wire_stadium)
+    #Part.show(wire_stadium)
     return (wire_stadium)
 
 # same as shp_stadium_wire, but returns a face
@@ -1238,6 +1238,239 @@ def shp_stadium_face (l, r, axis_rect='x', pos_z=0):
     shpStadiumWire = shp_stadium_wire (l, r, axis_rect, pos_z)
     shpStadiumFace = Part.Face (shpStadiumWire)
     return shpStadiumFace
+
+
+
+
+# ------------------- def shp_stadium_wire_dir
+
+def shp_stadium_wire_dir (l, r, fc_axis_l = VX,
+                          fc_axis_s = VY,
+                          ref_l = 1,
+                          ref_s = 1,
+                          pos=V0):
+
+    """
+    Same as shp_stadium_wire but in any direction
+    Also called discorectangle
+  
+    it will be centered on XY
+                                 
+                              fc_axis_s
+                               |
+               _____ .. r      |--> fc_axis_l
+              (_____)--
+               :   :
+               :.l.:
+ 
+    Arguments:
+    l: length of the parallels
+    r: Radius of the semicircles
+    fc_axis_l: vector on the direction of the paralles
+    fc_axis_s: vector on the direction of the paralles
+    ref_l: reference (zero) of the fc_axis_l
+            1: reference on the center (makes axis_s symmetrical)
+            2: reference at one of the semicircle centers (point 2)
+               the other circle center will be on the direction of fc_axis_l
+            3: reference at the end (point 3)
+               the other end will be on the direction of fc_axis_l
+    ref_s: reference (zero) of the fc_axis_s
+            1: reference at the center (makes axis_l symmetrical): p 1,2,3
+            2: reference at the parallels lines: p: 4, 5 
+               the other parallel will be on the direction of fc_axis_s
+    pos: FreeCAD vector of the position of the reference
+
+
+          fc_axis_s              in this drawing, 
+           :  p_edge             the zero is on point 2
+           :_________           ref_l = 2, ref_s = 1
+          /          \
+         3 2    1     ) -------> fc_axis_l
+          \5____4____/   n_edge
+             n_edge        
+     n circle        p circle
+
+    returns the shape of the wire
+    """
+
+    # normalize the axis
+    axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
+    axis_s = DraftVecUtils.scaleTo(fc_axis_s,1)
+
+
+    #        axis_s: 1, 2, 3 are the points in s
+    #      ____:_____
+    #     /    3     \
+    #    3 2   1    4 5 --> axis_l: 3, 2, 1, are the points in l
+    #     \____2_____/
+    #           
+    #
+    
+    # ----- Distance vectors on axis_l
+    # distance from 1 to 2 in axis_l
+    fc_1_2_l = DraftVecUtils.scale(axis_l, -l/2)
+    fc_2_3_l = DraftVecUtils.scale(axis_l, -r)
+    fc_1_3_l = fc_1_2_l + fc_2_3_l
+    fc_1_4_l = fc_1_2_l.negative()
+    fc_1_5_l = fc_1_3_l.negative()
+    # ----- reference to 1 on axis_l
+    #d vector to go from the reference point to point 1 in l
+    if ref_l == 1:  # ref on stadium center
+        refto_1_l = V0
+    elif ref_l == 2:  # ref on circle center (left)
+        refto_1_l = fc_1_4_l # or fc_1_2_l.negative()
+    elif ref_l == 3:  # ref at the left end
+        refto_1_l = fc_1_3_l
+    else:
+        logger.error('wrong ref_l in shp_stadium_wire_dir')
+
+
+    # ----- Distance vectors on axis_s
+    # distance from 1 to 2 in axis_s
+    fc_1_2_s = DraftVecUtils.scale(axis_s, -r)
+    fc_1_3_s = fc_1_2_s.negative()
+    #fc_2_3_s = DraftVecUtils.scale(axis_s, 2*r)
+    # ----- reference to 1 on axis_s
+    #d vector to go from the reference point to point 1 in s
+    if ref_s == 1:  # ref on stadium center
+        refto_1_s = V0
+    elif ref_s == 2:  # ref at the bottom
+        refto_1_s = fc_1_3_s # or fc_1_2_s.negative()
+    else:
+        logger.error('wrong ref_l in shp_stadium_wire_dir')
+
+    # Now define the center point of the stadium. This is an absolute position,
+    # and everything will be defined from this point
+    # ln: L axis Negative side
+    # lp: L axis Positive side
+    # sn: S axis Negative side
+    # sp: S axis Positive side
+    # s0: S axis at zero
+    #
+    #         axis_s
+    #    ln_sp :
+    #      ____:____lp_sp       
+    #     /          \
+    # ln_s0    cs     ) lp_s0 -------> axis_l
+    #     \__________/
+    #    ln_sn       lp_sn
+    #
+    #        axis_s: 1, 2, 3 are the points in s
+    #      ____:_____
+    #     /    3     \
+    #    3 2   1    4 5 --> axis_l: 3, 2, 1, are the points in l
+    #     \____2_____/
+    #           
+    #
+    
+    # Define these 6 points from cs_pos (Center Stadium pos)
+    cs_pos = pos + refto_1_l + refto_1_s
+
+    ln_s0_pos = cs_pos + fc_1_3_l
+    lp_s0_pos = cs_pos + fc_1_5_l
+
+    ln_sp_pos = cs_pos + fc_1_2_l + fc_1_3_s
+    lp_sp_pos = cs_pos + fc_1_4_l + fc_1_3_s
+
+    ln_sn_pos = cs_pos + fc_1_2_l + fc_1_2_s
+    lp_sn_pos = cs_pos + fc_1_4_l + fc_1_2_s
+
+    lin_p =  Part.Line(ln_sp_pos, lp_sp_pos).toShape() 
+    arch_p = Part.Arc(lp_sp_pos, lp_s0_pos, lp_sn_pos).toShape()
+    lin_n = Part.Line(lp_sn_pos, ln_sn_pos).toShape() 
+    arch_n = Part.Arc(ln_sn_pos, ln_s0_pos, ln_sp_pos).toShape()
+    wire_stadium = Part.Wire ([lin_p, arch_p, lin_n, arch_n])
+
+    Part.show(wire_stadium)
+    return (wire_stadium)
+
+
+def shp_stadium_dir (
+                     l, r, h,
+                     fc_axis_l = VX,
+                     fc_axis_s = V0,
+                     fc_axis_h = VZ,
+                     ref_l = 1,
+                     ref_s = 1,
+                     ref_h = 1,
+                     xtr_h = 0,
+                     xtr_nh = 0,
+                     pos=V0):
+
+    """ 
+    makes a stadium shape in any direction
+    see shp_stadium_wire_dir for the arguments
+
+    h: height the stadium
+    fc_axis_s: direction on the short axis, not necessary if ref_s == 1
+         it will be the perpendicular of the other 2 vectors
+    fc_axis_h: vector on the height direction
+    ref_h: 1: reference is at the center of the height
+           2: reference is at the bottom
+    xtr_h: if >0 it will be that extra height on the direction of fc_axis_h
+    xtr_nh: if >0 it will be that extra height on the opositve direction of
+             fc_axis_h
+        
+
+
+        fc_axis_s
+          :
+          :_________           ref_l = 2, ref_s = 1
+          /          \
+         3 2    1     ) -------> fc_axis_l
+          \5____4____/ 
+
+        fc_axis_h
+         _:___________ ............................
+        |             |                            :
+        |             |                            :
+        |      1      |      ref_h=1               + h
+        |             |                            :
+        |______2______|.......> fc_axis_l .........:  ref_h=2
+
+    """
+
+    # normalize the axis
+    axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
+    axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+    axis_h_n = axis_h.negative()
+    if fc_axis_s == V0:
+        axis_s = axis_l.cross(axis_h)
+    else:
+        axis_s = DraftVecUtils.scaleTo(fc_axis_s,1)
+
+    
+    if ref_h == 1: # we have to move the stadium half the height down + xtr_nh
+        basepos = pos + DraftVecUtils.scale(axis_h_n, h/2. + xtr_nh)
+    else:
+        basepos = pos + DraftVecUtils.scale(axis_h_n, xtr_nh)
+
+    shp_stadium_wire = shp_stadium_wire_dir (l,r, fc_axis_l = axis_l,
+                                         fc_axis_s = axis_s,
+                                         ref_l = ref_l, ref_s = ref_s,
+                                         pos = basepos)
+
+    # make a face of the wire
+    shp_stadium_face = Part.Face (shp_stadium_wire)
+    # extrude it
+    dir_extrud = DraftVecUtils.scaleTo(axis_h, h + xtr_nh + xtr_h)
+    shp_stadium = shp_stadium_face.extrude(dir_extrud)
+    return (shp_stadium)
+
+
+shp_std = shp_stadium_dir (
+                     l=20, r=5, h=40,
+                     fc_axis_l = VX,
+                     fc_axis_s = VY,
+                     fc_axis_h = VZ,
+                     ref_l = 3,
+                     ref_s = 2,
+                     ref_h = 2,
+                     xtr_h = 0,
+                     xtr_nh = 2,
+                     pos=FreeCAD.Vector(0,0,-1))
+
+
 
 # ------------------- def shpRndRectWire
 # Creates a wire (shape), that is a rectangle with rounded edges.

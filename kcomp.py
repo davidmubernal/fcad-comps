@@ -134,11 +134,11 @@ D912 = { 3: D912_M3,
 """
 
 # the circumdiameter, min value
-NUT_D934_D = {3: 6.01, 4: 7.66, 5: 8.79}
+NUT_D934_D =  {2.5: 5.45, 3: 6.01, 4: 7.66, 5: 8.79}
 # double the apotheme, max value
-NUT_D934_2A = {3: 5.5, 4: 7.0,  5: 8.0}
+NUT_D934_2A = {2.5: 5.,   3: 5.5,  4: 7.0,  5: 8.0}
 # the heigth, max value
-NUT_D934_L  = {3: 2.4, 4: 3.2,  5: 4.0}
+NUT_D934_L  = {2.5: 2.,   3: 2.4,  4: 3.2,  5: 4.0}
 
 M3_NUT_R = NUT_D934_D[3] / 2.0
 M3_NUT_L = NUT_D934_L[3] + TOL
