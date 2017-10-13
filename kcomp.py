@@ -101,8 +101,13 @@ M3_SHANK_R_TOL = 3 / 2.0 + TOL/2.0
 
 M4_HEAD_R = D912_HEAD_D[4] / 2.0
 M4_HEAD_L = D912_HEAD_L[4] + TOL
-M4_HEAD_R_TOL = M3_HEAD_R + TOL/2.0 # smaller TOL, because it's small
-M4_SHANK_R_TOL = 3 / 2.0 + TOL/2.0
+M4_HEAD_R_TOL = M4_HEAD_R + TOL/2.0 # smaller TOL, because it's small
+M4_SHANK_R_TOL = 4 / 2.0 + TOL/2.0
+
+M6_HEAD_R = D912_HEAD_D[6] / 2.0
+M6_HEAD_L = D912_HEAD_L[6] + TOL
+M6_HEAD_R_TOL = M6_HEAD_R + TOL/2.0 # smaller TOL, because it's small
+M6_SHANK_R_TOL = 6 / 2.0 + TOL/2.0
 
 D912_M3 = {
             'd': 3.,  # diameter of the shank
@@ -120,8 +125,18 @@ D912_M4 = {
             'head_l' :  M4_HEAD_L
            }
 
+D912_M6 = {
+            'd': 6.,  # diameter of the shank
+            'shank_r_tol' :  6 / 2. + TOL/2.,
+            'head_r' :  M6_HEAD_R,
+            'head_r_tol' :  M6_HEAD_R_TOL,
+            'head_l' :  M6_HEAD_L
+           }
+
+
 D912 = { 3: D912_M3,
-         4: D912_M4 }
+         4: D912_M4,
+         6: D912_M6 }
 
 
 # Nut DIN934 dimensions
