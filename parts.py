@@ -91,6 +91,9 @@ class AluProfBracketPerp (object):
             if 0, the same as bolt_lin_d
         nbolts_lin: 1: just one bolt on the fc_lin_ax, or two bolts
                    2: two bolts on the fc_lin_ax, or two bolts
+        bolts_lin_dist = If more than one bolt on fc_lin_ax, defines the 
+                   distance between them.
+                   if zero, takes min distance
         xtr_bolt_head : extra space for the bolt head length,
                         and making a space for it
         xtr_bolt_head_d : extra space for the bolt head diameter,
@@ -113,6 +116,7 @@ class AluProfBracketPerp (object):
                  bolt_lin_d = 3, #metric of the bolt 
                  bolt_perp_d = 0, #metric of the bolt
                  nbolts_lin = 1,
+                 bolts_lin_dist = 0,
                  xtr_bolt_head = 3,
                  xtr_bolt_head_d = 0,
                  reinforce = 1,
@@ -157,19 +161,25 @@ class AluProfBracketPerp (object):
         #              :   |  |__|___|___ 
         #              :...|_____________|
         #                  :.......:
-        #                  boltli_dist = br_perp_thick+boltpehead_l+boltlihead_r
+        #                 bolt1li_dist = br_perp_thick+boltpehead_l+boltlihead_r
         #                          :  :  :
         #                        2 x boltlihead_r
         #                  :.............:
         #                      + brlin_l
 
-        boltli_dist = (  br_perp_thick + boltpehead_l + boltlihead_r_tol
+        bolt1li_dist = (  br_perp_thick + boltpehead_l + boltlihead_r_tol
                         + xtr_bolt_head )
 
-        brlin_l = boltli_dist + 2 * boltlihead_r
+
+        brlin_l = bolt1li_dist + 2 * boltlihead_r
         if nbolts_lin > 1:
-            # for every new bolt, add 3 times the bolt head radius
-            brlin_l = brlin_l + (nbolts_lin-1)* 3 *  boltlihead_r
+            if bolts_lin_dist == 0:
+                # for every new bolt, add 3 times the bolt head radius
+                bolts_lin_dist = 3 *  boltlihead_r
+            elif bolts_lin_dist <  (3 *  boltlihead_r) :
+                logger.warning ('bolt_lin_dist too short')
+                bolts_lin_dist = 3 *  boltlihead_r
+            brlin_l = brlin_l + (nbolts_lin-1)* bolts_lin_dist
 
         #              ....:__: :  :           _________
         #              :   |  |_   :          ||       ||
@@ -264,7 +274,7 @@ class AluProfBracketPerp (object):
         boltholes.append(shp_boltpe)
 
 
-        pos_boltli =  pos + DraftVecUtils.scale(axis_lin,boltli_dist) 
+        pos_boltli =  pos + DraftVecUtils.scale(axis_lin,bolt1li_dist) 
         shp_boltli= fcfun.shp_cylcenxtr(r=boltlishank_r_tol,
                             h=br_lin_thick,
                             normal = axis_perp,
@@ -278,7 +288,7 @@ class AluProfBracketPerp (object):
         for ibolt in range (1, nbolts_lin):
             # for every new bolt, add 3 times the bolt head radius
             pos_boltli = (  pos_boltli
-                           + DraftVecUtils.scale(axis_lin,3 *  boltlihead_r)) 
+                           + DraftVecUtils.scale(axis_lin,bolts_lin_dist)) 
             shp_boltli= fcfun.shp_cylcenxtr(r=boltlishank_r_tol,
                             h=br_lin_thick,
                             normal = axis_perp,
@@ -353,7 +363,8 @@ AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 20,
                  br_lin_thick = 3.,
                  bolt_lin_d = 6,
                  bolt_perp_d = 3,
-                 nbolts_lin = 1,
+                 nbolts_lin = 2,
+                 bolts_lin_dist = 25,
                  xtr_bolt_head = 3,
                  xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
                  reinforce = 1,
@@ -413,6 +424,9 @@ class AluProfBracketPerpFlap (object):
             if 0, the same as bolt_lin_d
         nbolts_lin: 1: just one bolt on the fc_lin_ax, or two bolts
                    2: two bolts on the fc_lin_ax, or two bolts
+        bolts_lin_dist = If more than one bolt on fc_lin_ax, defines the 
+                   distance between them.
+                   if zero, takes min distance
         xtr_bolt_head : extra space for the bolt head on the line to the wall
                         (perpendicular)
         sunk : 1: if the top part is removed,
@@ -438,6 +452,7 @@ class AluProfBracketPerpFlap (object):
                  bolt_lin_d = 3, #metric of the bolt
                  bolt_perp_d = 0, #metric of the bolt
                  nbolts_lin = 1,
+                 bolts_lin_dist = 0,
                  xtr_bolt_head = 1,
                  sunk = 1,
                  flap = 1,
@@ -479,18 +494,23 @@ class AluProfBracketPerpFlap (object):
         #              :   |  |__|___|___ 
         #              :...|_____________|
         #                  :.......:
-        #                 +boltli_dist=br_perp_thick+xtr_bolt_head+boltlihead_r
+        #                 +bolt1li_dist=br_perp_thick+xtr_bolt_head+boltlihead_r
         #                          :  :  :
         #                        2 x boltlihead_r
         #                  :.............:
         #                      + brlin_l
 
-        boltli_dist = br_perp_thick + xtr_bolt_head + boltlihead_r 
+        bolt1li_dist = br_perp_thick + xtr_bolt_head + boltlihead_r 
 
-        brlin_l = boltli_dist + 2 * boltlihead_r
+        brlin_l = bolt1li_dist + 2 * boltlihead_r
         if nbolts_lin > 1:
-            # for every new bolt, add 3 times the bolt head radius
-            brlin_l = brlin_l + (nbolts_lin-1)* 3 *  boltlihead_r
+            if bolts_lin_dist == 0:
+                # for every new bolt, add 3 times the bolt head radius
+                bolts_lin_dist = 3 *  boltlihead_r
+            elif bolts_lin_dist <  (3 *  boltlihead_r) :
+                logger.warning ('bolt_lin_dist too short')
+                bolts_lin_dist = 3 *  boltlihead_r
+            brlin_l = brlin_l + (nbolts_lin-1)* bolts_lin_dist
 
         #                      1
         #              ....:__: : :        _____________________
@@ -629,7 +649,7 @@ class AluProfBracketPerpFlap (object):
                 boltholes.append(shp_boltpe)
 
 
-        pos_boltli = ( pos + DraftVecUtils.scale(axis_lin,boltli_dist) +
+        pos_boltli = ( pos + DraftVecUtils.scale(axis_lin,bolt1li_dist) +
                         DraftVecUtils.scale(axis_perp, alusize_perp))
         shp_boltli = fcfun.shp_bolt_dir(r_shank = boltlishank_r_tol,
                             l_bolt = alusize_perp,
@@ -647,7 +667,7 @@ class AluProfBracketPerpFlap (object):
         for ibolt in range (1, nbolts_lin):
             # for every new bolt, add 3 times the bolt head radius
             pos_boltli = (  pos_boltli
-                           + DraftVecUtils.scale(axis_lin,3 *  boltlihead_r)) 
+                           + DraftVecUtils.scale(axis_lin,bolts_lin_dist)) 
             shp_boltli = fcfun.shp_bolt_dir(r_shank = boltlishank_r_tol,
                             l_bolt = alusize_perp,
                             r_head = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
@@ -692,11 +712,12 @@ class AluProfBracketPerpFlap (object):
 #doc = FreeCAD.newDocument()
 
 AluProfBracketPerpFlap ( alusize_lin = 25, alusize_perp = 20,
-                         br_perp_thick = 3.,
-                         br_lin_thick = 3.,
+                         br_perp_thick = 4.,
+                         br_lin_thick = 4.,
                          bolt_lin_d = 6,
                          bolt_perp_d = 3,
                          nbolts_lin = 2,
+                         bolts_lin_dist = 25,
                          xtr_bolt_head = 1,
                          sunk = 0,
                          flap = 1, 
@@ -1843,25 +1864,25 @@ class SimpleEndstopHolder (object):
 
 
 
-doc = FreeCAD.newDocument()
-h_estp = SimpleEndstopHolder(
-                 d_endstop = kcomp.ENDSTOP_A,
-                 rail_l = 15,
-                 base_h = 4.,
-                 h = 0,
-                 holder_out = 2.,
-                 #csunk = 1,
-                 mbolt_d = 3.,
-                 endstop_nut_dist = 2.,
-                 fc_axis_h = VZ,
-                 fc_axis_d = VX,
-                 fc_axis_w = V0,
-                 ref_d = 2,
-                 ref_w = 1,
-                 ref_h = 1,
-                 pos = V0,
-                 wfco = 1,
-                 name = 'simple_enstop_holder')
+#doc = FreeCAD.newDocument()
+#h_estp = SimpleEndstopHolder(
+#                 d_endstop = kcomp.ENDSTOP_A,
+#                 rail_l = 15,
+#                 base_h = 4.,
+#                 h = 0,
+#                 holder_out = 2.,
+#                 #csunk = 1,
+#                 mbolt_d = 3.,
+#                 endstop_nut_dist = 2.,
+#                 fc_axis_h = VZ,
+#                 fc_axis_d = VX,
+#                 fc_axis_w = V0,
+#                 ref_d = 2,
+#                 ref_w = 1,
+#                 ref_h = 1,
+#                 pos = V0,
+#                 wfco = 1,
+#                 name = 'simple_enstop_holder')
 
 
 # ----------- thin linear bearing housing with one rail to be attached
