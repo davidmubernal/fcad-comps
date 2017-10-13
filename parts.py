@@ -1449,7 +1449,18 @@ class SimpleEndstopHolder (object):
        3  (________) ---| 2  |:
        4________________|____|:
 
-
+                               
+        _____________________ .......
+       | :          :    : : |:.....: endstop_nut_dist 
+       | :..........:   :   :|:     
+       |__:________:____:___:|:.....
+ 
+                  if endstop_nut_dist == 0
+                    just take the length+TOL of the nut
+        _____________________ 
+       | :          :    : : |:
+       | :..........:    : : |:.....
+       |__:________:____:___:|:.....kcomp.NUT_D934_L[estp_bolt_d]+TOL
 
 
         d_endstop: dictionary of the endstop
@@ -1462,6 +1473,8 @@ class SimpleEndstopHolder (object):
                it to be the endstop
         mbolt_d: diameter (metric) of the mounting bolts (for the holder
                not for the endstop
+        endstop_nut_dist: distance from the top to the endstop nut.
+               if zero
         ref_h: reference (zero) of fc_axis_h
                 1: at the bottom
                 2: on top
@@ -1492,6 +1505,7 @@ class SimpleEndstopHolder (object):
                  holder_out = 2.,
                  #csunk = 1,
                  mbolt_d = 3.,
+                 endstop_nut_dist = 0,
                  fc_axis_h = VZ,
                  fc_axis_d = VX,
                  fc_axis_w = V0,
@@ -1570,6 +1584,8 @@ class SimpleEndstopHolder (object):
 
         tot_d = 3*mbolt_head_r + rail_l + estp_tot_d - holder_out
 
+
+
         # Total width is the largest value from:
         # - the width(length) of the endstop
         # - the rail width: 2 bolt head diameters, and 2 more: 1 diameter 
@@ -1589,6 +1605,19 @@ class SimpleEndstopHolder (object):
         self.tot_h = tot_h
         self.tot_w = tot_w
         self.tot_d = tot_d
+
+        if endstop_nut_dist == 0:
+            endstop_nut_l =  kcomp.NUT_D934_L[estp_bolt_d]+TOL
+        else:
+            if endstop_nut_dist > tot_h -  kcomp.NUT_D934_L[estp_bolt_d]+TOL:
+                logger.debug('endstop_nut_dist: ' + str(endstop_nut_dist)
+                             + ' larger than total height - (nut length+tol): '
+                             + str(tot_h) + ' - '
+                             + str( kcomp.NUT_D934_L[estp_bolt_d] + TOL))
+                endstop_nut_l =  kcomp.NUT_D934_L[estp_bolt_d]+TOL
+            else:
+                endstop_nut_l = tot_h - endstop_nut_dist
+
             
         # ------------ DISTANCES ON AXIS_D
         # ref_d points:          fc_axis_h
@@ -1698,7 +1727,7 @@ class SimpleEndstopHolder (object):
                                 r_shank= (estp_bolt_d+TOL)/2.,
                                 l_bolt = tot_h,
                                 r_head = (kcomp.NUT_D934_D[estp_bolt_d]+TOL)/2.,
-                                l_head = kcomp.NUT_D934_L[estp_bolt_d]+TOL,
+                                l_head = endstop_nut_l,
                                 hex_head = 1,
                                 xtr_head = 1, xtr_shank = 1,
                                 fc_normal = axis_h,
@@ -1742,11 +1771,7 @@ class SimpleEndstopHolder (object):
         shp_holes = fcfun.fuseshplist(holes)
         shp_holder = shp_box.cut(shp_holes)
            
-            
-
         self.shp = shp_holder
-
-        
 
         if wfco == 1:
             # a freeCAD object is created
@@ -1775,11 +1800,12 @@ doc = FreeCAD.newDocument()
 h_estp = SimpleEndstopHolder(
                  d_endstop = kcomp.ENDSTOP_A,
                  rail_l = 15,
-                 base_h = 3.,
+                 base_h = 4.,
                  h = 0,
                  holder_out = 2.,
                  #csunk = 1,
                  mbolt_d = 3.,
+                 endstop_nut_dist = 2.,
                  fc_axis_h = VZ,
                  fc_axis_d = VX,
                  fc_axis_w = V0,
@@ -1790,8 +1816,6 @@ h_estp = SimpleEndstopHolder(
                  wfco = 1,
                  name = 'simple_enstop_holder')
 
-
-        
 
 # ----------- thin linear bearing housing with one rail to be attached
 
