@@ -859,9 +859,22 @@ class AluProfBracketPerpTwin (object):
         alusize_perp: width of the perpendicular aluminum profile
         alu_sep: separation of the 2 paralell profiles, from their centers
         brack_thick: thickness of the bracket
-        bolt_d: metric of the bolt 3, 4, ... (integer)
+        bolt_lin_d: metric of the bolt 3, 4, ... (integer)
+        bolt_perp_d: metric of the bolt 3, 4, ... (integer) on the profile line
+            if 0, the same as bolt_lin_d
         nbolts_lin: 1: just one bolt on the fc_lin_ax, or two bolts
                    2: two bolts on the fc_lin_ax, or two bolts
+        bolts_lin_dist = If more than one bolt on fc_lin_ax, defines the 
+                   distance between them.
+                   if zero, takes min distance
+        bolts_lin_rail = instead of bolt holes, it will be a rail
+                  it doesnt make sense to have number of bolts with this option
+                  it will work on 2 bolts or more. If nbolts_lin == 3, it 
+                  will make a rail between them. so it will be the same to have
+                  nbolts_lin = 2 and bolts_lin_dist = 20
+                  nbolts_lin = 3 and bolts_lin_dist = 10
+                  The rail will be 20, and it will look the same, it will be
+                  more clear to have the first option: 2 bolts
         bolt_perp_line: 1: if it has a bolt on the wall (perp) but in line
                    with the line aluminum profiles
                    0: no bolt 
@@ -885,8 +898,11 @@ class AluProfBracketPerpTwin (object):
                  alu_sep,
                  br_perp_thick = 3.,
                  br_lin_thick = 3.,
-                 bolt_d = 3, #metric of the bolt
+                 bolt_lin_d = 3, #metric of the bolt
+                 bolt_perp_d = 0, #metric of the bolt
                  nbolts_lin = 1,
+                 bolts_lin_dist = 1,
+                 bolts_lin_rail = 0,
                  bolt_perp_line = 0,
                  xtr_bolt_head = 3,
                  sunk = 0,
@@ -900,11 +916,19 @@ class AluProfBracketPerpTwin (object):
         doc = FreeCAD.ActiveDocument
         self.name = name
 
-        bolt_dict = kcomp.D912[bolt_d]
-        bolthead_r = bolt_dict['head_r']
-        bolthead_r_tol = bolt_dict['head_r_tol']
-        boltshank_r_tol = bolt_dict['shank_r_tol']
-        bolthead_l = bolt_dict['head_l']
+        boltli_dict = kcomp.D912[bolt_lin_d]
+        boltlihead_r = boltli_dict['head_r']
+        boltlihead_r_tol = boltli_dict['head_r_tol']
+        boltlishank_r_tol = boltli_dict['shank_r_tol']
+        boltlihead_l = boltli_dict['head_l']
+        if bolt_perp_d == 0:
+            bolt_perp_d = bolt_lin_d
+        boltpe_dict = kcomp.D912[bolt_perp_d]
+        boltpehead_r = boltpe_dict['head_r']
+        boltpehead_r_tol = boltpe_dict['head_r_tol']
+        boltpeshank_r_tol = boltpe_dict['shank_r_tol']
+        boltpehead_l = boltpe_dict['head_l']
+
         # normalize axis, just in case:
         axis_perp = DraftVecUtils.scaleTo(fc_perp_ax,1)
         axis_lin = DraftVecUtils.scaleTo(fc_lin_ax,1)
@@ -923,8 +947,11 @@ class AluProfBracketPerpTwin (object):
                                         alusize_perp = alusize_perp,
                                         br_perp_thick = br_perp_thick,
                                         br_lin_thick = br_lin_thick,
-                                        bolt_d = bolt_d,
+                                        bolt_lin_d = bolt_lin_d,
+                                        bolt_perp_d = bolt_perp_d,
                                         nbolts_lin = nbolts_lin,
+                                        bolts_lin_dist = bolts_lin_dist,
+                                        bolts_lin_rail = bolts_lin_rail,
                                         xtr_bolt_head = xtr_bolt_head,
                                         reinforce = reinforce,
                                         fc_perp_ax = axis_perp,
@@ -935,10 +962,13 @@ class AluProfBracketPerpTwin (object):
                                         alusize_perp = alusize_perp,
                                         br_perp_thick = br_perp_thick,
                                         br_lin_thick = br_lin_thick,
-                                        bolt_d = bolt_d,
+                                        bolt_lin_d = bolt_lin_d,
+                                        bolt_perp_d = bolt_perp_d,
                                         nbolts_lin = nbolts_lin,
-                                        reinforce = reinforce,
+                                        bolts_lin_dist = bolts_lin_dist,
+                                        bolts_lin_rail = bolts_lin_rail,
                                         xtr_bolt_head = xtr_bolt_head,
+                                        reinforce = reinforce,
                                         fc_perp_ax = axis_perp,
                                         fc_lin_ax = axis_lin,
                                         pos = brlin2_pos,
@@ -949,10 +979,14 @@ class AluProfBracketPerpTwin (object):
                                         alusize_perp = alusize_perp,
                                         br_perp_thick = br_perp_thick,
                                         br_lin_thick = br_lin_thick,
+                                        bolt_lin_d = bolt_lin_d,
+                                        bolt_perp_d = bolt_perp_d,
                                         nbolts_lin = nbolts_lin,
+                                        bolts_lin_dist = bolts_lin_dist,
+                                        bolts_lin_rail = bolts_lin_rail,
+                                        xtr_bolt_head = xtr_bolt_head,
                                         sunk = sunk,
                                         flap = 0, #no flap
-                                        xtr_bolt_head = xtr_bolt_head,
                                         fc_perp_ax = axis_perp,
                                         fc_lin_ax = axis_lin,
                                         pos = pos,
@@ -962,9 +996,13 @@ class AluProfBracketPerpTwin (object):
                                         alusize_perp = alusize_perp,
                                         br_perp_thick = br_perp_thick,
                                         br_lin_thick = br_lin_thick,
+                                        bolt_lin_d = bolt_lin_d,
+                                        bolt_perp_d = bolt_perp_d,
                                         nbolts_lin = nbolts_lin,
-                                        sunk = sunk,
+                                        bolts_lin_dist = bolts_lin_dist,
+                                        bolts_lin_rail = bolts_lin_rail,
                                         xtr_bolt_head = xtr_bolt_head,
+                                        sunk = sunk,
                                         flap = 0, #no flap
                                         fc_perp_ax = axis_perp,
                                         fc_lin_ax = axis_lin,
@@ -1006,22 +1044,22 @@ class AluProfBracketPerpTwin (object):
                                                     fc_axis = axis_perp,
                                                     fc_pts = chmf_pts,
                                                     fillet = 0,
-                                                    radius = bolthead_r )
+                                                    radius = boltpehead_r )
 
         doc.recompute()
         shp_twinbr = shp_twinbr.removeSplitter()
 
         bolthole_list = []
-        if bolt_perp_line == 1 or union_w < 8 * bolthead_r:
+        if bolt_perp_line == 1 or union_w < 8 * boltpehead_r:
             # one bolt in the middle
             pos_boltpe =  (pos
                     + DraftVecUtils.scale(axis_perp,alusize_perp/2.)
-                    + DraftVecUtils.scale(axis_lin,br_perp_thick+bolthead_l)
+                    + DraftVecUtils.scale(axis_lin,br_perp_thick+boltpehead_l)
                     + DraftVecUtils.scale(axis_wid, alu_sep/2.))
-            shp_boltpe = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
-                            l_bolt = br_perp_thick + bolthead_l,
-                            r_head = bolthead_r_tol + kcomp.TOL, #extra TOL
-                            l_head = bolthead_l,
+            shp_boltpe = fcfun.shp_bolt_dir(r_shank = boltpeshank_r_tol,
+                            l_bolt = br_perp_thick + boltpehead_l,
+                            r_head = boltpehead_r_tol + kcomp.TOL, #extra TOL
+                            l_head = boltpehead_l,
                             xtr_head = 2,
                             xtr_shank = 1,
                             support = 0,
@@ -1031,17 +1069,17 @@ class AluProfBracketPerpTwin (object):
             bolthole_list.append(shp_boltpe)
         else:
             # 2 holes:
-            boltpe_w_pos1 = alusize_lin/2. + 2* bolthead_r
-            boltpe_w_pos2 = alu_sep - alusize_lin/2. - 2* bolthead_r
+            boltpe_w_pos1 = alusize_lin/2. + 2* boltpehead_r
+            boltpe_w_pos2 = alu_sep - alusize_lin/2. - 2* boltpehead_r
             for w_pos in [boltpe_w_pos1, boltpe_w_pos2]:
                 pos_boltpe =  (pos
                     + DraftVecUtils.scale(axis_perp,alusize_perp/2.)
-                    + DraftVecUtils.scale(axis_lin,br_perp_thick+bolthead_l)
+                    + DraftVecUtils.scale(axis_lin,br_perp_thick+boltpehead_l)
                     + DraftVecUtils.scale(axis_wid, w_pos))
-                shp_boltpe = fcfun.shp_bolt_dir(r_shank = boltshank_r_tol,
-                            l_bolt = br_perp_thick + bolthead_l,
-                            r_head = bolthead_r_tol + kcomp.TOL, #extra TOL
-                            l_head = bolthead_l,
+                shp_boltpe = fcfun.shp_bolt_dir(r_shank = boltpeshank_r_tol,
+                            l_bolt = br_perp_thick + boltpehead_l,
+                            r_head = boltpehead_r_tol + kcomp.TOL, #extra TOL
+                            l_head = boltpehead_l,
                             xtr_head = 2,
                             xtr_shank = 1,
                             support = 0,
@@ -1069,7 +1107,7 @@ class AluProfBracketPerpTwin (object):
             self.fco.ViewObject.ShapeColor = color
         else:
             logger.debug("Bracket object with no fco")
-        
+
     # exports the shape into stl format
     def export_stl (self, name = ""):
         #filepath = os.getcwd()
@@ -1098,21 +1136,24 @@ class AluProfBracketPerpTwin (object):
 #                 wfco=1,
 #                 name = 'bracket_twin3')
 
-#AluProfBracketPerpTwin ( alusize_lin = 10, alusize_perp = 10,
-#                 alu_sep = 40.,
-#                 br_perp_thick = 3.,
-#                 br_lin_thick = 3.,
-#                 bolt_d = 3,
-#                 nbolts_lin = 2,
-#                 bolt_perp_line = 1,
-#                 xtr_bolt_head = 4, # more extra because of the perp bolt
-#                 sunk = 2,
-#                 fc_perp_ax = VZ,
-#                 fc_lin_ax = VX,
-#                 fc_wide_ax = VY,
-#                 pos = V0,
-#                 wfco=1,
-#                 name = 'bracket_twin3_perp')
+AluProfBracketPerpTwin ( alusize_lin = 16, alusize_perp = 20,
+                 alu_sep = 25.,
+                 br_perp_thick = 3.,
+                 br_lin_thick = 3.,
+                 bolt_lin_d = 6,
+                 bolt_perp_d = 3,
+                 nbolts_lin = 2,
+                 bolts_lin_dist = 15,
+                 bolts_lin_rail = 1,
+                 bolt_perp_line = 1,
+                 xtr_bolt_head = 4, # more extra because of the perp bolt
+                 sunk = 0,
+                 fc_perp_ax = VZ,
+                 fc_lin_ax = VX,
+                 fc_wide_ax = VY,
+                 pos = V0,
+                 wfco=1,
+                 name = 'bracket_twin3_perp')
 
 
 
