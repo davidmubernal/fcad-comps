@@ -89,16 +89,24 @@ class AluProfBracketPerp (object):
         bolt_lin_d: metric of the bolt 3, 4, ... (integer)
         bolt_perp_d: metric of the bolt 3, 4, ... (integer) on the profile line
             if 0, the same as bolt_lin_d
-        nbolts_lin: 1: just one bolt on the fc_lin_ax, or two bolts
-                   2: two bolts on the fc_lin_ax, or two bolts
+        nbolts_lin: number of bolts one bolt on the fc_lin_ax, 
+                   number of bolts: two bolts on the fc_lin_ax
         bolts_lin_dist = If more than one bolt on fc_lin_ax, defines the 
                    distance between them.
                    if zero, takes min distance
+        bolts_lin_rail = instead of bolt holes, it will be a rail
+                  it doesnt make sense to have number of bolts with this option
+                  it will work on 2 bolts or more. If nbolts_lin == 3, it 
+                  will make a rail between them. so it will be the same to have
+                  nbolts_lin = 2 and bolts_lin_dist = 20
+                  nbolts_lin = 3 and bolts_lin_dist = 10
+                  The rail will be 20, and it will look the same, it will be
+                  more clear to have the first option: 2 bolts
         xtr_bolt_head : extra space for the bolt head length,
                         and making a space for it
         xtr_bolt_head_d : extra space for the bolt head diameter,
                           and making a space for it. For the wall bolt
-        reinforce = 1,
+        reinforce = 1, if it is reinforced on the sides of lin profile
         fc_perp_ax: axis of the bracket on the perpendicular prof, see picture
         fc_line_ax: axis of the bracket on the aligned profile, see picture
         pos : position of the center of the bracket on the intersection
@@ -117,6 +125,7 @@ class AluProfBracketPerp (object):
                  bolt_perp_d = 0, #metric of the bolt
                  nbolts_lin = 1,
                  bolts_lin_dist = 0,
+                 bolts_lin_rail = 0,
                  xtr_bolt_head = 3,
                  xtr_bolt_head_d = 0,
                  reinforce = 1,
@@ -273,28 +282,41 @@ class AluProfBracketPerp (object):
                             pos = pos_boltpe)
         boltholes.append(shp_boltpe)
 
-
+        # position of the first bolt
         pos_boltli =  pos + DraftVecUtils.scale(axis_lin,bolt1li_dist) 
-        shp_boltli= fcfun.shp_cylcenxtr(r=boltlishank_r_tol,
-                            h=br_lin_thick,
-                            normal = axis_perp,
-                            ch = 0, xtr_top = 1, xtr_bot=1,
-                            pos = pos_boltli)
-        boltholes.append(shp_boltli)
-
-        shp_boltfuse = shp_boltli.fuse(shp_boltpe)
-
-        #if nbolts_lin > 1:
-        for ibolt in range (1, nbolts_lin):
-            # for every new bolt, add 3 times the bolt head radius
-            pos_boltli = (  pos_boltli
-                           + DraftVecUtils.scale(axis_lin,bolts_lin_dist)) 
+        if bolts_lin_rail == 1 and nbolts_lin > 1:
+            # there is a rail
+            rail_l = (nbolts_lin - 1) * bolts_lin_dist
+            shp_railli = fcfun.shp_stadium_dir(length= rail_l,
+                                               radius = boltlishank_r_tol,
+                                               height = br_lin_thick,
+                                               fc_axis_l = axis_lin,
+                                               fc_axis_h = axis_perp,
+                                               ref_l = 2, #ref at circle center
+                                               ref_s = 1, #symm
+                                               ref_h = 2, #bottom
+                                               xtr_h = 1,
+                                               xtr_nh = 1,
+                                               pos = pos_boltli)
+            boltholes.append(shp_railli)
+        else: # holes for the bolts
+            # first boltli hole 
             shp_boltli= fcfun.shp_cylcenxtr(r=boltlishank_r_tol,
-                            h=br_lin_thick,
-                            normal = axis_perp,
-                            ch = 0, xtr_top = 1, xtr_bot=1,
-                            pos = pos_boltli)
+                                h=br_lin_thick,
+                                normal = axis_perp,
+                                ch = 0, xtr_top = 1, xtr_bot=1,
+                                pos = pos_boltli)
             boltholes.append(shp_boltli)
+            # the rest of boltli holes
+            for ibolt in range (1, nbolts_lin):
+                pos_boltli = (  pos_boltli
+                               + DraftVecUtils.scale(axis_lin,bolts_lin_dist)) 
+                shp_boltli= fcfun.shp_cylcenxtr(r=boltlishank_r_tol,
+                                h=br_lin_thick,
+                                normal = axis_perp,
+                                ch = 0, xtr_top = 1, xtr_bot=1,
+                                pos = pos_boltli)
+                boltholes.append(shp_boltli)
 
         shp_boltfuse = fcfun.fuseshplist(boltholes)
 
@@ -364,7 +386,8 @@ AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 20,
                  bolt_lin_d = 6,
                  bolt_perp_d = 3,
                  nbolts_lin = 2,
-                 bolts_lin_dist = 25,
+                 bolts_lin_dist = 35,
+                 bolts_lin_rail = 1,
                  xtr_bolt_head = 3,
                  xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
                  reinforce = 1,
@@ -427,6 +450,14 @@ class AluProfBracketPerpFlap (object):
         bolts_lin_dist = If more than one bolt on fc_lin_ax, defines the 
                    distance between them.
                    if zero, takes min distance
+        bolts_lin_rail = instead of bolt holes, it will be a rail
+                  it doesnt make sense to have number of bolts with this option
+                  it will work on 2 bolts or more. If nbolts_lin == 3, it 
+                  will make a rail between them. so it will be the same to have
+                  nbolts_lin = 2 and bolts_lin_dist = 20
+                  nbolts_lin = 3 and bolts_lin_dist = 10
+                  The rail will be 20, and it will look the same, it will be
+                  more clear to have the first option: 2 bolts
         xtr_bolt_head : extra space for the bolt head on the line to the wall
                         (perpendicular)
         sunk : 1: if the top part is removed,
@@ -453,6 +484,7 @@ class AluProfBracketPerpFlap (object):
                  bolt_perp_d = 0, #metric of the bolt
                  nbolts_lin = 1,
                  bolts_lin_dist = 0,
+                 bolts_lin_rail = 0,
                  xtr_bolt_head = 1,
                  sunk = 1,
                  flap = 1,
@@ -596,7 +628,7 @@ class AluProfBracketPerpFlap (object):
             # add one, to have it a minimum of one mm
             if (sunk == 1) and (alusize_lin > 2*(boltlihead_r + kcomp.TOL) + 1):
                 inside_w =  2*(boltlihead_r + kcomp.TOL)
-                print ("inside width " + str(inside_w))
+                #print ("inside width " + str(inside_w))
             else:
                 # no space for reinforcement, or no reinforcement (sunk == 2)
                 inside_w = alusize_lin + oneflap_w + 2 # +2 to make the cut
@@ -649,25 +681,29 @@ class AluProfBracketPerpFlap (object):
                 boltholes.append(shp_boltpe)
 
 
+        # position of the first bolt, on top
         pos_boltli = ( pos + DraftVecUtils.scale(axis_lin,bolt1li_dist) +
                         DraftVecUtils.scale(axis_perp, alusize_perp))
-        shp_boltli = fcfun.shp_bolt_dir(r_shank = boltlishank_r_tol,
-                            l_bolt = alusize_perp,
-                            r_head = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
-                            l_head = alusize_perp-br_lin_thick,
-                            xtr_head = 1,
-                            xtr_shank = 1,
-                            support = 0,
-                            fc_normal = axis_perp_neg,
-                            fc_verx1 = axis_lin, #it doesnt matter
-                            pos = pos_boltli)
-        boltholes.append(shp_boltli)
-
-        #if nbolts_lin > 1:
-        for ibolt in range (1, nbolts_lin):
-            # for every new bolt, add 3 times the bolt head radius
-            pos_boltli = (  pos_boltli
-                           + DraftVecUtils.scale(axis_lin,bolts_lin_dist)) 
+        if bolts_lin_rail == 1 and nbolts_lin > 1:
+            # there is rail
+            rail_l = (nbolts_lin - 1) * bolts_lin_dist
+            # make the hole also for the head of the bolts, even that maybe
+            # it is not necessary because it is sunk
+            shp_railli = shp_2stadium_dir (length = rail_l,
+                               r_s = boltlishank_r_tol,
+                               r_l = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
+                               h_tot = alusize_perp,
+                               h_rl = alusize_perp-br_lin_thick,
+                               fc_axis_h = axis_perp_neg,
+                               fc_axis_l = axis_lin,
+                               ref_l = 2, #ref on the circle center
+                               rl_h0 = 1, #bolt head is on pos
+                               xtr_h = 1,
+                               xtr_nh = 1,
+                               pos = pos_boltli)
+            boltholes.append(shp_railli)
+        else :
+            # first bolt hole:
             shp_boltli = fcfun.shp_bolt_dir(r_shank = boltlishank_r_tol,
                             l_bolt = alusize_perp,
                             r_head = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
@@ -679,6 +715,22 @@ class AluProfBracketPerpFlap (object):
                             fc_verx1 = axis_lin, #it doesnt matter
                             pos = pos_boltli)
             boltholes.append(shp_boltli)
+
+            #if nbolts_lin > 1:
+            for ibolt in range (1, nbolts_lin):
+                pos_boltli = (  pos_boltli
+                               + DraftVecUtils.scale(axis_lin,bolts_lin_dist)) 
+                shp_boltli = fcfun.shp_bolt_dir(r_shank = boltlishank_r_tol,
+                            l_bolt = alusize_perp,
+                            r_head = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
+                            l_head = alusize_perp-br_lin_thick,
+                            xtr_head = 1,
+                            xtr_shank = 1,
+                            support = 0,
+                            fc_normal = axis_perp_neg,
+                            fc_verx1 = axis_lin, #it doesnt matter
+                            pos = pos_boltli)
+                boltholes.append(shp_boltli)
 
         shp_boltfuse = fcfun.fuseshplist(boltholes)
 
@@ -717,7 +769,8 @@ AluProfBracketPerpFlap ( alusize_lin = 25, alusize_perp = 20,
                          bolt_lin_d = 6,
                          bolt_perp_d = 3,
                          nbolts_lin = 2,
-                         bolts_lin_dist = 25,
+                         bolts_lin_dist = 35,
+                         bolts_lin_rail = 1,
                          xtr_bolt_head = 1,
                          sunk = 0,
                          flap = 1, 

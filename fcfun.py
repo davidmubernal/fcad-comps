@@ -1254,8 +1254,6 @@ def shp_stadium_wire_dir (length, radius, fc_axis_l = VX,
     Same as shp_stadium_wire but in any direction
     Also called discorectangle
   
-    it will be centered on XY
-                                 
                                    fc_axis_s
                                     |
                _____ .. radius      |--> fc_axis_l
@@ -1390,9 +1388,9 @@ def shp_stadium_wire_dir (length, radius, fc_axis_l = VX,
 
 def shp_stadium_dir (
                      length, radius, height,
+                     fc_axis_h = VZ,
                      fc_axis_l = VX,
                      fc_axis_s = V0,
-                     fc_axis_h = VZ,
                      ref_l = 1,
                      ref_s = 1,
                      ref_h = 1,
@@ -1408,6 +1406,16 @@ def shp_stadium_dir (
     fc_axis_s: direction on the short axis, not necessary if ref_s == 1
          it will be the perpendicular of the other 2 vectors
     fc_axis_h: vector on the height direction
+    ref_l: reference (zero) of the fc_axis_l
+            1: reference on the center (makes axis_s symmetrical)
+            2: reference at one of the semicircle centers (point 2)
+               the other circle center will be on the direction of fc_axis_l
+            3: reference at the end (point 3)
+               the other end will be on the direction of fc_axis_l
+    ref_s: reference (zero) of the fc_axis_s
+            1: reference at the center (makes axis_l symmetrical): p 1,2,3
+            2: reference at the parallels lines: p: 4, 5 
+               the other parallel will be on the direction of fc_axis_s
     ref_h: 1: reference is at the center of the height
            2: reference is at the bottom
     xtr_h: if >0 it will be that extra height on the direction of fc_axis_h
@@ -1463,17 +1471,166 @@ def shp_stadium_dir (
     return (shp_stadium)
 
 
-shp_std = shp_stadium_dir (
-                     length=20, radius=5, height=40,
-                     fc_axis_l = VX,
-                     #fc_axis_s = VY,
+#shp_std = shp_stadium_dir (
+#                     length=20, radius=5, height=40,
+#                     fc_axis_l = VX,
+#                     #fc_axis_s = VY,
+#                     fc_axis_h = VZ,
+#                     ref_l = 2,
+#                     ref_s = 1,
+#                     ref_h = 2,
+#                     #xtr_h = 0,
+#                     xtr_nh = 1,
+#                     pos=FreeCAD.Vector(0,0,-1))
+
+
+def shp_2stadium_dir (
+                     length, r_s, r_l,
+                     h_tot, h_rl,
                      fc_axis_h = VZ,
-                     ref_l = 2,
-                     ref_s = 1,
-                     ref_h = 2,
-                     #xtr_h = 0,
-                     xtr_nh = 1,
-                     pos=FreeCAD.Vector(0,0,-1))
+                     fc_axis_l = VX,
+                     ref_l = 1,
+                     rl_h0 = 1,
+                     xtr_h = 0,
+                     xtr_nh = 0,
+                     pos=V0):
+
+    """ makes to concentric stadiums, useful for making rails for bolts
+        the length is the same for both. Changes the radius and the height
+        The smaller radius will have the largest length
+
+        rl_h0 = 1: the large stadium is at h=0
+
+                    fc_axis_h 
+             ________:________......................
+            |   :         :   |                    :
+            |   :         :   |                    :
+         ___|   :         :   |___ ........        + h_tot
+        |       :         :       |        : h_rl  :
+        |_______:____*____:_______|........:.......: ......> fc_axis_l
+        :   :   :         :
+        :...:.+.:.........:
+        :    r_s:   lenght
+        :       :
+        :       :
+        :.r_l...:
+
+
+        rl_h0 = 0 : the large stadium is at the end of h
+        
+                    fc_axis_h 
+         ____________:____________..............
+        |       :         :       |    : h_rl  :
+        |___    :         :    ___|....:       :
+            |   :         :   |                :+ h_tot
+        :   |   :         :   |                :
+        :   |___:____*____:___|................: ......> fc_axis_l
+        :   :   :         :
+        :...:.+.:.........:
+        :    r_s:   length
+        :       :
+        :       :
+        :.r_l...:
+
+    on the axis_h, the h_rl stadium can be at the reference, or at the
+    end of the reference (rl_h0 =0)
+
+    ref_l points:
+
+         fc_axis_s
+           :
+           :_________         
+          /          \
+         ( 2    1     ) -------> fc_axis_l
+          \__________/ 
+
+
+    Arguments:
+    length: length of the parallels, from one semicircle center to the other
+    r_s: Smaller radius of the semicircles
+    r_l: Larger radius of the semicircles
+    h_tot: Total height
+    h_rl: height of the larger radius stadium
+    fc_axis_h: vector on the direction of the height
+    fc_axis_l: vector on the direction of the parallels, 
+    ref_l: reference (zero) of the fc_axis_l
+            1: reference on the center (makes axis_s symmetrical)
+            2: reference at one of the semicircle centers (point 2)
+               the other circle center will be on the direction of fc_axis_l
+    rl_h0: 1: if the larger radius stadium is at the beginning of the axis_h
+           0: at the end of axis_h
+
+    xtr_h: if >0 it will be that extra height on the direction of fc_axis_h
+    xtr_nh: if >0 it will be that extra height on the opositve direction of
+             fc_axis_h
+    pos: position of the reference
+
+
+    """
+
+    # normalize the axis_h
+    axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+
+    # the r_s (smaller radius ) stadium goes all over the height
+    if not (ref_l == 1 or ref_l == 2):
+        logger.error('wrong value for ref_l')
+
+    if  rl_h0 == 1: # the larger stadium is at the beginning:
+        pos_rl = pos
+        axis_h_rl = axis_h
+        # no extra for the shorter stadium, so the surfaces are not in the
+        # same plane
+        xtr_nh_rs = 0
+        xtr_h_rs = xtr_h
+        xtr_nh_rl = xtr_nh
+        xtr_h_rl = 0  # no extra on positive side, because it is inside
+    else:
+        pos_rl = pos + DraftVecUtils.scale(axis_h, h_tot)
+        axis_h_rl = axis_h.negative()
+        xtr_nh_rs = xtr_nh
+        xtr_h_rs = 0
+        xtr_nh_rl = xtr_h
+        xtr_h_rl = 0 # no extra on positive side because is inside
+                    
+
+    shp_stadium_rs = shp_stadium_dir(length = length,
+                                     radius = r_s, height = h_tot,
+                                     fc_axis_l = fc_axis_l,
+                                     fc_axis_h = axis_h,
+                                     ref_l = ref_l,
+                                     ref_s = 1,
+                                     ref_h = 2, #ref at the end
+                                     xtr_h = xtr_h_rs,
+                                     xtr_nh = xtr_nh_rs,
+                                     pos = pos)
+
+    shp_stadium_rl = shp_stadium_dir(length = length,
+                                     radius = r_l, height = h_rl,
+                                     fc_axis_l = fc_axis_l,
+                                     fc_axis_h = axis_h_rl,
+                                     ref_l = ref_l,
+                                     ref_s = 1,
+                                     ref_h = 2, #ref at the end
+                                     xtr_h = xtr_h_rl,
+                                     xtr_nh = xtr_nh_rl,
+                                     pos = pos_rl)
+
+    shp_2stadium = shp_stadium_rs.fuse(shp_stadium_rl)
+    shp_2stadium = shp_2stadium.removeSplitter()
+
+    return (shp_2stadium)
+
+
+#shp_2std = shp_2stadium_dir (
+#                     length = 20, r_s = 10, r_l = 15,
+#                     h_tot = 30, h_rl = 10,
+#                     fc_axis_h = VZ,
+#                     fc_axis_l = VX,
+#                     ref_l = 2,
+#                     rl_h0 = 2,
+#                     xtr_h = 0,
+#                     xtr_nh = 3,
+#                     pos=V0)
 
 
 
