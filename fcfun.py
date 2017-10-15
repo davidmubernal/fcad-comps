@@ -2944,7 +2944,7 @@ def shp_boltnut_dir_hole (r_shank,        l_bolt,
     return shp_boltnut
 
 
-# ------------------- def shpAluProfWire
+# ------------------- def aluprof_vec
 # Creates a wire (shape), that is an approximation of a generic alum
 # profile extrusion 
 # width: the total width of the profile, it is a square
@@ -3017,7 +3017,159 @@ def aluprof_vec (width, thick, slot, insquare):
 """
 
     
+# ------------------- def shp_aluwire_dir
 
+def shp_aluwire_dir (width, thick, slot, insquare,
+                    fc_axis_x=VX, fc_axis_y=VY,
+                    ref_x = 1, ref_y = 1,
+                    pos=V0):
+
+
+    """
+    Creates a wire (shape), that is an approximation of a generic alum
+    profile extrusion. Creates it in any position an any direction
+    width: the total width of the profile, it is a square
+    thick: the thickness of the side
+    slot: the width of the rail 
+    insquare: the width of the inner square
+    indiam: the diameter of the inner hole
+    fc_axis_x : is a generic X axis, can be any
+        1: reference (zero) at the center
+        2: reference (zero) at the side, the other end side will be on the
+           direction of fc_axis_x
+    fc_axis_y : is a generic Y axis, can be any perpendicular to fc_axis_y
+        1: reference (zero) at the center
+        2: reference (zero) at the side, the other end side will be on the
+           direction of fc_axis_y
+    ref_x: reference (zero) on the fc_axis_x
+    ref_y: reference (zero) on the fc_axis_1
+    pos: position of the center
+    
+                      Y
+                      |_ X
+         :----- width ----:
+         :       slot     :
+         :      :--:      :
+         :______:  :______:
+         |    __|  |__    |
+         | |\ \      / /| |
+         |_| \ \____/ / |_| ...........
+             |        | ......        insquare
+             |  (  )  | ......indiam  :
+          _  |  ____  | ..............:
+         | | / /    \ \ | |
+         | |/ /_    _\ \| | .... 
+         |______|  |______| ....thick
+    
+                                      Y values:
+      :  3 _____ 4
+      :   |_1  7| ................... 1,2: width/2 - thick
+      :  2 / /|_| ....................7: width/2- (thick+thick*cos45)
+      :___/ / 6  5 .....................              5,6: slot/2.
+      :  0  |8     :8:insquare/2-thick*cos45  0:insquare/2  :
+      :.....|......:..........................:.............:
+    
+     ref_x= 1 ; ref_y = 1
+               fc_axis_w
+                :
+                :
+             _  :  _
+            |_|_:_|_|
+      ........|.:.|........ fc_axis_p
+             _|_:_|_
+            |_| : |_|
+                :
+                :
+                :
+   
+   
+     ref_x= 2 ; ref_y = 1 (the zero of axis_y is at the center)
+                          (the zero of axis_x is at one side)
+
+                fc_axis_y
+                :       
+                :      
+                :  
+                :_     _ 
+                |_|___|_|
+      ..........:.|...|........ fc_axis_x
+                :_|___|_
+                |_|   |_|
+                :
+                :
+                :
+
+    """
+
+    axis_x = DraftVecUtils.scaleTo(fc_axis_x, 1)
+    axis_y = DraftVecUtils.scaleTo(fc_axis_y, 1)
+
+    # Get the center position
+    if ref_x == 2:
+        ref2center_x = DraftVecUtils.scale(axis_x, width/2.)
+    else:
+        ref2center_x = V0
+    if ref_y == 2:
+        ref2center_y = DraftVecUtils.scale(axis_y, width/2.)
+    else:
+        ref2center_y = V0
+
+    center_pos = pos + ref2center_x + ref2center_y
+
+    y = []
+    y.append(insquare/2)               # y0, x8
+    y.append(width/2. - thick)         # y1, x7
+    y.append(y[-1])                    # y2, x6,  y2==y1
+    y.append(width/2.)                 # y3, x5
+    y.append(y[-1])                    # y4, x4,  y4==y3
+    y.append(slot/2.)                  # y5, x3
+    y.append(y[-1])                    # y6, x2   y6==y5
+    y.append(width/2.-thick*(1+COS45))  # y7, x1
+    y.append(insquare/2.-thick*COS45)        # y8, x0
+
+    n = len(y)-1
+
+    #
+    #       1st point
+    #       |      go clockwise
+    #    2  |  1
+    #   ----|----
+    #    3  |  4
+    #       |
+    #
+    #
+
+    vec = []
+    # First quadrant
+    for ind in range(len(y)):
+        point = (center_pos + DraftVecUtils.scale(axis_x,  y[n-ind])
+                            + DraftVecUtils.scale(axis_y,  y[ind]))
+        vec.append(point)
+    # 4 quadrant
+    for ind in range(len(y)):
+        point = (center_pos + DraftVecUtils.scale(axis_x,  y[ind])
+                            + DraftVecUtils.scale(axis_y, -y[n-ind]))
+        vec.append(point)
+    # 3 quadrant
+    for ind in range(len(y)):
+        point = (center_pos + DraftVecUtils.scale(axis_x, -y[n-ind])
+                            + DraftVecUtils.scale(axis_y, -y[ind]))
+        vec.append(point)
+    # 2 quadrant
+    for ind in range(len(y)):
+        point = (center_pos + DraftVecUtils.scale(axis_x, -y[ind])
+                            + DraftVecUtils.scale(axis_y,  y[n-ind]))
+        vec.append(point)
+
+    # The first point has to be the last to close the wire
+    vec.append(vec[0])
+
+
+    shp_aluwire = Part.makePolygon(vec)
+
+    return (shp_aluwire)
+
+    
   
 # -------------------- NutHole -----------------------------
 # adding a Nut hole (hexagonal) with a prism attached to introduce the nut

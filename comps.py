@@ -366,6 +366,7 @@ class Sk_dir (object):
         self.size = size
         self.wfco = wfco
         self.name = name
+        self.pos = pos
         self.ref_hr = ref_hr
         self.ref_wc = ref_wc
         self.ref_dc = ref_dc
@@ -1001,6 +1002,197 @@ class AluProf (object):
         self.fco.ViewObject.ShapeColor = color
 
 
+# ----------- class AluProf_dir ---------------------------------------------
+
+
+class AluProf_dir (object):
+
+    """
+    Creates a generic aluminum profile in any direction
+         :----- width ----:
+         :       slot     :
+         :      :--:      :
+         :______:  :______:
+         |    __|  |__    |
+         | |\ \      / /| |
+         |_| \ \____/ / |_| ...........
+             |        | ......        insquare
+             |  (  )  | ......indiam  :
+          _  |  ____  | ..............:
+         | | / /    \ \ | |
+         | |/ /_    _\ \| | .... 
+         |______|  |______| ....thick
+   
+    width:    the Width of the profile, it is squared
+    length:   the length of the bar, the extrusion 
+    thick: the thickness of the side
+    slot: the width of the rail 
+    insquare: the width of the inner square
+    indiam: the diameter of the inner hole. If 0, there is no hole
+    fc_axis_l = axis on the length direction
+    fc_axis_w = axis on the width direction
+    fc_axis_p = axis on the other width direction (perpendicular)
+            can be V0 if ref_p = 1
+    ref_l: reference (zero) on the fc_axis_l
+            1: reference at the center
+            2: reference at the end, the other end will be on the direction of
+               fc_axis_l
+    ref_w: reference (zero) on the fc_axis_w
+            1: reference at the center
+            2: reference at the side, the other end side will be on the
+               direction of fc_axis_w
+    ref_p: reference (zero) on the fc_axis_p
+            1: reference at the center
+            2: reference at the side, the other end side will be on the
+               direction of fc_axis_p
+    xtr_l: if >0 it will be that extra length on the direction of fc_axis_l
+           I dont think it is useful for a profile, but since it is easy to
+           do, I just do it
+    xtr_nl: if >0 it will be that extra height on the opositve direction of
+             fc_axis_l
+    pos : FreeCAD vector of the position 
+    wfco: 1 a freecad object will be created. 0: only a shape
+    name: name of the freecad object
+    attributes:
+    the arguments and
+    face     : the face that has been extruded
+    shp      : the shape
+    fco      : the freecad object
+   
+     ref_w = 1  ; ref_p = 1
+
+                fc_axis_w
+                :
+                :
+             _  :  _
+            |_|_:_|_|
+      ........|.:.|........ fc_axis_p
+             _|_:_|_
+            |_| : |_|
+                :
+                :
+                :
+   
+   
+     ref_w = 1 ; ref_p = 2              
+
+                fc_axis_w
+                :       
+                :      
+                :  
+                :_     _ 
+                |_|___|_|
+      ..........:.|...|........ fc_axis_p
+                :_|___|_
+                |_|   |_|
+                :
+                :
+                :
+   
+    """
+#
+#  Final                    axis = 'x'  -> Rotation -90 on axis Y: pitch -90
+#             Z             cx = 0      
+#             :             cy = 0      -> Translation Y: width/2
+#             :             cz = 0      -> Translation Z: width/2
+#             :  
+#             :_     _ 
+#             |_|___|_|
+#             : |   |
+#             :_|___|_
+#   ..........|_|...|_|.......Y
+#             :
+#             :
+#             :
+#
+#
+#
+#
+
+    def __init__ (self, width, length, thick, slot, insquare, 
+                  indiam, fc_axis_l = VX, fc_axis_w = VY, fc_axis_p = V0,
+                  ref_l = 0, ref_w = 1, ref_p = 1,
+                  xtr_l=0, xtr_nl=0,  pos = V0,
+                  wfco = 1, name = "aluprof"):
+        doc = FreeCAD.ActiveDocument
+        self.width  = width
+        self.length = length
+        self.thick  = thick
+        self.slot   = slot
+        self.name   = name
+        self.insquare = insquare
+        self.indiam = indiam
+        self.name   = name
+        self.wfco = wfco
+        # normalize the axis
+        axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
+        axis_w = DraftVecUtils.scaleTo(fc_axis_w,1)
+        if fc_axis_p == V0:
+            axis_p = axis_l.cross(axis_w)
+        else:
+            axis_p = DraftVecUtils.scaleTo(fc_axis_p,1)
+        axis_l_n = axis_l.negative()
+
+        self.axis_l = axis_l
+        self.axis_w = axis_w
+        self.axis_p = axis_p
+
+        # getting the base position
+
+        if ref_l == 1: # move the postion half of the height down 
+            base_pos = pos + DraftVecUtils.scale(axis_l_n, length/2. + xtr_nl)
+        else:
+            base_pos = pos + DraftVecUtils.scale(axis_l_n, xtr_nl)
+
+
+        # Get the center position
+        if ref_w == 2:
+            ref2center_w = DraftVecUtils.scale(axis_w, width/2.)
+        else:
+            ref2center_w = V0
+        if ref_p == 2:
+            ref2center_p = DraftVecUtils.scale(axis_p, width/2.)
+        else:
+            ref2center_p = V0
+
+        basecen_pos = base_pos + ref2center_w + ref2center_p
+
+
+        shp_alu_wire = fcfun.shp_aluwire_dir (width, thick, slot, insquare,
+                                              fc_axis_x = axis_w,
+                                              fc_axis_y = axis_p,
+                                              ref_x = 1, #already centered
+                                              ref_y = 1, #already centered
+                                              pos = basecen_pos)
+
+
+        # make a face of the wire
+        shp_alu_face = Part.Face (shp_alu_wire)
+        # inner hole
+        if indiam > 0 :
+            hole =  Part.makeCircle (indiam/2.,   # Radius
+                                     basecen_pos,  # Position
+                                     axis_l)  # direction
+            wire_hole = Part.Wire(hole)
+            face_hole = Part.Face(wire_hole)
+            shp_alu_face = shp_alu_face.cut(face_hole)
+
+        # extrude it
+        dir_extrud = DraftVecUtils.scaleTo(axis_l, length + xtr_nl + xtr_l)
+        shp_aluprof = shp_alu_face.extrude(dir_extrud)
+
+        self.shp = shp_aluprof
+        if wfco == 1:
+            fco_aluprof = doc.addObject("Part::Feature", name)
+            fco_aluprof.Shape = shp_aluprof
+        
+        self.fco = fco_aluprof
+
+    def color (self, color = (1,1,1)):
+        self.fco.ViewObject.ShapeColor = color
+
+
+
 # ----------- end class AluProf ----------------------------------------
 
 # Function that having a dictionary of the aluminum profile, just calls
@@ -1021,6 +1213,41 @@ def getaluprof ( aludict, length,
                                cx=cx, cy=cy, cz=cz)
 
     return (h_aluprof)
+
+
+# Function that having a dictionary of the aluminum profile, just calls
+# the class AluProf_dir, 
+def getaluprof_dir ( aludict, length, 
+                    fc_axis_l = VX, fc_axis_w = VY, fc_axis_p = V0,
+                    ref_l = 0, ref_w = 1, ref_p = 1,
+                    xtr_l=0, xtr_nl=0,  pos = V0,
+                    wfco = 1, name = "aluprof"):
+
+    h_aluprof = AluProf_dir ( width=aludict['w'],
+                              length = length, 
+                              thick = aludict['t'],
+                              slot  = aludict['slot'],
+                              insquare = aludict['insq'], 
+                              indiam   = aludict['indiam'],
+                              fc_axis_l = fc_axis_l,
+                              fc_axis_w = fc_axis_w,
+                              fc_axis_p = fc_axis_p,
+                              ref_l = ref_l, ref_w = ref_w, ref_p = ref_p,
+                              xtr_l = xtr_l, xtr_nl = xtr_nl,
+                              pos = pos, wfco = wfco,
+                              name = name)
+
+    return (h_aluprof)
+
+h_aluprof = getaluprof_dir(aludict= kcomp.ALU_MOTEDIS_20I5,
+                         length=50, 
+                    fc_axis_l = FreeCAD.Vector(1,1,0),
+                    fc_axis_w = FreeCAD.Vector(-1,1,0),
+                    fc_axis_p = V0,
+                    ref_l = 1, ref_w = 2, ref_p = 2,
+                    xtr_l=0, xtr_nl=0,  pos = FreeCAD.Vector(1,2,4),
+                    wfco = 1, name = "aluprof")
+
 
 
 #cls_aluprof = getaluprof(aludict= kcomp.ALU_MOTEDIS_20I5,
@@ -1045,10 +1272,6 @@ def getaluprof ( aludict, length,
 #                         axis = 'x',
 #                 cx=True, cy=True, cz=True)
 #
-#h_aluprof = getaluprof(aludict= kcomp.ALU_OPENBEAM_5,
-#                         length=50, 
-#                         axis = 'y',
-#                 cx=False, cy=True, cz=False)
 
             
 # ----------- NEMA MOTOR

@@ -689,7 +689,7 @@ class AluProfBracketPerpFlap (object):
             rail_l = (nbolts_lin - 1) * bolts_lin_dist
             # make the hole also for the head of the bolts, even that maybe
             # it is not necessary because it is sunk
-            shp_railli = shp_2stadium_dir (length = rail_l,
+            shp_railli = fcfun.shp_2stadium_dir (length = rail_l,
                                r_s = boltlishank_r_tol,
                                r_l = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
                                h_tot = alusize_perp,
@@ -1654,6 +1654,7 @@ class SimpleEndstopHolder (object):
                    the rail center will be on the direction of fc_axis_w
                4 = at the end
                    the end will be on the direction of fc_axis_w
+        wfco: 1 a freecad object will be created
 
         the rails can be countersunk to make space for the bolts
 
@@ -1687,6 +1688,8 @@ class SimpleEndstopHolder (object):
         axis_d = DraftVecUtils.scaleTo(fc_axis_d,1)
         if fc_axis_w == V0:
             axis_w = axis_h.cross(axis_d)
+        else:
+            axis_w = DraftVecUtils.scaleTo(fc_axis_w,1)
         axis_h_n = axis_h.negative()
         axis_d_n = axis_d.negative()
         axis_w_n = axis_w.negative()    
