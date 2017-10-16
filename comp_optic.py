@@ -1448,13 +1448,280 @@ def lcp01m_plate (d_lcp01m_plate = kcomp_optic.LCP01M_PLATE,
 
 
 
+# -------------------------- LCPB1M Cage Mounting Base for 60mm
+
+class Lcpb1mBase (object):
+
+    """ Creates a mounting base, Thorlabs LCPB1_M
+
+                   fc_axis_h
+                       :
+            ___________:____________ ....                _.........
+           |________________________|...:h_lip        ..| |___    :
+           |                        |            h_sup+ |     |   + h_tot
+     ______|                        |______...        : |_____|   :
+    |_|__|____________________________|__|_|.:h_slot  :.|_____|...:..>fc_axis_d
+
+        
+
+                s_mholes_dist (small mounting holes)
+                 .....+......
+                :            :      
+     ___________:____________:_____________....................... fc_axis_w
+    |      |________________________|      |...: d_lip :d_mount   :
+    |  /\  |    o    (O)     o      |  /\  |-----------:         + d_tot
+    |_|  |_|________________________|_|  |_|.....................:
+    :  :   :        l_mhole         :   :  :
+    :  :   :                        :   :  :
+    :  :   :                        :   :  :
+    :  :   :........ w_sup .........:   :  :
+    :  :                                :  :
+    :  :........... slot_dist ..........:  :
+    :                                      :
+    :............... w_tot ................:
 
 
+                    ref_h
+            ________________________                 _
+           |___________2____________|               | |__2
+           |                        |               |    |
+     ______|                        |______         |____|
+    3_|2_|_____________1______________|__|_|        1_2__3  ref_d
+    ref_w                                            
+                   
+        
+                     ref_d
+     __________________1___________________
+    |      |________________________|      |
+    |  /\  |    o     (2)    o      |  /\  |
+    |_|  |_|___________3____________|_|  |_|
 
 
+    """
+
+    def __init__(self,
+                 w_tot, d_tot, h_tot, h_slot, slot_dist,
+                 d_mount,
+                 slot_d, w_sup, h_sup, d_lip,
+                 s_mholes_dist,
+                 s_mholes_d, l_mbolt_d,
+                 fc_axis_d = VX, fc_axis_w = V0, fc_axis_h = VZ,
+                 ref_d = 1, ref_w = 1, ref_h = 1,
+                 pos = V0, wfco = 1, toprint= 0, name = 'Lcpb1mBase'):
+
+        self.wfco = wfco
+        self.name = name
+        self.h_tot = h_tot,
+        doc = FreeCAD.ActiveDocument
+        # normalize the axis
+        axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+        axis_d = DraftVecUtils.scaleTo(fc_axis_d,1)
+        if fc_axis_w == V0:
+            axis_w = axis_h.cross(axis_d)
+        else:
+            axis_w = DraftVecUtils.scaleTo(fc_axis_w,1)
+        axis_h_n = axis_h.negative()
+        axis_d_n = axis_d.negative()
+        axis_w_n = axis_w.negative()    
+
+        self.axis_h = axis_h
+        self.axis_d = axis_d
+        self.axis_w = axis_w
+        # best axis to print, to be pointing up:
+        self.axis_print = axis_h
+
+        # central large mounting bolt hole
+        d_lmbolt = kcomp.D912[int(l_mbolt_d)]
+
+        lmbolt_head_r = d_lmbolt['head_r']
+        lmbolt_shank_r_tol = d_lmbolt['shank_r_tol']
+        lmbolt_head_r_tol = d_lmbolt['head_r_tol']
+        lmbolt_head_l = d_lmbolt['head_l']
 
 
+        # ------- Reference to point w=1, d=1, h=1
+        # ----------- DISTANCES ON AXIS W
+        fc_1_2_w = DraftVecUtils.scale(axis_w, slot_dist/2.)
+        fc_1_3_w = DraftVecUtils.scale(axis_w, w_tot/2.)
+        fc_1_2_d = DraftVecUtils.scale(axis_d, d_mount)
+        fc_1_3_d = DraftVecUtils.scale(axis_d, d_tot)
+        fc_1_2_h = DraftVecUtils.scale(axis_h, h_sup)
+        if ref_w == 1:
+            refto_1_w = V0
+        elif ref_w == 2:
+            refto_1_w == fc_1_2_w.negative()
+        elif ref_w == 3:
+            refto_1_w = fc_1_3_w.negative()
+        else:
+            logger.error('wrong reference point')
+        if ref_d == 1:
+            refto_1_d = V0
+        elif ref_d == 2:
+            refto_1_d = fc_1_2_d.negative()
+        elif ref_d == 3:
+            refto_1_d = fc_1_3_d.negative()
+        else:
+            logger.error('wrong reference point')
+        if ref_h == 1:
+            refto_1_h = V0
+        elif ref_h == 2:
+            refto_1_h = fc_1_2_h.negative()
+        else:
+            logger.error('wrong reference point')
 
+        # absolute position of point on w=1, d=1, h=1
+        w1_d1_h1_pos = pos + refto_1_w + refto_1_d + refto_1_h
+        w1_d2_h1_pos = w1_d1_h1_pos + fc_1_2_d
+
+        # Draw the 3 boxes:
+        base_list = []
+        shp_lip_box = fcfun.shp_box_dir (box_w = w_sup,
+                                         box_d = d_lip,
+                                         box_h = h_tot,
+                                         fc_axis_h = axis_h,
+                                         fc_axis_d = axis_d,
+                                         cw = 1, cd = 0, ch = 0,
+                                         pos = w1_d1_h1_pos)
+        base_list.append(shp_lip_box)
+        shp_sup_box = fcfun.shp_box_dir (box_w = w_sup,
+                                         box_d = d_tot,
+                                         box_h = h_sup,
+                                         fc_axis_h = axis_h,
+                                         fc_axis_d = axis_d,
+                                         cw = 1, cd = 0, ch = 0,
+                                         pos = w1_d1_h1_pos)
+        base_list.append(shp_sup_box)
+        shp_slot_box = fcfun.shp_box_dir (box_w = w_tot,
+                                         box_d = d_tot,
+                                         box_h = h_slot,
+                                         fc_axis_h = axis_h,
+                                         fc_axis_d = axis_d,
+                                         cw = 1, cd = 0, ch = 0,
+                                         pos = w1_d1_h1_pos)
+        base_list.append(shp_slot_box)
+
+
+        shp_base = fcfun.fuseshplist(base_list)
+
+        shp_base = shp_base.removeSplitter()
+
+        holes = []
+        # slot holes are in w=2
+        for pos_wi in [fc_1_2_w, fc_1_2_w.negative()]:
+            slot_pos = w1_d2_h1_pos + pos_wi
+            # longer length, it doesnt matter
+            shp_slot_hole = fcfun.shp_stadium_dir(length = d_tot,
+                                                radius = slot_d/2. + kcomp.TOL,
+                                                height = h_slot,
+                                                fc_axis_h = axis_h,
+                                                fc_axis_l = axis_d,
+                                                ref_l = 2, ref_h=2,
+                                                xtr_h = 1, xtr_nh = 1,
+                                                pos = slot_pos)
+            holes.append(shp_slot_hole)
+
+        shp_lmbolt_hole = fcfun.shp_bolt_dir(r_shank = lmbolt_shank_r_tol,
+                                  l_bolt = h_sup,
+                                  # it seems that the head is larger: +1
+                                  r_head = lmbolt_head_r_tol + 1,
+                                  l_head = lmbolt_head_l + kcomp.TOL,
+                                  xtr_head = 1,
+                                  xtr_shank = 1,
+                                  support = toprint,
+                                  fc_normal = axis_h,
+                                  fc_verx1 = axis_w,
+                                  pos = w1_d2_h1_pos)
+        holes.append(shp_lmbolt_hole)
+
+        fc_1_to_smholes = DraftVecUtils.scale(axis_w, s_mholes_dist/2.)
+        for pos_wi in [fc_1_to_smholes.negative(), fc_1_to_smholes]:
+            mshole_pos = w1_d2_h1_pos + pos_wi
+            # longer length, it doesnt matter
+            shp_smhole = fcfun.shp_cylcenxtr(
+                                                r = s_mholes_d/2.,
+                                                h = h_sup,
+                                                normal = axis_h,
+                                                ch = 0,
+                                                xtr_top = 1, xtr_bot = 1,
+                                                pos = mshole_pos)
+            holes.append(shp_smhole)
+
+        shp_holes = fcfun.fuseshplist(holes)
+        shp_base = shp_base.cut(shp_holes)
+   
+
+        if wfco == 1:
+            # a freeCAD object is created
+            fco_base = doc.addObject("Part::Feature", name )
+            fco_base.Shape = shp_base
+            self.fco = fco_base
+
+    def color (self, color = (1,1,1)):
+        if self.wfco == 1:
+            self.fco.ViewObject.ShapeColor = color
+        else:
+            logger.debug("Plate object with no fco")
+        
+    # exports the shape into stl format
+    def export_stl (self, name = ""):
+        #filepath = os.getcwd()
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName = stlPath + name + ".stl"
+        self.shp.exportStl(stlFileName)
+
+
+def lcpb1m_base (d_lcpb1m_base = kcomp_optic.LCPB1M_BASE,
+                  fc_axis_d = VX,
+                  fc_axis_w = V0,
+                  fc_axis_h = VZ,
+                  ref_d = 1, ref_w = 1, ref_h = 1,
+                  pos = V0, wfco = 1, toprint= 0, name = 'Lcpb1mBase'):
+
+    """ creates a lcpb1m_base for plates
+        side,
+        it creates from a dictionary
+
+        pos :  position of the center. FreeCAD.Vector
+        wfco: 1: a FreeCAD object is created
+              0: only de shape is created
+        name: name of the freecad object (if created)
+
+    """
+
+    h_baseplate = Lcpb1mBase(
+                 w_tot = d_lcpb1m_base['w_tot'],
+                 d_tot = d_lcpb1m_base['d_tot'],
+                 h_tot = d_lcpb1m_base['h_tot'],
+                 h_slot = d_lcpb1m_base['h_slot'],
+                 slot_dist = d_lcpb1m_base['slot_dist'],
+                 d_mount = d_lcpb1m_base['d_mount'],
+                 slot_d = d_lcpb1m_base['slot_d'],
+                 w_sup = d_lcpb1m_base['w_sup'],
+                 h_sup = d_lcpb1m_base['h_sup'],
+                 d_lip = d_lcpb1m_base['d_lip'],
+                 s_mholes_dist = d_lcpb1m_base['s_mholes_dist'],
+                 s_mholes_d = d_lcpb1m_base['s_mholes_d'],
+                 l_mbolt_d = d_lcpb1m_base['l_mbolt_d'],
+                 fc_axis_d = fc_axis_d,
+                 fc_axis_w = fc_axis_w,
+                 fc_axis_h = fc_axis_h,
+                 ref_d=ref_d, ref_w=ref_w, ref_h=ref_h,
+                 pos = pos, wfco=wfco, toprint= toprint,
+                 name = name)
+
+    return h_baseplate
+
+
+doc = FreeCAD.newDocument()
+lcpb1m_base (d_lcpb1m_base = kcomp_optic.LCPB1M_BASE,
+                  fc_axis_d = VX,
+                  fc_axis_w = V0,
+                  fc_axis_h = VZ,
+                  ref_d = 3, ref_w = 1, ref_h = 1,
+                  pos = FreeCAD.Vector(3,4,8),
+                  wfco = 1, toprint= 0, name = 'Lcpb1mBase')
 
 
 

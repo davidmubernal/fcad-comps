@@ -142,7 +142,52 @@ LCP01M_PLATE = {
            'chamfer_r' : 2., #aprox
            }
 
+# LCPB1M_BASE  mounting plate dimensions
 
+#mounting base, Thorlabs LCPB1_M
+#
+#                   fc_axis_h
+#                       :
+#            ___________:____________ ....                _.........
+#           |________________________|...:h_lip        ..| |___    :
+#           |                        |            h_sup+ |     |   + h_tot
+#     ______|                        |______...        : |_____|   :
+#    |_|__|____________________________|__|_|.:h_slot  :.|_____|...:..>fc_axis_d
+#
+#        
+#
+#                s_mholes_dist (small mounting holes)
+#                 .....+......
+#                :            :      
+#     ___________:____________:_____________....................... fc_axis_w
+#    |      |________________________|      |...: d_lip :d_mount   :
+#    |  /\  |    o    (O)     o      |  /\  |-----------:         + d_tot
+#    |_|  |_|________________________|_|  |_|.....................:
+#    :  :   :        l_mhole         :   :  :
+#    :  :   :                        :   :  :
+#    :  :   :                        :   :  :
+#    :  :   :........ w_sup .........:   :  :
+#    :  :                                :  :
+#    :  :........... slot_dist ..........:  :
+#    :                                      :
+#    :............... w_tot ................:
+#
+
+LCPB1M_BASE = {
+           'w_tot'        : 120.7,
+           'd_tot'        :  15.2,
+           'h_tot'        :  10.8,
+           'h_slot'       :   3.8,
+           'slot_dist'    : 100.,
+           'd_mount'       :   8.9, # all mounting holes are at the same d
+           'slot_d'       :   6.0,  # diameter of the slot. M6 plus TOL
+           'w_sup'        :  82.6,
+           'h_sup'        :   8.9,
+           'd_lip'        :   2.5,
+           's_mholes_dist':  50.0,
+           's_mholes_d'   :   3.0,   # diam M3 plus TOL
+           'l_mbolt_d'    :   4.0    # diam M4 plus TOL, counterbored
+            }
 
 
 # 2inch diameter stackabel lens tubes> SM2LXX
