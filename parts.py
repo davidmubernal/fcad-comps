@@ -284,28 +284,37 @@ class AluProfBracketPerp (object):
 
         # position of the first bolt
         pos_boltli =  pos + DraftVecUtils.scale(axis_lin,bolt1li_dist) 
+        pos_boltli_top = (pos_boltli
+                         + DraftVecUtils.scale(axis_perp, alusize_perp))
         if bolts_lin_rail == 1 and nbolts_lin > 1:
             # there is a rail
             rail_l = (nbolts_lin - 1) * bolts_lin_dist
-            shp_railli = fcfun.shp_stadium_dir(length= rail_l,
-                                               radius = boltlishank_r_tol,
-                                               height = br_lin_thick,
-                                               fc_axis_l = axis_lin,
-                                               fc_axis_h = axis_perp,
-                                               ref_l = 2, #ref at circle center
-                                               ref_s = 1, #symm
-                                               ref_h = 2, #bottom
-                                               xtr_h = 1,
-                                               xtr_nh = 1,
-                                               pos = pos_boltli)
+            # 2 Stadium to cut the chamfer if it is too big
+            shp_railli = fcfun.shp_2stadium_dir (length = rail_l,
+                               r_s = boltlishank_r_tol,
+                               r_l = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
+                               h_tot = alusize_perp,
+                               h_rl = alusize_perp-br_lin_thick,
+                               fc_axis_h = axis_perp_neg,
+                               fc_axis_l = axis_lin,
+                               ref_l = 2, #ref on the circle center
+                               rl_h0 = 1, #bolt head is on pos
+                               xtr_h = 1,
+                               xtr_nh = 1,
+                               pos = pos_boltli_top)
             boltholes.append(shp_railli)
         else: # holes for the bolts
-            # first boltli hole 
-            shp_boltli= fcfun.shp_cylcenxtr(r=boltlishank_r_tol,
-                                h=br_lin_thick,
-                                normal = axis_perp,
-                                ch = 0, xtr_top = 1, xtr_bot=1,
-                                pos = pos_boltli)
+            # first boltli hole , make a bolt, in case there is chamfer to cut
+            shp_boltli = fcfun.shp_bolt_dir(r_shank = boltlishank_r_tol,
+                            l_bolt = alusize_perp,
+                            r_head = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
+                            l_head = alusize_perp-br_lin_thick,
+                            xtr_head = 1,
+                            xtr_shank = 1,
+                            support = 0,
+                            fc_normal = axis_perp_neg,
+                            fc_verx1 = axis_lin, #it doesnt matter
+                            pos = pos_boltli_top)
             boltholes.append(shp_boltli)
             # the rest of boltli holes
             for ibolt in range (1, nbolts_lin):
@@ -323,6 +332,7 @@ class AluProfBracketPerp (object):
         shp_bracket = shp_box.cut(shp_boltfuse)
         doc.recompute()
         shp_bracket =shp_bracket.removeSplitter()
+        doc.recompute()
 
         self.shp = shp_bracket
         self.wfco = wfco
@@ -378,24 +388,76 @@ class AluProfBracketPerp (object):
 #                 wfco=1,
 #                 name = 'bracket_lin3_2bolts_noreinfore')
 
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 
-AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 20,
-                 br_perp_thick = 3.,
-                 br_lin_thick = 3.,
-                 bolt_lin_d = 6,
-                 bolt_perp_d = 3,
-                 nbolts_lin = 2,
-                 bolts_lin_dist = 35,
-                 bolts_lin_rail = 1,
-                 xtr_bolt_head = 3,
-                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
-                 reinforce = 1,
-                 fc_perp_ax = VZ,
-                 fc_lin_ax = VX,
-                 pos = V0,
-                 wfco=1,
-                 name = 'bracket_lin3_1bolt_noreinfore')
+#AluProfBracketPerp ( alusize_lin = 10, alusize_perp = 20,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_lin_d = 3,
+#                 bolt_perp_d = 3,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 0,
+#                 bolts_lin_rail = 0,
+#                 xtr_bolt_head = 3,
+#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+#                 reinforce = 1,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_lin3_1bolt_noreinfore')
+
+#AluProfBracketPerp ( alusize_lin = 20, alusize_perp = 10,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_lin_d = 3,
+#                 bolt_perp_d = 3,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 0,
+#                 bolts_lin_rail = 0,
+#                 xtr_bolt_head = 3,
+#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+#                 reinforce = 1,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_lin3_1bolt_noreinfore')
+
+
+#AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 20,
+#                 br_perp_thick = 4.,
+#                 br_lin_thick = 4.,
+#                 bolt_lin_d = 6,
+#                 bolt_perp_d = 4,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 50,
+#                 bolts_lin_rail = 1,
+#                 xtr_bolt_head = 3,
+#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+#                 reinforce = 1,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_lin3_1bolt_noreinfore')
+#
+#AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 10,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_lin_d = 6,
+#                 bolt_perp_d = 3,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 50,
+#                 bolts_lin_rail = 1,
+#                 xtr_bolt_head = 3,
+#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+#                 reinforce = 1,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_lin3_1bolt_noreinfore')
 
 
 # ----------- class AluProfBracketPerpWide -----------------------------------
@@ -737,6 +799,7 @@ class AluProfBracketPerpFlap (object):
         shp_bracket = shp_boxbr.cut(shp_boltfuse)
         doc.recompute()
         shp_bracket =shp_bracket.removeSplitter()
+        doc.recompute()
 
         self.shp = shp_bracket
         self.wfco = wfco
@@ -763,22 +826,57 @@ class AluProfBracketPerpFlap (object):
 
 #doc = FreeCAD.newDocument()
 
-AluProfBracketPerpFlap ( alusize_lin = 25, alusize_perp = 20,
-                         br_perp_thick = 4.,
-                         br_lin_thick = 4.,
-                         bolt_lin_d = 6,
-                         bolt_perp_d = 3,
-                         nbolts_lin = 2,
-                         bolts_lin_dist = 35,
-                         bolts_lin_rail = 1,
-                         xtr_bolt_head = 1,
-                         sunk = 0,
-                         flap = 1, 
-                         fc_perp_ax = VZ,
-                         fc_lin_ax = VX,
-                         pos = V0,
-                         wfco=1,
-                         name = 'bracket3_flap')
+#AluProfBracketPerpFlap ( alusize_lin = 10, alusize_perp = 15,
+#                         br_perp_thick = 4.,
+#                         br_lin_thick = 3.,
+#                         bolt_lin_d = 3,
+#                         bolt_perp_d = 3,
+#                         nbolts_lin = 2,
+#                         bolts_lin_dist = 0,
+#                         bolts_lin_rail = 0,
+#                         xtr_bolt_head = 1,
+#                         sunk = 0,
+#                         flap = 1, 
+#                         fc_perp_ax = VZ,
+#                         fc_lin_ax = VX,
+#                         pos = V0,
+#                         wfco=1,
+#                         name = 'bracket3_flap')
+
+#AluProfBracketPerpFlap ( alusize_lin = 15, alusize_perp = 10,
+#                         br_perp_thick = 4.,
+#                         br_lin_thick = 3.,
+#                         bolt_lin_d = 3,
+#                         bolt_perp_d = 3,
+#                         nbolts_lin = 2,
+#                         bolts_lin_dist = 0,
+#                         bolts_lin_rail = 0,
+#                         xtr_bolt_head = 1,
+#                         sunk = 0,
+#                         flap = 1, 
+#                         fc_perp_ax = VZ,
+#                         fc_lin_ax = VX,
+#                         pos = V0,
+#                         wfco=1,
+#                         name = 'bracket3_flap')
+
+#AluProfBracketPerpFlap ( alusize_lin = 25, alusize_perp = 20,
+#                         br_perp_thick = 4.,
+#                         br_lin_thick = 4.,
+#                         bolt_lin_d = 6,
+#                         bolt_perp_d = 4.,
+#                         nbolts_lin = 2,
+#                         bolts_lin_dist = 50,
+#                         bolts_lin_rail = 1,
+#                         xtr_bolt_head = 1,
+#                         sunk = 0,
+#                         flap = 1, 
+#                         fc_perp_ax = VZ,
+#                         fc_lin_ax = VX,
+#                         pos = V0,
+#                         wfco=1,
+#                         name = 'bracket3_flap')
+
 
 #AluProfBracketPerpFlap ( alusize_lin = 10, alusize_perp = 10,
 #                         br_perp_thick = 3.,
@@ -1093,6 +1191,7 @@ class AluProfBracketPerpTwin (object):
         shp_twinbr = shp_twinbr.cut(shp_boltpe)
         doc.recompute()
         shp_bracket =shp_twinbr.removeSplitter()
+        doc.recompute()
 
         self.shp = shp_bracket
         self.wfco = wfco
@@ -1136,24 +1235,62 @@ class AluProfBracketPerpTwin (object):
 #                 wfco=1,
 #                 name = 'bracket_twin3')
 
-AluProfBracketPerpTwin ( alusize_lin = 16, alusize_perp = 20,
-                 alu_sep = 25.,
-                 br_perp_thick = 3.,
-                 br_lin_thick = 3.,
-                 bolt_lin_d = 6,
-                 bolt_perp_d = 3,
-                 nbolts_lin = 2,
-                 bolts_lin_dist = 15,
-                 bolts_lin_rail = 1,
-                 bolt_perp_line = 1,
-                 xtr_bolt_head = 4, # more extra because of the perp bolt
-                 sunk = 0,
-                 fc_perp_ax = VZ,
-                 fc_lin_ax = VX,
-                 fc_wide_ax = VY,
-                 pos = V0,
-                 wfco=1,
-                 name = 'bracket_twin3_perp')
+#AluProfBracketPerpTwin ( alusize_lin = 16, alusize_perp = 30,
+#                 alu_sep = 25.,
+#                 br_perp_thick = 4.,
+#                 br_lin_thick = 4.,
+#                 bolt_lin_d = 6,
+#                 bolt_perp_d = 4,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 15,
+#                 bolts_lin_rail = 1,
+#                 bolt_perp_line = 0,
+#                 xtr_bolt_head = 4, # more extra because of the perp bolt
+#                 sunk = 0,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 fc_wide_ax = VY,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_twin3_perp')
+
+#AluProfBracketPerpTwin ( alusize_lin = 16, alusize_perp = 15,
+#                 alu_sep = 25.,
+#                 br_perp_thick = 4.,
+#                 br_lin_thick = 4.,
+#                 bolt_lin_d = 6,
+#                 bolt_perp_d = 3,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 15,
+#                 bolts_lin_rail = 1,
+#                 bolt_perp_line = 0,
+#                 xtr_bolt_head = 4, # more extra because of the perp bolt
+#                 sunk = 0,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 fc_wide_ax = VY,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_twin3_perp')
+
+#AluProfBracketPerpTwin ( alusize_lin = 16, alusize_perp = 10,
+#                 alu_sep = 25.,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_lin_d = 6,
+#                 bolt_perp_d = 3.,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 15,
+#                 bolts_lin_rail = 1,
+#                 bolt_perp_line = 0,
+#                 xtr_bolt_head = 4, # more extra because of the perp bolt
+#                 sunk = 0,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 fc_wide_ax = VY,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_twin3_perp')
 
 
 
@@ -1205,6 +1342,8 @@ AluProfBracketPerpTwin ( alusize_lin = 16, alusize_perp = 20,
 # holdbolt_d: diameter of the bolts used to attach this part to the aluminum
 #   profile
 # above_h: height of this piece above the aluminum profile
+# rail: posibility of having a rail instead of holes for mounting the 
+#       holder. It has been made fast, so there may be bugs
 # mindepth: If there is a minimum depth. Sometimes needed for the endstop
 #            to reach its target
 # attach_dir: Normal vector to where the holder is attached:'x','-x','y','-y'
@@ -1222,6 +1361,7 @@ AluProfBracketPerpTwin ( alusize_lin = 16, alusize_perp = 20,
 class IdlePulleyHolder (object):
 
     def __init__ (self, profile_size, pulleybolt_d, holdbolt_d, above_h,
+                  rail = 0,
                   mindepth = 0,
                   attach_dir = '-y', endstop_side = 0,
                   endstop_posh = 0,
@@ -1341,31 +1481,58 @@ class IdlePulleyHolder (object):
             shp_face_base = Part.Face(shp_wire_base)
             shp_box = shp_face_base.extrude(FreeCAD.Vector(0,0,height))
 
-
-
             hbolt_p0x = p0x + sg * hbolt_endsep
             #shank of holding bolt
             pos_shank_hbolt0 = FreeCAD.Vector(hbolt_p0x,
                                               -1,
                                              -profile_size/2.)
-            shp_shank_hbolt0 = fcfun.shp_cyl ( r = holdbolt_d/2. + TOL,
+            if rail == 0:
+                shp_shank_hbolt0 = fcfun.shp_cyl ( r = holdbolt_d/2. + TOL,
                                                h= bolt_shank + 2, normal = VY,
                                                pos = pos_shank_hbolt0)
-            if depth > bolt_shank :
-                pos_head_hbolt0 = FreeCAD.Vector(hbolt_p0x,
+                if depth > bolt_shank :
+                    pos_head_hbolt0 = FreeCAD.Vector(hbolt_p0x,
                                                  bolt_shank,
                                                  -profile_size/2.)
-                shp_head_hbolt0 = fcfun.shp_cyl (
+                    shp_head_hbolt0 = fcfun.shp_cyl (
                                            r = holdbolthead_d/2. + TOL,
                                            h = depth - bolt_shank + 1,
                                            normal = VY,
                                            pos = pos_head_hbolt0)
-                shp_hbolt0 = shp_shank_hbolt0.fuse(shp_head_hbolt0)
-            else: # no head
-                shp_hbolt0 = shp_shank_hbolt0 
-            shp_hbolt1 = shp_hbolt0.copy()
-            # It is in zero
-            shp_hbolt1.Placement.Base.x = sg * hbolt_sep
+                    shp_hbolt0 = shp_shank_hbolt0.fuse(shp_head_hbolt0)
+                else: # no head
+                    shp_hbolt0 = shp_shank_hbolt0 
+                shp_hbolt1 = shp_hbolt0.copy()
+                # It is in zero
+                shp_hbolt1.Placement.Base.x = sg * hbolt_sep
+            else:
+                rail = min(rail, above_h-profile_size/2.)
+                shp_shank_hbolt0 = fcfun.shp_stadium_dir (
+                                            length = rail,
+                                            radius = holdbolt_d/2. + TOL,
+                                            height= bolt_shank + 2,
+                                            fc_axis_l = VZ,
+                                            fc_axis_h = VY,
+                                            ref_l = 2, ref_h = 2,
+                                            pos = pos_shank_hbolt0)
+                if depth > bolt_shank :
+                    pos_head_hbolt0 = FreeCAD.Vector(hbolt_p0x,
+                                                 bolt_shank,
+                                                 -profile_size/2.)
+                    shp_head_hbolt0 = fcfun.shp_stadium_dir (
+                                           length = rail,
+                                           radius = holdbolthead_d/2. + TOL,
+                                           height = depth - bolt_shank + 1,
+                                           fc_axis_l = VZ,
+                                           fc_axis_h = VY,
+                                            ref_l = 2, ref_h = 2,
+                                           pos = pos_head_hbolt0)
+                    shp_hbolt0 = shp_shank_hbolt0.fuse(shp_head_hbolt0)
+                else: # no head
+                    shp_hbolt0 = shp_shank_hbolt0 
+                shp_hbolt1 = shp_hbolt0.copy()
+                # It is in zero
+                shp_hbolt1.Placement.Base.x = sg * hbolt_sep
 
             # hole for the pulley bolt
             pulleybolt_pos = FreeCAD.Vector (0, depth - pulleydepth/2.,
@@ -1374,6 +1541,7 @@ class IdlePulleyHolder (object):
                                             h = pulleybolt_h + 1,
                                             normal = VZ,
                                             pos = pulleybolt_pos)
+                                   
                                             
             holes_list = [shp_hbolt0, shp_hbolt1]
             # hole for the nut:
@@ -1469,6 +1637,18 @@ class IdlePulleyHolder (object):
 #                        pulleybolt_d=3.,
 #                        holdbolt_d = 5,
 #                        above_h = 47-15-9.5,
+#                        mindepth = 0,
+#                        attach_dir = '-y',
+#                        endstop_side = 0,
+#                        endstop_posh = 0,
+#                        name = "idlepulleyhold")
+
+
+#idp = IdlePulleyHolder( profile_size=30.,
+#                        pulleybolt_d=3.,
+#                        holdbolt_d = 4,
+#                        above_h = 40,
+#                        rail = 30,
 #                        mindepth = 0,
 #                        attach_dir = '-y',
 #                        endstop_side = 0,
@@ -1733,7 +1913,7 @@ class SimpleEndstopHolder (object):
 
         # mounting bolt data
         d_mbolt = kcomp.D912[int(mbolt_d)]  #dictionary of the mounting bolt
-        print(str(d_mbolt))
+        #print(str(d_mbolt))
         mbolt_r_tol = d_mbolt['shank_r_tol']
         mbolt_head_r = d_mbolt['head_r']
         mbolt_head_r_tol = d_mbolt['head_r_tol']
