@@ -1817,6 +1817,7 @@ class SimpleEndstopHolder (object):
                not for the endstop
         endstop_nut_dist: distance from the top to the endstop nut.
                if zero
+        min_d: 1: make the endstop axis_d dimension the minimum
         ref_h: reference (zero) of fc_axis_h
                 1: at the bottom
                 2: on top
@@ -1849,9 +1850,10 @@ class SimpleEndstopHolder (object):
                  #csunk = 1,
                  mbolt_d = 3.,
                  endstop_nut_dist = 0,
-                 fc_axis_h = VZ,
+                 min_d = 0,
                  fc_axis_d = VX,
                  fc_axis_w = V0,
+                 fc_axis_h = VZ,
                  ref_d = 1,
                  ref_w = 1,
                  ref_h = 1,
@@ -1927,9 +1929,17 @@ class SimpleEndstopHolder (object):
         estp_bolt_d = d_endstop['BOLT_D']  #diameter, not depth
         estp_w = d_endstop['L']
 
-        tot_d = 3*mbolt_head_r + rail_l + estp_tot_d - holder_out
-
-
+        # length of the pins:
+        estp_pin_d  = estp_tot_d - estp_d
+        if min_d == 0:
+            tot_d = 3*mbolt_head_r + rail_l + estp_tot_d - holder_out
+            # nut axis: (nut axis of the hexagon vertex
+            hex_verx = axis_d
+        else:
+            # Taking the minimum lenght, very tight
+            tot_d = (3*mbolt_head_r + rail_l + estp_d - holder_out
+                     + estp_pin_d/2.)
+            hex_verx = axis_w # less space
 
         # Total width is the largest value from:
         # - the width(length) of the endstop
@@ -2076,7 +2086,7 @@ class SimpleEndstopHolder (object):
                                 hex_head = 1,
                                 xtr_head = 1, xtr_shank = 1,
                                 fc_normal = axis_h,
-                                fc_verx1 = axis_d,
+                                fc_verx1 = hex_verx,
                                 pos = pos_estpbolt)
             holes.append(shp_estpbolt)
         # holes for the rails, point d2 w3 h2
@@ -2141,25 +2151,26 @@ class SimpleEndstopHolder (object):
 
 
 
-#doc = FreeCAD.newDocument()
-#h_estp = SimpleEndstopHolder(
-#                 d_endstop = kcomp.ENDSTOP_A,
-#                 rail_l = 15,
-#                 base_h = 4.,
-#                 h = 0,
-#                 holder_out = 2.,
-#                 #csunk = 1,
-#                 mbolt_d = 3.,
-#                 endstop_nut_dist = 2.,
-#                 fc_axis_h = VZ,
-#                 fc_axis_d = VX,
-#                 fc_axis_w = V0,
-#                 ref_d = 2,
-#                 ref_w = 1,
-#                 ref_h = 1,
-#                 pos = V0,
-#                 wfco = 1,
-#                 name = 'simple_enstop_holder')
+doc = FreeCAD.newDocument()
+h_estp = SimpleEndstopHolder(
+                 d_endstop = kcomp.ENDSTOP_A,
+                 rail_l = 25,
+                 base_h = 4.,
+                 h = 0,
+                 holder_out = 2.,
+                 #csunk = 1,
+                 mbolt_d = 3.,
+                 endstop_nut_dist = 2.,
+                 min_d = 1,
+                 fc_axis_d = VX,
+                 fc_axis_w = V0,
+                 fc_axis_h = VZ,
+                 ref_d = 2,
+                 ref_w = 1,
+                 ref_h = 1,
+                 pos = V0,
+                 wfco = 1,
+                 name = 'simple_enstop_holder')
 
 
 # ----------- thin linear bearing housing with one rail to be attached
@@ -4479,3 +4490,299 @@ class Plate3CageCubes (object):
 #                fc_sid_ax = VY,
 #                pos = V0,
 #                name = 'Plate3CageCubes')
+
+class hallestop_holder (object):
+
+
+    def __init__(self,
+                 stp_w = 21.,
+                 stp_h = 31.,
+                 base_thick = 4.,
+                 sup_thick = 4.,
+                 bolt_base_d = 3, #metric of the bolt 
+                 bolt_sup_d = 3, #metric of the bolt
+                 bolt_sup_sep = 17.,
+                 alu_rail_l = 5,
+                 stp_rail_l = 5,
+                 xtr_bolt_head = 3,
+                 xtr_bolt_head_d = 0,
+                 reinforce = 1,
+                 base_min_dist = 1,
+                 fc_perp_ax = VZ,
+                 fc_lin_ax = VX,
+                 pos = V0,
+                 wfco=1,
+                 name = 'holder'):
+
+        doc = FreeCAD.ActiveDocument
+        self.name = name
+        # bolt lin dimensions
+        boltli_dict = kcomp.D912[bolt_base_d]
+        boltlihead_r = boltli_dict['head_r']
+        boltlihead_r_tol = boltli_dict['head_r_tol']
+        boltlishank_r_tol = boltli_dict['shank_r_tol']
+        boltlihead_l = boltli_dict['head_l']
+        if bolt_sup_d == 0:
+            bolt_sup_d = bolt_lin_d
+        boltpe_dict = kcomp.D912[bolt_sup_d]
+        boltpehead_r = boltpe_dict['head_r']
+        boltpehead_r_tol = boltpe_dict['head_r_tol']
+        boltpeshank_r_tol = boltpe_dict['shank_r_tol']
+        boltpehead_l = boltpe_dict['head_l']
+
+        boltmaxhead_r = max(boltlihead_r, boltpehead_r)
+        boltmaxhead_r_tol = max(boltlihead_r_tol, boltpehead_r_tol)
+
+        # normalize axis, just in case:
+        axis_perp = DraftVecUtils.scaleTo(fc_perp_ax,1)
+        axis_lin = DraftVecUtils.scaleTo(fc_lin_ax,1)
+        axis_perp_neg = axis_perp.negative()
+        axis_lin_neg = axis_lin.negative()
+        axis_wid   = axis_perp.cross(axis_lin)
+
+        #Calculate the length of the sup_l
+        #         sup_thick :boltpehead_l
+        #                  :  : : boltlihead_r
+        #              ....:__: :  :
+        #              :   |  |_   :
+        # sup_h        +   |  |_| _:_
+        #              :   |  |__|___|___ 
+        #              :...|_____________|
+        #                  :.......:
+        #                 bolt1li_dist = sup_thick+boltpehead_l+boltlihead_r
+        #                          :  :  :
+        #                        2 x boltlihead_r
+        #                  :.............:
+        #                      + sup_l
+
+        if base_min_dist == 0:
+            bolt1li_dist = (  sup_thick + boltpehead_l + boltlihead_r_tol
+                        + xtr_bolt_head )
+            sup_l = bolt1li_dist + 2 * boltlihead_r + alu_rail_l
+        else: 
+            bolt1li_dist = ( sup_thick + boltlihead_r_tol
+                        + xtr_bolt_head +kcomp.TOL)
+            sup_l = bolt1li_dist + 0.8*boltlihead_r + alu_rail_l
+
+        tot_w = max(stp_w + 2 * boltpehead_r, 8 * boltlihead_r) + 2 * reinforce
+
+
+        #              ....:__: :  :           _________
+        #              :   |  |_   :          ||       ||
+        #   su_h       +   |  |_| _:_         ||   O   ||
+        #              :   |  |__|___|___     ||_______||
+        #              :...|_____________|    |___:_:___|......axis_wid
+        #                  :.............:    :.........:
+        #                    + sup_l             + tot_w
+
+        sup_h = 2*boltpehead_r + base_thick + stp_rail_l
+
+        shp_box = fcfun.shp_box_dir (box_w = tot_w,
+                                     box_d = sup_l,
+                                     box_h = sup_h,
+                                     fc_axis_h = axis_perp,
+                                     fc_axis_d = axis_lin,
+                                     cw = 1, cd = 0, ch = 0,
+                                     pos = pos)
+
+        chmf_out_r = min(sup_l-sup_thick, sup_h-base_thick)
+
+        chmf_out_pos = (   pos + DraftVecUtils.scaleTo(axis_lin, sup_l)
+                         + DraftVecUtils.scaleTo(axis_perp, sup_h))
+
+        shp_box = fcfun.shp_filletchamfer_dirpt(shp_box,
+                                                   fc_axis = axis_wid,
+                                                   fc_pt = chmf_out_pos,
+                                                   fillet = 0,
+                                                   radius = chmf_out_r)
+
+        #                                       inside_w
+        #                                       ...+...
+        #              ....:__: :  :           :_______:
+        #              :   |  |_   :          ||       ||
+        #    sup_h +   |  |_| _:_         ||   O   ||
+        #              :   |  |__|___|___     ||_______||
+        #              :...|_____________|    |___:_:___|
+        #                  :.............:    :.........:
+        #                    + sup_l             + tot_w
+        # cut the box inside
+        # Inside width
+        # add one, to have it a minimum of one mm
+        if (reinforce > 0 and
+           (tot_w > 2*(boltmaxhead_r + kcomp.TOL) + 1 )):
+            inside_w =  tot_w - 2 * reinforce
+            #print ("inside width " + str(inside_w))
+        else:
+            #no space for reinforcement, or reinforcement 0
+            inside_w = tot_w + 2 # +2 to make the cut
+
+        # chamfer of the inside box
+        chmf_in_r = boltpehead_r
+        logger.debug ("chamfer radius" + str(chmf_in_r))
+
+        # inside box:
+        insbox_pos = ( pos + DraftVecUtils.scale(axis_lin,sup_thick)
+                           + DraftVecUtils.scale(axis_perp,base_thick))
+        shp_insbox = fcfun.shp_box_dir (box_w = inside_w,
+                                     box_d = sup_l,
+                                     box_h = sup_h,
+                                     fc_axis_h = axis_perp,
+                                     fc_axis_d = axis_lin,
+                                     cw = 1, cd = 0, ch = 0,
+                                     pos = insbox_pos)
+        if chmf_in_r > 0 :
+            shp_insbox = fcfun.shp_filletchamfer_dirpt(shp_insbox,
+                                                     fc_axis = axis_wid,
+                                                     fc_pt = insbox_pos,
+                                                     fillet = 0,
+                                                     radius = chmf_in_r)
+        #Part.show(shp_insbox)
+        shp_box = shp_box.cut(shp_insbox)
+
+        #pos_boltpe =  pos + DraftVecUtils.scale(axis_perp,sup_h/2.) 
+        #shp_boltpe= fcfun.shp_cylcenxtr(r=boltshank_r_tol,
+        #                    h=brack_thick,
+        #                    normal = axis_lin,
+        #                    ch = 0, xtr_top = 1, xtr_bot=1,
+        #                    pos = pos_boltpe)
+
+        boltholes = []
+        for pos_wi in [ DraftVecUtils.scale(axis_wid,-bolt_sup_sep/2.),
+                        DraftVecUtils.scale(axis_wid,bolt_sup_sep/2.)]:
+            pos_boltpe =  (pos
+                     + DraftVecUtils.scale(axis_perp,
+                                           base_thick +(sup_h-base_thick)/2.)
+                     + DraftVecUtils.scale(axis_lin,sup_thick+boltpehead_l)
+                     + pos_wi)
+            shp_boltpe = fcfun.shp_2stadium_dir(
+                               length = stp_rail_l,
+                               r_s = boltpeshank_r_tol,
+                               #r_l =  boltpehead_r_tol + xtr_bolt_head_d/2.,
+                               r_l =  boltpehead_r + xtr_bolt_head_d/2.,
+                               h_tot = sup_thick + boltpehead_l,
+                               h_rl = boltpehead_l,
+                               fc_axis_h = axis_lin_neg,
+                               fc_axis_l = axis_perp,
+                               ref_l = 1, #ref on the circle center
+                               rl_h0 = 1, #bolt head is on pos
+                               xtr_h = 1,
+                               xtr_nh = 1,
+                               pos = pos_boltpe)
+            boltholes.append(shp_boltpe)
+
+        pos_boltli =  pos + DraftVecUtils.scale(axis_lin,bolt1li_dist) 
+        #pos_wi_sca = tot_w/2. -2*boltlihead_r - reinforce
+        pos_wi_sca = bolt_sup_sep/2.
+        for pos_wi in  [ DraftVecUtils.scale(axis_wid,-pos_wi_sca),
+                        DraftVecUtils.scale(axis_wid,pos_wi_sca)]:
+            # 2 Stadium to cut the chamfer if it is too big
+            pos_boltli_top = (pos_boltli
+                         + DraftVecUtils.scale(axis_perp, sup_h) 
+                         + pos_wi)
+            shp_railli = fcfun.shp_2stadium_dir (length = alu_rail_l,
+                               r_s = boltlishank_r_tol,
+                               r_l = boltlihead_r_tol + kcomp.TOL/2., #extra TOL
+                               h_tot = sup_h,
+                               h_rl = sup_h-base_thick,
+                               fc_axis_h = axis_perp_neg,
+                               fc_axis_l = axis_lin,
+                               ref_l = 2, #ref on the circle center
+                               rl_h0 = 1, #bolt head is on pos
+                               xtr_h = 1,
+                               xtr_nh = 1,
+                               pos = pos_boltli_top)
+            boltholes.append(shp_railli)
+
+        shp_boltfuse = fcfun.fuseshplist(boltholes)
+
+        shp_bracket = shp_box.cut(shp_boltfuse)
+        doc.recompute()
+        shp_bracket =shp_bracket.removeSplitter()
+        doc.recompute()
+
+        self.shp = shp_bracket
+        self.wfco = wfco
+        if wfco == 1:
+            # a freeCAD object is created
+            fco_bracket = doc.addObject("Part::Feature", name )
+            fco_bracket.Shape = shp_bracket
+            self.fco = fco_bracket
+
+    def color (self, color = (1,1,1)):
+        if self.wfco == 1:
+            self.fco.ViewObject.ShapeColor = color
+        else:
+            logger.debug("Bracket object with no fco")
+        
+    # exports the shape into stl format
+    def export_stl (self, name = ""):
+        #filepath = os.getcwd()
+        if not name:
+            name = self.name
+        stlPath = filepath + "/freecad/stl/"
+        stlFileName = stlPath + name + ".stl"
+        self.shp.exportStl(stlFileName)
+       
+#doc = FreeCAD.newDocument()
+
+#hs = hallestop_holder ( 
+#                 stp_w = 21.,
+#                 stp_h = 31.,
+#                 base_thick = 4.,
+#                 sup_thick = 5.,
+#                 bolt_base_d = 3, #metric of the bolt 
+#                 bolt_sup_d = 3, #metric of the bolt
+#                 bolt_sup_sep = 17.,
+#                 alu_rail_l = 10,
+#                 stp_rail_l = 20,
+#                 xtr_bolt_head = 0,
+#                 xtr_bolt_head_d = 0,
+#                 base_min_dist = 1,
+#                 reinforce = 4,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'holder')
+
+
+#hs = hallestop_holder ( 
+#                 stp_w = 21.,
+#                 stp_h = 31.,
+#                 base_thick = 3.,
+#                 sup_thick = 3.,
+#                 bolt_base_d = 3, #metric of the bolt 
+#                 bolt_sup_d = 3, #metric of the bolt
+#                 bolt_sup_sep = 17.,
+#                 alu_rail_l = 7,
+#                 stp_rail_l = 5,
+#                 xtr_bolt_head = 0,
+#                 xtr_bolt_head_d = 0,
+#                 base_min_dist = 1,
+#                 reinforce = 2,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'holder')
+
+
+#hs = hallestop_holder ( 
+#                 stp_w = 21.,
+#                 stp_h = 31.,
+#                 base_thick = 3.,
+#                 sup_thick = 3.,
+#                 bolt_base_d = 3, #metric of the bolt 
+#                 bolt_sup_d = 3, #metric of the bolt
+#                 bolt_sup_sep = 17.,
+#                 alu_rail_l = 10,
+#                 stp_rail_l = 10,
+#                 xtr_bolt_head = 0,
+#                 xtr_bolt_head_d = 0,
+#                 base_min_dist = 1,
+#                 reinforce = 4,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'holder')
