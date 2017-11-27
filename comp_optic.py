@@ -1191,6 +1191,8 @@ class PlateThruholeMhole (object):
                  name = 'plate'):
 
         doc = FreeCAD.ActiveDocument
+        self.sym_hole_d = sym_hole_d
+        self.sym_hole_sep = sym_hole_sep
 
         # normalize de axis
         axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
@@ -1530,6 +1532,12 @@ class Lcpb1mBase (object):
         # best axis to print, to be pointing up:
         self.axis_print = axis_h
 
+        self.ref_d = ref_d
+        self.ref_w = ref_w
+        self.ref_h = ref_h
+
+        self.slot_dist = slot_dist
+
         # central large mounting bolt hole
         d_lmbolt = kcomp.D912[int(l_mbolt_d)]
 
@@ -1568,6 +1576,16 @@ class Lcpb1mBase (object):
             refto_1_h = fc_1_2_h.negative()
         else:
             logger.error('wrong reference point')
+
+        self.refto_1_w = refto_1_w
+        self.refto_1_d = refto_1_d
+        self.refto_1_h = refto_1_h
+        self.fc_1_2_w = fc_1_2_w
+        self.fc_1_3_w = fc_1_3_w
+        self.fc_1_2_d = fc_1_2_d
+        self.fc_1_3_d = fc_1_3_d
+        self.fc_1_2_h = fc_1_2_h
+
 
         # absolute position of point on w=1, d=1, h=1
         w1_d1_h1_pos = pos + refto_1_w + refto_1_d + refto_1_h
@@ -1714,14 +1732,14 @@ def lcpb1m_base (d_lcpb1m_base = kcomp_optic.LCPB1M_BASE,
     return h_baseplate
 
 
-doc = FreeCAD.newDocument()
-lcpb1m_base (d_lcpb1m_base = kcomp_optic.LCPB1M_BASE,
-                  fc_axis_d = VX,
-                  fc_axis_w = V0,
-                  fc_axis_h = VZ,
-                  ref_d = 3, ref_w = 1, ref_h = 1,
-                  pos = FreeCAD.Vector(3,4,8),
-                  wfco = 1, toprint= 0, name = 'Lcpb1mBase')
+#doc = FreeCAD.newDocument()
+#lcpb1m_base (d_lcpb1m_base = kcomp_optic.LCPB1M_BASE,
+#                  fc_axis_d = VX,
+#                  fc_axis_w = V0,
+#                  fc_axis_h = VZ,
+#                  ref_d = 3, ref_w = 1, ref_h = 1,
+#                  pos = FreeCAD.Vector(3,4,8),
+#                  wfco = 1, toprint= 0, name = 'Lcpb1mBase')
 
 
 

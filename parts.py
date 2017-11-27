@@ -2151,26 +2151,26 @@ class SimpleEndstopHolder (object):
 
 
 
-doc = FreeCAD.newDocument()
-h_estp = SimpleEndstopHolder(
-                 d_endstop = kcomp.ENDSTOP_A,
-                 rail_l = 25,
-                 base_h = 4.,
-                 h = 0,
-                 holder_out = 2.,
-                 #csunk = 1,
-                 mbolt_d = 3.,
-                 endstop_nut_dist = 2.,
-                 min_d = 1,
-                 fc_axis_d = VX,
-                 fc_axis_w = V0,
-                 fc_axis_h = VZ,
-                 ref_d = 2,
-                 ref_w = 1,
-                 ref_h = 1,
-                 pos = V0,
-                 wfco = 1,
-                 name = 'simple_enstop_holder')
+#doc = FreeCAD.newDocument()
+#h_estp = SimpleEndstopHolder(
+#                 d_endstop = kcomp.ENDSTOP_A,
+#                 rail_l = 25,
+#                 base_h = 4.,
+#                 h = 0,
+#                 holder_out = 2.,
+#                 #csunk = 1,
+#                 mbolt_d = 3.,
+#                 endstop_nut_dist = 2.,
+#                 min_d = 1,
+#                 fc_axis_d = VX,
+#                 fc_axis_w = V0,
+#                 fc_axis_h = VZ,
+#                 ref_d = 2,
+#                 ref_w = 1,
+#                 ref_h = 1,
+#                 pos = V0,
+#                 wfco = 1,
+#                 name = 'simple_enstop_holder')
 
 
 # ----------- thin linear bearing housing with one rail to be attached

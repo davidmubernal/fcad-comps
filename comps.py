@@ -998,8 +998,31 @@ class AluProf (object):
         
         self.fco = fco_profile
 
+        self.defaluline()
+
     def color (self, color = (1,1,1)):
         self.fco.ViewObject.ShapeColor = color
+        linecol = []
+        for col_i in color:
+            if col_i < 0.2:
+                linecol.append(0.)
+            else:
+                linecol.append(col_i - 0.2)
+        print (str(linecol))       
+        self.fco.ViewObject.LineColor = tuple(linecol)
+        print(str(color) + ' -  '  + str(self.fco.ViewObject.LineColor))
+
+
+    def linecolor (self, color = (1,1,1)):
+        self.fco.ViewObject.LineColor = color
+
+    def linewidth (self, width = 1.):
+        self.fco.ViewObject.LineWidth = width
+
+    def defaluline (self):
+        self.fco.ViewObject.LineColor = (0.5,0.5,0.5)
+        self.fco.ViewObject.LineWidth = 1.
+
 
 
 # ----------- class AluProf_dir ---------------------------------------------
@@ -1124,6 +1147,7 @@ class AluProf_dir (object):
         self.indiam = indiam
         self.name   = name
         self.wfco = wfco
+        self.pos = pos
         # normalize the axis
         axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
         axis_w = DraftVecUtils.scaleTo(fc_axis_w,1)
@@ -1188,12 +1212,35 @@ class AluProf_dir (object):
         
         self.fco = fco_aluprof
 
+        self.defaluline()
+
     def color (self, color = (1,1,1)):
         self.fco.ViewObject.ShapeColor = color
+        linecol = []
+        for col_i in color:
+            print (str(col_i))
+            if col_i < 0.2:
+                linecol.append(0.)
+            else:
+                linecol.append(col_i - 0.2)
+        print (str(linecol))       
+        self.fco.ViewObject.LineColor = tuple(linecol)
+        print(str(color) + ' -  '  + str(self.fco.ViewObject.LineColor))
+        print(str(linecol))
+
+    def linecolor (self, color = (1,1,1)):
+        self.fco.ViewObject.LineColor = color
+
+    def linewidth (self, width = 1.):
+        self.fco.ViewObject.LineWidth = width
+
+    def defaluline (self):
+        self.fco.ViewObject.LineColor = (0.5,0.5,0.5)
+        self.fco.ViewObject.LineWidth = 1.
 
 
 
-# ----------- end class AluProf ----------------------------------------
+# ----------- end class AluProf_dir ----------------------------------------
 
 # Function that having a dictionary of the aluminum profile, just calls
 # the class AluProf, 
@@ -1240,15 +1287,15 @@ def getaluprof_dir ( aludict, length,
     return (h_aluprof)
 
 
-#doc =FreeCAD.newDocument()
-#h_aluprof = getaluprof_dir(aludict= kcomp.ALU_MOTEDIS_20I5,
-#                         length=50, 
-#                    fc_axis_l = FreeCAD.Vector(1,1,0),
-#                    fc_axis_w = FreeCAD.Vector(-1,1,0),
-#                    fc_axis_p = V0,
-#                    ref_l = 1, ref_w = 2, ref_p = 2,
-#                    xtr_l=0, xtr_nl=0,  pos = FreeCAD.Vector(1,2,4),
-#                    wfco = 1, name = "aluprof")
+doc =FreeCAD.newDocument()
+h_aluprof = getaluprof_dir(aludict= kcomp.ALU_MOTEDIS_20I5,
+                         length=50, 
+                    fc_axis_l = FreeCAD.Vector(1,1,0),
+                    fc_axis_w = FreeCAD.Vector(-1,1,0),
+                    fc_axis_p = V0,
+                    ref_l = 1, ref_w = 2, ref_p = 2,
+                    xtr_l=0, xtr_nl=0,  pos = FreeCAD.Vector(1,2,4),
+                    wfco = 1, name = "aluprof")
 
 
 

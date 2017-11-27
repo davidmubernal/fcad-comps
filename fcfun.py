@@ -3732,6 +3732,83 @@ def shp_filletchamfer_dirpts (shp, fc_axis, fc_pts,  fillet = 1,
 
 
 
+def shp_cir_fillchmf (shp, circen_pos = V0,  fillet = 1, radius=1):
+    """
+        Fillet or chamfer edges that is a circle, the shape has to be a 
+        cylinder
+    Arguments:
+        shp:   is the original cylinder shape we want to fillet or chamfer
+        circen_pos  : FreeCAD.Vector of the center of the circle
+        fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+        radius: the radius of the fillet or chamfer
+
+    """
+
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
+    edgelist = []
+    for edge in shp.Edges:
+        # get the edges, if it is a cylinder, 2 edges will have just one
+        # point and one will have to (the height)
+        # check if they are closed:
+        if edge.Closed == True:
+            # only one point
+            # Get the center of Mass, which will be the center
+            cen = edge.CenterOfMass
+            # check if they are the same vector
+            if ( DraftVecUtils.equals(circen_pos, cen)):
+                edgelist.append(edge)
+                break
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            shp_fillcham = shp.makeFillet(radius, edgelist)
+        else:
+            shp_fillcham = shp.makeChamfer(radius, edgelist)
+        doc.recompute()
+        return shp_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
+
+
+def shp_cylfilletchamfer (shp, fillet = 1, radius=1):
+    """
+        Fillet or chamfer all edges of a cylinder
+    Arguments:
+        shp:   is the original cylinder shape we want to fillet or chamfer
+        fillet: 1 if we are doing a fillet, 0 if it is a chamfer
+        radius: the radius of the fillet or chamfer
+
+    """
+
+    # we have to bring the active document
+    doc = FreeCAD.ActiveDocument
+    doc.recompute()  # you may hav problems if you dont do it
+    edgelist = []
+    for edge in shp.Edges:
+        # get the edges, if it is a cylinder, 2 edges will have just one
+        # point and one will have to (the height)
+        # check if they are closed:
+        if edge.Closed == True:
+            # only one point
+            edgelist.append(edge)
+
+    if len(edgelist) != 0:
+        if fillet == 1:
+            shp_fillcham = shp.makeFillet(radius, edgelist)
+        else:
+            shp_fillcham = shp.makeChamfer(radius, edgelist)
+        doc.recompute()
+        return shp_fillcham
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
+
+
+
+
 #  --- Fillet or chamfer edges of a certain length, on a certain axis
 #  --- and a certain coordinate
 #  For a shape
