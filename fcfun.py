@@ -1266,7 +1266,7 @@ def shp_stadium_wire_dir (length, radius, fc_axis_l = VX,
     length: length of the parallels
     radius: Radius of the semicircles
     fc_axis_l: vector on the direction of the paralles
-    fc_axis_s: vector on the direction of the paralles
+    fc_axis_s: vector on the direction perpendicular to the paralles
     ref_l: reference (zero) of the fc_axis_l
             1: reference on the center (makes axis_s symmetrical)
             2: reference at one of the semicircle centers (point 2)
@@ -1321,7 +1321,7 @@ def shp_stadium_wire_dir (length, radius, fc_axis_l = VX,
     elif ref_l == 2:  # ref on circle center (left)
         refto_1_l = fc_1_4_l # or fc_1_2_l.negative()
     elif ref_l == 3:  # ref at the left end
-        refto_1_l = fc_1_3_l
+        refto_1_l = fc_1_5_l # or fc_1_3_l.negative
     else:
         logger.error('wrong ref_l in shp_stadium_wire_dir')
 
@@ -1631,6 +1631,348 @@ def shp_2stadium_dir (
 #                     xtr_h = 0,
 #                     xtr_nh = 3,
 #                     pos=V0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ------------------- def shp_belt_wire_dir
+
+def shp_belt_wire_dir (center_sep, rad1, rad2, fc_axis_l = VX,
+                       fc_axis_s = VY,
+                       ref_l = 1,
+                       ref_s = 1,
+                       pos=V0):
+
+    """
+    Makes a shape of a wire with to circles and exterior tangent lines
+    check: https://en.wikipedia.org/wiki/Tangent_lines_to_circles
+    It is not easy to draw it well
+    rad1 and rad2 can be exchanged, rad1 doesnt have to be larger
+
+            ....                    fc_axis_s
+           :    ( \ tangent          |
+      rad1 :   (    \  .. rad2       |--> fc_axis_l, on the direction of rad2
+           .--(  +   +)--
+               (    /:
+                ( /  :
+                 :   :
+                 :...:
+                   + center_sep
+
+ 
+
+                  ....                fc_axis_s
+                 :    ( \ tangent       |
+            rad1 :   (    \  .. rad2    |
+                  --(  +   +)--         |--> fc_axis_l, on the direction of rad2
+                     (    /:             centered on this axis
+                      ( /  :
+                       :   :
+                       :...:
+             ref_l: 3  2 1
+
+ 
+    Arguments:
+    center_sep: separation of the circle centers
+    rad1: Radius of the firs circle, on the opposite direction of fc_axis_l
+    fc_axis_l: vector on the direction circle centers, pointing to rad2
+    fc_axis_s: vector on the direction perpendicular to fc_axis_l, on the plane
+               of the wire
+    ref_l: reference (zero) of the fc_axis_l
+            1: reference on the center 
+            2: reference at one of the semicircle centers (point 2)
+               the other circle center will be on the direction of fc_axis_l
+            3: reference at the end of rad1 circle
+               the other end will be on the direction of fc_axis_l
+    pos: FreeCAD vector of the position of the reference
+
+
+    returns the shape of the wire
+    """
+
+    # normalize the axis
+    axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
+    axis_s = DraftVecUtils.scaleTo(fc_axis_s,1)
+
+
+    #        ....                fc_axis_s
+    #            :    ( \ tangent       |
+    #       rad1 :   (    \  .. rad2    |
+    #             --3  2 1 45--         |--> fc_axis_l, on the direction of rad2
+    #                (    /:             centered on this axis
+    #                 ( /  :
+    #                  :   :
+    #                  :...:
+    #                    + center_sep
+       
+
+    # ----- Distance vectors on axis_l
+    # distance from 1 to 2 in axis_l
+    fc_1_2_l = DraftVecUtils.scale(axis_l, -center_sep/2.)
+    fc_2_3_l = DraftVecUtils.scale(axis_l, -rad1)
+    fc_2_4_l = DraftVecUtils.scale(axis_l, center_sep)
+    fc_4_5_l = DraftVecUtils.scale(axis_l, rad2)
+    fc_2_5_l = fc_2_4_l + fc_4_5_l
+    # ----- reference is point 2 on axis_l
+    # vector to go from the reference point to point 2 in l
+    if ref_l == 1:  # ref on circle center sep
+        refto_2_l = fc_1_2_l
+    elif ref_l == 2:  # ref on circle center (rad1)
+        refto_2_l = V0
+    elif ref_l == 3:  # ref at the left end
+        refto_2_l = fc_2_3_l.negative()
+    else:
+        logger.error('wrong ref_l in shp_belt_wire_dir')
+
+
+    # Now define the center of the rad1 circle
+    # and everything will be defined from this point
+    # ln: L axis Negative side
+    # lp: L axis Positive side
+    # sn: S axis Negative side
+    # sp: S axis Positive side
+    # s0: S axis at zero
+    #
+    #        ....      ln_sp          fc_axis_s
+    #            :    ( \ tangent     |
+    #       rad1 :   (    \ lp_sp     |
+    #           ln_s0  2   4lp_s0     |--> fc_axis_l, on the direction of rad2
+    #                (    / lp_sn        centered on this axis
+    #                 ( /
+    #                  lp_sp
+    #
+    
+    # cs_rad1 is point 2 (center of circle 1)
+    cs_rad1 = pos +  refto_2_l
+    # cs_rad2 is point 4 (center of circle 2)
+    cs_rad2 = cs_rad1 + fc_2_4_l
+    # ln_s0 is point 3 
+    ln_s0_pos = cs_rad1 + fc_2_3_l
+    # lp_s0 is point 5 
+    lp_s0_pos = cs_rad2 + fc_4_5_l
+
+    dif_rad = float(abs(rad1 - rad2))
+    # Since we take our reference on axis_l, they are aligned, like if they were
+    # on axis X, and axis Y would be zero.
+    # therefore, angle gamma is zero (se wikipedia)
+    # check: https://en.wikipedia.org/wiki/Tangent_lines_to_circles
+    # the angle beta of the tanget is calculate from pythagoras:
+    # the length (separation between centers) and dif_rad
+    beta = math.atan (dif_rad/center_sep)
+    print ('beta %f', 180*beta/math.pi)
+    print ('beta %f', beta*math.pi/2)
+    # depending on who is larger rad1 or rad2, the negative angle will be either
+    # on top or down of axis_s
+
+    #
+    #                 (          \
+    #                ( /alfa   beta\ which is 90-beta
+    #               (               )
+    #                (             / 
+    #                 (          /
+    #  
+   
+    cos_beta = math.cos(beta) 
+    sin_beta = math.sin(beta) 
+    tan_axis_s_rad1add = DraftVecUtils.scale(axis_s, rad1 * cos_beta)
+    tan_axis_s_rad2add = DraftVecUtils.scale(axis_s, rad2 * cos_beta)
+    if rad1 > rad2: # then it will be positive on axis_l on rad1 and rad2
+        tan_axis_l_rad1add = DraftVecUtils.scale(axis_l, rad1 * sin_beta)
+        tan_axis_l_rad2add = DraftVecUtils.scale(axis_l, rad2 * sin_beta)
+    else:
+        tan_axis_l_rad1add = DraftVecUtils.scale(axis_l, - rad1 * sin_beta)
+        tan_axis_l_rad2add = DraftVecUtils.scale(axis_l, - rad2 * sin_beta)
+
+    ln_sp_pos = cs_rad1 + tan_axis_l_rad1add + tan_axis_s_rad1add 
+    ln_sn_pos = cs_rad1 + tan_axis_l_rad1add + tan_axis_s_rad1add.negative() 
+    lp_sp_pos = cs_rad2 + tan_axis_l_rad2add + tan_axis_s_rad2add 
+    lp_sn_pos = cs_rad2 + tan_axis_l_rad2add + tan_axis_s_rad2add.negative() 
+    
+    
+    lin_p =  Part.Line(ln_sp_pos, lp_sp_pos).toShape() 
+    arch_p = Part.Arc(lp_sp_pos, lp_s0_pos, lp_sn_pos).toShape()
+    lin_n = Part.Line(lp_sn_pos, ln_sn_pos).toShape() 
+    arch_n = Part.Arc(ln_sn_pos, ln_s0_pos, ln_sp_pos).toShape()
+    wire_belt = Part.Wire ([lin_p, arch_p, lin_n, arch_n])
+
+    Part.show(wire_belt)
+    return (wire_belt)
+
+
+belt_wire = shp_belt_wire_dir (center_sep = 70, rad1= 20, rad2=30,
+                       fc_axis_l = VX,
+                       fc_axis_s = VY,
+                       ref_l = 1,
+                       pos=FreeCAD.Vector(1,2,3))
+
+
+def shp_belt_dir (center_sep, rad1, rad2, height,
+                  fc_axis_h = VZ,
+                  fc_axis_l = VX,
+                  ref_l = 1,
+                  ref_h = 1,
+                  xtr_h = 0,
+                  xtr_nh = 0,
+                  pos=V0):
+
+    """
+    Makes a shape of 2 tangent circles (like a belt joining 2 circles).
+    check shp_belt_wire_dir
+    
+    Arguments:
+    center_sep: separation of the circle centers
+    rad1: Radius of the first circle, on the opposite direction of fc_axis_l
+    rad2: Radius of the second circle, on the direction of fc_axis_l
+    height: height of the shape
+    fc_axis_l: vector on the direction circle centers, pointing to rad2
+    fc_axis_h: vector on the hieght direction
+    ref_l: reference (zero) of the fc_axis_l
+            1: reference on the center 
+            2: reference at one of the semicircle centers (point 2)
+               the other circle center will be on the direction of fc_axis_l
+            3: reference at the end of rad1 circle
+               the other end will be on the direction of fc_axis_l
+    ref_h: 1: reference is at the center of the height
+           2: reference is at the bottom
+    xtr_h: if >0 it will be that extra height on the direction of fc_axis_h
+    xtr_nh: if >0 it will be that extra height on the opositve direction of
+             fc_axis_h
+    pos: FreeCAD vector of the position of the reference
+
+    returns the shape
+    """
+
+        # normalize the axis
+    axis_l = DraftVecUtils.scaleTo(fc_axis_l,1)
+    axis_h = DraftVecUtils.scaleTo(fc_axis_h,1)
+    axis_h_n = axis_h.negative()
+    axis_s = axis_l.cross(axis_h)
+    
+    if ref_h == 1: # we have to move the stadium half the height down + xtr_nh
+        basepos = pos + DraftVecUtils.scale(axis_h_n, height/2. + xtr_nh)
+    else:
+        basepos = pos + DraftVecUtils.scale(axis_h_n, xtr_nh)
+
+    shp_belt_wire = shp_belt_wire_dir (center_sep = center_sep,
+                                       rad1 = rad1, rad2 = rad2,
+                                       fc_axis_l = axis_l,
+                                       fc_axis_s = axis_s,
+                                       ref_l = ref_l,
+                                       pos=basepos)
+
+    # make a face of the wire
+    shp_belt_face = Part.Face (shp_belt_wire)
+    # extrude it
+    dir_extrud = DraftVecUtils.scaleTo(axis_h, height + xtr_nh + xtr_h)
+    shp_belt = shp_belt_face.extrude(dir_extrud)
+    return (shp_belt)
+
+
+
+#belt_shp = shp_belt_dir (center_sep = 70, rad1= 20, rad2=30, height = 10,
+#                       fc_axis_l = VX,
+#                       fc_axis_h = VZ,
+#                       ref_l = 1,
+#                       ref_h = 1,
+#                       xtr_h = 0,
+#                       xtr_nh = 0,
+#                       pos=V0);
+#Part.show(belt_shp)
+
+def shp_hollowbelt_dir (center_sep, rad1, rad2,
+                        rad_thick,
+                        height,
+                        fc_axis_h = VZ,
+                        fc_axis_l = VX,
+                        ref_l = 1,
+                        ref_h = 1,
+                        xtr_h = 0,
+                        xtr_nh = 0,
+                        pos=V0):
+
+    """
+    Makes a shape of 2 tangent circles (like a belt joining 2 circles).
+    check shp_belt_wire_dir
+    
+    Arguments:
+    center_sep: separation of the circle centers
+    rad1: Internal radius of the first circle, on the opposite direction of
+          fc_axis_l
+    rad2: Internal radius of the second circle, on the direction of fc_axis_l
+    rad_thick: increment to rad1 and rad2 to make the thickness. 
+    height: height of the shape
+    fc_axis_l: vector on the direction circle centers, pointing to rad2
+    fc_axis_h: vector on the hieght direction
+    ref_l: reference (zero) of the fc_axis_l
+            1: reference on the center 
+            2: reference at one of the semicircle centers (point 2)
+               the other circle center will be on the direction of fc_axis_l
+            3: reference at the end of rad1 circle
+               the other end will be on the direction of fc_axis_l
+    ref_h: 1: reference is at the center of the height
+           2: reference is at the bottom
+    xtr_h: if >0 it will be that extra height on the direction of fc_axis_h
+    xtr_nh: if >0 it will be that extra height on the opositve direction of
+             fc_axis_h
+    pos: FreeCAD vector of the position of the reference
+
+    returns the shape
+    """
+
+
+    belt_shp = shp_belt_dir (center_sep = center_sep,
+                             rad1=rad1+rad_thick,
+                             rad2=rad2+rad_thick,
+                             height =height,
+                             fc_axis_l = fc_axis_l,
+                             fc_axis_h = fc_axis_h,
+                             ref_l = ref_l,
+                             ref_h = ref_h,
+                             xtr_h = xtr_h,
+                             xtr_nh = xtr_nh,
+                             pos=pos);
+
+    belt_shp_hole = shp_belt_dir (center_sep = center_sep,
+                             rad1=rad1,
+                             rad2=rad2,
+                             height =height,
+                             fc_axis_l = fc_axis_l,
+                             fc_axis_h = fc_axis_h,
+                             ref_l = ref_l,
+                             ref_h = ref_h,
+                             xtr_h = xtr_h+1,
+                             xtr_nh = xtr_nh+1,
+                             pos=pos);
+
+    shp_belthole = belt_shp.cut(belt_shp_hole)
+
+    shp_belthole = shp_belthole.removeSplitter()
+    Part.show(shp_belthole)
+
+    return(shp_belthole)
+
+shp_belthollow = shp_hollowbelt_dir (
+                       center_sep = 70, rad1= 50, rad2=30,
+                       rad_thick = 4,
+                       height = 10,
+                       fc_axis_l = VX,
+                       fc_axis_h = VZ,
+                       ref_l = 2,
+                       ref_h = 1,
+                       xtr_h = 0,
+                       xtr_nh = 0,
+                       pos=V0);
+    
 
 
 
