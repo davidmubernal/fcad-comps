@@ -1287,15 +1287,15 @@ def getaluprof_dir ( aludict, length,
     return (h_aluprof)
 
 
-doc =FreeCAD.newDocument()
-h_aluprof = getaluprof_dir(aludict= kcomp.ALU_MOTEDIS_20I5,
-                         length=50, 
-                    fc_axis_l = FreeCAD.Vector(1,1,0),
-                    fc_axis_w = FreeCAD.Vector(-1,1,0),
-                    fc_axis_p = V0,
-                    ref_l = 1, ref_w = 2, ref_p = 2,
-                    xtr_l=0, xtr_nl=0,  pos = FreeCAD.Vector(1,2,4),
-                    wfco = 1, name = "aluprof")
+#doc =FreeCAD.newDocument()
+#h_aluprof = getaluprof_dir(aludict= kcomp.ALU_MOTEDIS_20I5,
+#                         length=50, 
+#                    fc_axis_l = FreeCAD.Vector(1,1,0),
+#                    fc_axis_w = FreeCAD.Vector(-1,1,0),
+#                    fc_axis_p = V0,
+#                    ref_l = 1, ref_w = 2, ref_p = 2,
+#                    xtr_l=0, xtr_nl=0,  pos = FreeCAD.Vector(1,2,4),
+#                    wfco = 1, name = "aluprof")
 
 
 

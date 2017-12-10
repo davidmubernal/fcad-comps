@@ -99,6 +99,13 @@ def equ (x,y):
         return True
     else:
         return False
+
+def add_fcobj(shp, name):
+    """ just creates a freeCAD object of the shape, just to save one line"""
+    doc = FreeCAD.ActiveDocument
+    fcobj = doc.addObject("Part::Feature", name)
+    fcobj.Shape = shp
+    return fcobj
   
 
 def addBox(x, y, z, name, cx= False, cy=False):
@@ -1805,15 +1812,15 @@ def shp_belt_wire_dir (center_sep, rad1, rad2, fc_axis_l = VX,
     arch_n = Part.Arc(ln_sn_pos, ln_s0_pos, ln_sp_pos).toShape()
     wire_belt = Part.Wire ([lin_p, arch_p, lin_n, arch_n])
 
-    Part.show(wire_belt)
+    #Part.show(wire_belt)
     return (wire_belt)
 
 
-belt_wire = shp_belt_wire_dir (center_sep = 70, rad1= 20, rad2=30,
-                       fc_axis_l = VX,
-                       fc_axis_s = VY,
-                       ref_l = 1,
-                       pos=FreeCAD.Vector(1,2,3))
+#belt_wire = shp_belt_wire_dir (center_sep = 70, rad1= 20, rad2=30,
+#                       fc_axis_l = VX,
+#                       fc_axis_s = VY,
+#                       ref_l = 1,
+#                       pos=FreeCAD.Vector(1,2,3))
 
 
 def shp_belt_dir (center_sep, rad1, rad2, height,
@@ -1957,21 +1964,21 @@ def shp_hollowbelt_dir (center_sep, rad1, rad2,
     shp_belthole = belt_shp.cut(belt_shp_hole)
 
     shp_belthole = shp_belthole.removeSplitter()
-    Part.show(shp_belthole)
+    #Part.show(shp_belthole)
 
     return(shp_belthole)
 
-shp_belthollow = shp_hollowbelt_dir (
-                       center_sep = 70, rad1= 50, rad2=30,
-                       rad_thick = 4,
-                       height = 10,
-                       fc_axis_l = VX,
-                       fc_axis_h = VZ,
-                       ref_l = 2,
-                       ref_h = 1,
-                       xtr_h = 0,
-                       xtr_nh = 0,
-                       pos=V0);
+#shp_belthollow = shp_hollowbelt_dir (
+#                       center_sep = 70, rad1= 50, rad2=30,
+#                       rad_thick = 4,
+#                       height = 10,
+#                       fc_axis_l = VX,
+#                       fc_axis_h = VZ,
+#                       ref_l = 2,
+#                       ref_h = 1,
+#                       xtr_h = 0,
+#                       xtr_nh = 0,
+#                       pos=V0);
     
 
 
@@ -4157,6 +4164,7 @@ def shp_cylfilletchamfer (shp, fillet = 1, radius=1):
 #   shp:   is the original shape we want to fillet or chamfer
 #   fillet: 1 if we are doing a fillet, 0 if it is a chamfer
 #   e_len: the length of the edges that we want to fillet or chamfer
+#          if e_len == 0, chamfer/fillet any length
 #   radius: the radius of the fillet or chamfer
 #   axis  : the axis where the fillet will be
 #   xpos_chk,ypos_chk,zpos_chk  :  if the position will be checked
@@ -4176,7 +4184,7 @@ def shp_filletchamfer (shp, e_len, fillet = 1, radius=1, axis='x',
         #logger.debug('filletchamfer: edge Length: %s ind %s',
         #             edge.Length, edge_ind)
         # using equ because float number can be not exactly the same
-        if equ(edge.Length, e_len): # same length
+        if (e_len == 0 or equ(edge.Length, e_len)): # same length
             if edgeonaxis (edge, axis) == True:
                 #logger.debug('edgeonaxis: Length: %s' % str(edge.Length))
                 v0 = edge.Vertexes[0]
@@ -4239,6 +4247,7 @@ def shp_filletchamfer (shp, e_len, fillet = 1, radius=1, axis='x',
 #   fco:   is the original FreeCAD object we want to fillet or chamfer
 #   fillet: 1 if we are doing a fillet, 0 if it is a chamfer
 #   e_len: the length of the edges that we want to fillet or chamfer
+#          if e_len == 0, chamfer/fillet any length
 #   radius: the radius of the fillet or chamfer
 #   axis  : the axis where the fillet will be
 #   xpos_chk,ypos_chk,zpos_chk  :  if the position will be checked
@@ -4259,7 +4268,7 @@ def filletchamfer (fco, e_len, name, fillet = 1, radius=1, axis='x',
         #logger.debug('filletchamfer: edge Length: %s ind %s',
         #             edge.Length, edge_ind)
         # using equ because float number can be not exactly the same
-        if equ(edge.Length, e_len): # same length
+        if (e_len == 0 or equ(edge.Length, e_len)): # same length
             if edgeonaxis (edge, axis) == True:
                 #logger.debug('edgeonaxis: Length: %s' % str(edge.Length))
                 v0 = edge.Vertexes[0]

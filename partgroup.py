@@ -140,6 +140,7 @@ def getmaxwashdiam (holcyl_list):
 
 # From a group of bearings and washers to make idle pulleys, obtains
 # the diameter of the larger bearing
+# check that it is the same as get_idlepull_maxbear_d in kcomp.py
 
 def getmaxbeardiam (holcyl_list):
 
@@ -159,6 +160,21 @@ def getgroupheight (holcyl_list):
     for elem in holcyl_list:
         group_h += elem.thick
     return group_h
+
+
+def getmaxwashthick (holcyl_list):
+    """
+    From a group of bearings and washers to make idle pulleys, obtains
+    the diameter of the larger washer
+    """
+
+    maxwashthick = 0
+    for elem in holcyl_list:
+        if elem.part == 'washer':
+            if maxwashthick < elem.thick :
+                maxwashthick = elem.thick
+    return maxwashthick
+
 
 
 
