@@ -41,30 +41,34 @@ logger = logging.getLogger(__name__)
 
 
 # ----------- class BearWashGroup ----------------------------------------
-# Creates a group of bearings and washers to make idle pulleys
-# Receives a list of names 
-# ----- Arguments:
-# holcyl_list:  list of objects kcomp.HollowCyl, that have the list of 
-#               objects that will be on this group. The ordering will be
-#               from bottom to top
-# normal:   FreeCAD.Vector on the direction of the cylinder. The sign matters
-# pos:      FreeCAD.Vector that defines the position of the center of the 
-#           cylinder base       
-# name:     string with the name
-# ----- Attributes:
-# holcyl_list:
-# normal:   The normalized normal
-# pos:      The position (argument)
-# height:   The total height of all the components
-# count:    The number of components
-# fco_list: A list with all the freecad objects
-# d_maxwash: The largest diameter of all the washers
-# d_maxbear: The largest diameter of all the bearing
-# r_maxwash: The largest radius of all the washers
-# r_maxbear: The largest radius of all the bearing
-# fco      : cad object of the compound
 
 class BearWashGroup (object):
+    """
+    creates a group of bearings and washers to make idle pulleys
+    Receives a list of names 
+    ----- Arguments:
+    holcyl_list:  list of objects kcomp.HollowCyl, that have the list of 
+                objects that will be on this group. The ordering will be
+                from bottom to top
+    fc_axis_h:   FreeCAD.Vector on the direction of the cylinder.
+                 The sign matters
+    pos:      FreeCAD.Vector that defines the position of the center of the 
+            cylinder base       
+    name:     string with the name
+    ----- Attributes:
+    holcyl_list:
+    normal:   The normalized normal
+    pos:      The position (argument)
+    height:   The total height of all the components
+    count:    The number of components
+    fco_list: A list with all the freecad objects
+    d_maxwash: The largest diameter of all the washers
+    d_maxbear: The largest diameter of all the bearing
+    r_maxwash: The largest radius of all the washers
+    r_maxbear: The largest radius of all the bearing
+    fco      : cad object of the compound
+    """
+
 
     def __init__ (self, holcyl_list,
                   name = "bearwashgr", 
@@ -120,7 +124,8 @@ class BearWashGroup (object):
         
 
 # ----------- end class BearWashGroup ----------------------------------------
-            
+
+
 # From a group of bearings and washers to make idle pulleys, obtains
 # the diameter of the larger washer
 
@@ -144,6 +149,18 @@ def getmaxbeardiam (holcyl_list):
             if maxbeardiam < elem.d_out :
                 maxbeardiam = elem.d_out
     return maxbeardiam
+
+# From a group of bearings and washers to make idle pulleys, obtains
+# the height
+
+def getgroupheight (holcyl_list):
+
+    group_h = 0
+    for elem in holcyl_list:
+        group_h += elem.thick
+    return group_h
+
+
 
 
 #doc = FreeCAD.newDocument()

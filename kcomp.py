@@ -95,17 +95,20 @@ D912_HEAD_D = {3: 5.5, 4: 7.0, 5: 8.5, 6:10.0, 8:13.0, 10:18.0}
 D912_HEAD_L =  {3: 3.0, 4: 4.0, 5: 5.0,  6:6.0, 8:8.0,  10:10.0} 
 
 M3_HEAD_R = D912_HEAD_D[3] / 2.0
-M3_HEAD_L = D912_HEAD_L[3] + TOL
+M3_HEAD_L = D912_HEAD_L[3]
+M3_HEAD_L_TOL = D912_HEAD_L[3] + TOL
 M3_HEAD_R_TOL = M3_HEAD_R + TOL/2.0 # smaller TOL, because it's small
 M3_SHANK_R_TOL = 3 / 2.0 + TOL/2.0
 
 M4_HEAD_R = D912_HEAD_D[4] / 2.0
-M4_HEAD_L = D912_HEAD_L[4] + TOL
+M4_HEAD_L = D912_HEAD_L[4]
+M4_HEAD_L_TOL = D912_HEAD_L[4] + TOL
 M4_HEAD_R_TOL = M4_HEAD_R + TOL/2.0 # smaller TOL, because it's small
 M4_SHANK_R_TOL = 4 / 2.0 + TOL/2.0
 
 M6_HEAD_R = D912_HEAD_D[6] / 2.0
-M6_HEAD_L = D912_HEAD_L[6] + TOL
+M6_HEAD_L = D912_HEAD_L[6]
+M6_HEAD_L_TOL = D912_HEAD_L[6] + TOL
 M6_HEAD_R_TOL = M6_HEAD_R + TOL/2.0 # smaller TOL, because it's small
 M6_SHANK_R_TOL = 6 / 2.0 + TOL/2.0
 
@@ -114,7 +117,8 @@ D912_M3 = {
             'shank_r_tol' :  3 / 2. + TOL/2.,
             'head_r' :  M3_HEAD_R,
             'head_r_tol' :  M3_HEAD_R_TOL,
-            'head_l' :  M3_HEAD_L
+            'head_l' :  M3_HEAD_L,
+            'head_l_tol' :  M3_HEAD_L_TOL
            }
 
 D912_M4 = {
@@ -122,20 +126,32 @@ D912_M4 = {
             'shank_r_tol' :  4 / 2. + TOL/2.,
             'head_r' :  M4_HEAD_R,
             'head_r_tol' :  M4_HEAD_R_TOL,
-            'head_l' :  M4_HEAD_L
+            'head_l' :  M4_HEAD_L,
+            'head_l_tol' :  M4_HEAD_L_TOL
+           }
+
+D912_M5 = {
+            'd': 5.,  # diameter of the shank
+            'shank_r_tol' :  5 / 2. + TOL/2.,
+            'head_r' :      D912_HEAD_D[5]/2.,
+            'head_r_tol' :  D912_HEAD_D[5]/2. + TOL/2.,
+            'head_l' :      D912_HEAD_L[5],
+            'head_l_tol' :  D912_HEAD_L[5] + TOL
            }
 
 D912_M6 = {
             'd': 6.,  # diameter of the shank
             'shank_r_tol' :  6 / 2. + TOL/2.,
-            'head_r' :  M6_HEAD_R,
-            'head_r_tol' :  M6_HEAD_R_TOL,
-            'head_l' :  M6_HEAD_L
+            'head_r'      :  M6_HEAD_R,
+            'head_r_tol'  :  M6_HEAD_R_TOL,
+            'head_l'      :  M6_HEAD_L,
+            'head_l_tol'  :  M6_HEAD_L_TOL
            }
 
 
 D912 = { 3: D912_M3,
          4: D912_M4,
+         5: D912_M5,
          6: D912_M6 }
 
 
@@ -174,6 +190,30 @@ M4_NUT_R = NUT_D934_D[4] / 2.0
 M4_NUT_L = NUT_D934_L[4] + TOL
 #  1.5 TOL because diameter values are minimum, so they may be larger
 M4_NUT_R_TOL = M4_NUT_R + 1.5*TOL
+
+D934_M3 = {
+            'in_d': 3.,  # inner diameter of the shank
+            'circ_d' : NUT_D934_D[3], #circumdiameter, min value
+            'circ_r' : NUT_D934_D[3]/2, #circumradius, min value
+            'circ_r_tol' : NUT_D934_D[3]/2 +  1.5*TOL , #circumradius + tol
+            'a2' :  NUT_D934_2A[3], #double of apotheme, max value
+            'l' :  NUT_D934_L[3], # height, max value
+            'l_tol' :  NUT_D934_L[3] + TOL #height with tolerance
+           }
+
+
+D934_M4 = {
+            'in_d': 4.,  # inner diameter of the shank
+            'circ_d' : NUT_D934_D[4], #circumdiameter, min value
+            'circ_r' : NUT_D934_D[4]/2, #circumradius, min value
+            'circ_r_tol' : NUT_D934_D[4]/2 +  1.5*TOL , #circumradius + tol
+            'a2' :  NUT_D934_2A[4], #double of apotheme, max value
+            'l' :  NUT_D934_L[4], # height, max value
+            'l_tol' :  NUT_D934_L[4] + TOL #height with tolerance
+           }
+
+D934 = { 3: D934_M3,
+         4: D934_M4}
 
 
 # tightening bolt with added tolerances:
@@ -365,6 +405,7 @@ idpull3_nlist = [
 idpull_dict = { 3: idpull3_nlist, 4: idpull4_nlist }
 
 # from an idlepull_name_list, returns the maximum diameter of its bearings
+# check that it is the same as getmaxbeardiam in partgroup.py
 
 def get_idlepull_maxbear_d (idlepull_list):
     d_maxbear = 0
