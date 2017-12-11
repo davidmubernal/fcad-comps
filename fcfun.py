@@ -88,7 +88,7 @@ V0ROT = FreeCAD.Rotation(VZ,0)
 EQUAL_TOL = 0.001 # less than a micron is the same
 
 
-COS30 = 0.866   
+COS30 = 0.86603   
 COS45 = 0.707   
 
 # to compare numbers that they are almost the same, but because of 
@@ -99,6 +99,111 @@ def equ (x,y):
         return True
     else:
         return False
+
+
+
+
+def fc_isperp (fc1, fc2):
+
+    """ return 1 if fc1 and fc2 are perpendicular, 0 if they are not
+    Args:
+        fc1: FreeCAD.Vector
+        fc2: FreeCAD.Vector
+    Return:
+         1 if fc1 and fc2 are perpendicular, 0 if they are not 
+    """
+
+    if DraftVecUtils.isNull(fc1) == 1 or DraftVecUtils.isNull(fc2) == 1:
+        # if any of them are null, they are not perpendicular
+        return 0
+    else:
+        nperp = fc1.dot(fc2)
+        nperp_round = round(nperp,DraftVecUtils.precision())
+        if nperp_round == 0:
+            return 1
+        else:
+            return 0
+
+
+def fc_isparal (fc1, fc2):
+
+    """ return 1 if fc1 and fc2 are paralell (colinear), 0 if they are not
+    Args:
+        fc1: FreeCAD.Vector
+        fc2: FreeCAD.Vector
+    Return:
+         1 if fc1 and fc2 are parallel, 0 if they are not 
+    """
+
+    if DraftVecUtils.isNull(fc1) == 1 or DraftVecUtils.isNull(fc2) == 1:
+        # if any of them are null, they are not parallel
+        return 0
+    else:
+        # scale both to 1, normalize
+        n1 = DraftVecUtils.scaleTo(fc1,1)
+        n2 = DraftVecUtils.scaleTo(fc2,1)
+        n1neg = n1.negative()
+        if (DraftVecUtils.equals(n1,n2) or
+            DraftVecUtils.equals(n1neg,n2)):
+            return 1
+        else:
+            return 0
+
+def fc_isonbase (fcv):
+
+    """ just tells if a vector has 2 of the coordinates zero
+        So it is on just a base vector
+    """
+
+    if fcv.x == 0:
+        if fcv.y == 0: # (0,0, )
+            if fcv.z == 0:
+                # null vector
+                return 0  # (0,0,0)
+            else: 
+                return 1  # (0,0,Z)
+        else:  # (0,Y, )
+            if fcv.z == 0:
+                return 1  # (0,Y,0)
+            else:
+                return 0  # (0,Y,Z)
+    else: #(X, , )
+        if fcv.y == 0: # (X,0, )
+            if fcv.z == 0:
+                return 1  # (X,0,0)
+            else: 
+                return 0  # (X,0,Z)
+        else: # (X,Y, )
+            return 0
+
+
+def get_fc_perpend1(fcv):
+
+    """ gets a perpendicular FreeCAD.Vector
+    similar to get_vecname_perpend1, but there are more cases here
+
+    Args:
+        vec: 'x', '-x', 'y', '-y', 'z', '-z'
+    """
+
+    if DraftVecUtils.isNull(fcv):
+        logger.error('null vector')
+
+    if fc_isonbase(fcv) == 1: # 2 of the bases are 0
+         # just move them
+        fcp = FreeCAD.Vector(fcv.z, fcv.x, fcv.y)
+    elif fcv.x == 0:
+        fcp = FreeCAD.Vector(0, fcv.z, -fcv.y)
+    elif fcv.y == 0:
+        fcp = FreeCAD.Vector(-fcv.z, 0, fcv.x)
+    elif fcv.z == 0:
+        fcp = FreeCAD.Vector(fcv.y, -fcv.x,0)
+    else: # none of them are zero
+        fcp = FreeCAD.Vector(fcv.y, -fcv.x, 0)
+
+    return fcp
+
+
 
 def add_fcobj(shp, name):
     """ just creates a freeCAD object of the shape, just to save one line"""
@@ -3628,6 +3733,175 @@ class NutHole (object):
         self.fco = nuthole   # the FreeCad Object
 
 
+ 
+# -------------------- shp_nuthole -----------------------------
+
+def shp_nuthole (nut_r, nut_h, hole_h,
+                 xtr_nut = 1, xtr_hole = 1,
+                 fc_axis_nut = VX,
+                 fc_axis_hole = VZ,
+                 ref_nut_ax = 1,
+                 ref_hole_ax = 1,
+                 pos = V0):
+    """
+    similar to NutHole, but creates a shape, in any direction
+    add a Nut hole (hexagonal) with a prism attached to introduce the nut
+    tolerances are included
+    nut_r : circumradius of the hexagon
+    nut_h : height of the nut, usually larger than the actual nut height, to be
+           able to introduce it
+    hole_h: the hole height, from the center of the hexagon to the side it will
+           see light
+    xtr_nut:  1 if you want 1 mm out of the hole, to cut
+    xtr_hole:  1 if you want 1 mm out of the hole, to cut
+    fc_axis_nut: axis of the shank of the nut
+    fc_axis_hole: axis of the shank of the nut
+    ref_nut_ax: if it is referenced to the center, symmetrical point on the
+                on the fc_axis_nut
+    ref_hole_ax: if it is referenced at the center of the shank, or at the 
+                 end of the hole, not counting extra
+ 
+         fc_axis_hole               fc_axis_hole
+            :                        :   
+           _:_                      _:_ ..
+          |   |                    |   |  :
+          |   |                    |   |  + hole_h
+          |___|----fc_axis_nut     |   |--:
+          |   |                     \ /   + nut_r
+          |___|                      V....:
+          :   :
+          :...:
+           + nut_h
+
+      ref_nut:
+
+         fc_axis_hole               fc_axis_hole
+            :                        :   
+           _:_                      _:_
+          |   |                    |   |
+          |   |                    |   |
+          2_1_|----fc_axis_nut     |   |
+          |   |                     \ /
+          |___|                      V
+
+      ref_hole:
+
+         fc_axis_hole               fc_axis_hole
+            :                        :   
+           _2_                      _2_
+          |   |                    |   |
+          |   |                    |   |
+          |_1_|----fc_axis_nut     | 1 |
+          |   |                     \ /
+          |___|                      V
+
+
+         fc_axis_hole
+            :
+           _:_ ...
+          |.2.|...xtr_hole (but pos is not referenced on the xtr)
+          |   |
+          |   |
+          |_1_|----fc_axis_nut             
+          |   |                 ___  but pos is still referenced on the axis of
+          |___|.....           |   |    the shank
+                    xtr_nut....|___|
+
+    """
+    doc = FreeCAD.ActiveDocument
+    # normalize axis:
+    axis_nut = DraftVecUtils.scaleTo(fc_axis_nut,1)
+    axis_hole = DraftVecUtils.scaleTo(fc_axis_hole,1)
+    nut_2ap = 2 * nut_r * COS30    #Apotheme = R * cos (30)
+
+    # --- Reference to point *: hole=1 , nut=2
+    #    fc_axis_hole               fc_axis_hole
+    #       :                        :   
+    #      _2_                      _2_
+    #     |   |                    |   |
+    #     |   |                    |   |
+    #     *___|----fc_axis_nut     | * |
+    #     |   |                     \ /
+    #     |___|                      V
+
+    fc_1_2_nut  = DraftVecUtils.scale(axis_nut, -nut_h/2.) 
+    fc_2_1_hole = DraftVecUtils.scale(axis_hole, -hole_h) 
+    # ref to point nut=2 (*)
+    #      _:_                      _:_
+    #     |   |                    |   |
+    #     |   |                    |   |
+    #     *_1_|----fc_axis_nut     | * |
+    #     |   |                    :\ /:
+    #     |___|                    : V :
+    #     :   :                    :   :
+    #     :...:                    :...:
+    #      + nut_h                  + nut_2ap
+
+    if ref_nut_ax == 1:
+        refto_2_nut = fc_1_2_nut
+    else: 
+        refto_2_nut = V0
+
+    # ref to point axis_hole=1 (*)
+    #     2___                      _2_...
+    #     |   |                    |   |  + hole_h
+    #     |   |                    |   |  :
+    #     1___|----fc_axis_nut     | 1 |--
+    #     |   |                     \ /
+    #     |___|                      V
+    #     :   :
+    #     :...:
+    #      + nut_h
+
+    if ref_hole_ax == 1:
+        refto_1_hole = V0
+    else: 
+        refto_1_hole = fc_2_1_hole
+
+    # absolute position of point *: axis_nut = 2 , axis_hole = 1
+    nut2_hole1_pos = pos + refto_2_nut + refto_1_hole
+
+    # position of the nut, including the extra
+    nut_pos = nut2_hole1_pos + DraftVecUtils.scale(axis_hole, -xtr_nut)
+
+    shp_nut = shp_regprism_dirxtr ( 
+                                         n_sides = 6,
+                                         radius  = nut_r,
+                                         length  = nut_h,
+                                         fc_normal = axis_nut,
+                                         fc_verx1  = axis_hole,
+                                         centered  = 0,
+                                         # no extra, tolerances included
+                                         xtr_top   = 0,
+                                         xtr_bot   = 0,
+                                         pos       = nut_pos)
+
+    # position is in nut2_hole1_pos, and then xtr are considered in both
+    # directions
+    shp_hole = shp_box_dir_xtr(box_w = nut_2ap,
+                                     box_d = nut_h,
+                                     box_h = hole_h,
+                                     fc_axis_h = axis_hole,
+                                     fc_axis_d = axis_nut,
+                                     cw=1, cd=0, ch=0,
+                                     xtr_h = xtr_hole,
+                                     xtr_nh = xtr_nut,
+                                     pos= nut2_hole1_pos)
+
+    shp_nuthole = shp_nut.fuse(shp_hole)
+    shp_nuthole = shp_nuthole.removeSplitter()
+    doc.recompute() 
+    return shp_nuthole
+
+#doc = FreeCAD.newDocument()
+#shpNuthole = shp_nuthole (nut_r = 5, nut_h = 4, hole_h = 10,
+#             xtr_nut = 1, xtr_hole = 1,
+#             fc_axis_nut = VY,
+#             fc_axis_hole = VX,
+#             ref_nut_ax = 1,
+#             ref_hole_ax = 1,
+#             pos = FreeCAD.Vector(1,1,2))
+#Part.show(shpNuthole)
 
 
 #  ---------------- Fillet on edges of a certain length
@@ -4875,104 +5149,6 @@ def get_positive_vecname (vecname):
         logger.error('Not a valid base vector name')
 
 
-def fc_isperp (fc1, fc2):
-
-    """ return 1 if fc1 and fc2 are perpendicular, 0 if they are not
-    Args:
-        fc1: FreeCAD.Vector
-        fc2: FreeCAD.Vector
-    Return:
-         1 if fc1 and fc2 are perpendicular, 0 if they are not 
-    """
-
-    if DraftVecUtils.isNull(fc1) == 1 or DraftVecUtils.isNull(fc2) == 1:
-        # if any of them are null, they are not perpendicular
-        return 0
-    else:
-        nperp = fc1.dot(fc2)
-        nperp_round = round(nperp,DraftVecUtils.precision())
-        if nperp_round == 0:
-            return 1
-        else:
-            return 0
-
-
-def fc_isparal (fc1, fc2):
-
-    """ return 1 if fc1 and fc2 are paralell (colinear), 0 if they are not
-    Args:
-        fc1: FreeCAD.Vector
-        fc2: FreeCAD.Vector
-    Return:
-         1 if fc1 and fc2 are parallel, 0 if they are not 
-    """
-
-    if DraftVecUtils.isNull(fc1) == 1 or DraftVecUtils.isNull(fc2) == 1:
-        # if any of them are null, they are not parallel
-        return 0
-    else:
-        # scale both to 1, normalize
-        n1 = DraftVecUtils.scaleTo(fc1,1)
-        n2 = DraftVecUtils.scaleTo(fc2,1)
-        n1neg = n1.negative()
-        if (DraftVecUtils.equals(n1,n2) or
-            DraftVecUtils.equals(n1neg,n2)):
-            return 1
-        else:
-            return 0
-
-def get_fc_perpend1(fcv):
-
-    """ gets a perpendicular FreeCAD.Vector
-    similar to get_vecname_perpend1, but there are more cases here
-
-    Args:
-        vec: 'x', '-x', 'y', '-y', 'z', '-z'
-    """
-
-    if DraftVecUtils.isNull(fcv):
-        logger.error('null vector')
-
-    if fc_isonbase(fcv) == 1: # 2 of the bases are 0
-         # just move them
-        fcp = FreeCAD.Vector(fcv.z, fcv.x, fcv.y)
-    elif fcv.x == 0:
-        fcp = FreeCAD.Vector(0, fcv.z, -fcv.y)
-    elif fcv.y == 0:
-        fcp = FreeCAD.Vector(-fcv.z, 0, fcv.x)
-    elif fcv.z == 0:
-        fcp = FreeCAD.Vector(fcv.y, -fcv.x,0)
-    else: # none of them are zero
-        fcp = FreeCAD.Vector(fcv.y, -fcv.x, 0)
-
-    return fcp
-
-def fc_isonbase (fcv):
-
-    """ just tells if a vector has 2 of the coordinates zero
-        So it is on just a base vector
-    """
-
-    if fcv.x == 0:
-        if fcv.y == 0: # (0,0, )
-            if fcv.z == 0:
-                # null vector
-                return 0  # (0,0,0)
-            else: 
-                return 1  # (0,0,Z)
-        else:  # (0,Y, )
-            if fcv.z == 0:
-                return 1  # (0,Y,0)
-            else:
-                return 0  # (0,Y,Z)
-    else: #(X, , )
-        if fcv.y == 0: # (X,0, )
-            if fcv.z == 0:
-                return 1  # (X,0,0)
-            else: 
-                return 0  # (X,0,Z)
-        else: # (X,Y, )
-            return 0
 
       
 
