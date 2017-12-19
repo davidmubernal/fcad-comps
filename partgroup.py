@@ -121,6 +121,19 @@ class BearWashGroup (object):
 
         self.fco = bearwashgroup
         doc.recompute()
+
+    def getmaxwashthick (holcyl_list):
+        """
+        From a group of bearings and washers to make idle pulleys, obtains
+        the diameter of the larger washer
+        """
+        maxwashthick = 0
+        for elem in self.holcyl_list:
+            if elem.part == 'washer':
+                if maxwashthick < elem.thick :
+                    maxwashthick = elem.thick
+        return maxwashthick
+
         
 
 # ----------- end class BearWashGroup ----------------------------------------

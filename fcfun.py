@@ -98,7 +98,8 @@ COS45 = 0.707
 # floating point calculations they are not exactly the same
 def equ (x,y):
 
-    if abs(x-y) < EQUAL_TOL:
+    p = DraftVecUtils.precision()
+    if round(x,p) == round(y,p):
         return True
     else:
         return False
@@ -686,7 +687,256 @@ def shp_box_dir_xtr (box_w, box_d, box_h,
     return(shp_box)
 
 
-    
+def shp_boxdir_fillchmfplane (
+                     box_w, box_d, box_h,
+                     axis_d = VY,
+                     axis_w = V0,
+                     axis_h = VZ,
+                     cw=1, cd=1, ch=1,
+                     xtr_d = 0, xtr_nd = 0,
+                     xtr_w = 0, xtr_nw = 0,
+                     xtr_h = 0, xtr_nh = 0,
+                     fillet = 1,
+                     radius = 1.,
+                     plane_fill = VZ,
+                     both_planes = 1,
+                     pos=V0):
+    """
+    Creates a box shape (cuboid) along 3 axis.
+    The shape will be filleted or chamfered on the edgess of the plane defined
+    by the plane_fill vector. If both_planes == 1, both faces will be
+    filleted/chm
+    if both_planes == 0, only the face that plane_fill is normal and goes
+    outwards
+
+             ________
+            |\       \
+            | \       \  
+            |  \_______\  
+             \ |       |
+              \|_______|
+
+
+     Example of not centered on origin: cd=0, cw=0, ch=0
+
+          axis_h        . axis_d
+             :         .     
+             :   __________....
+             :  /:   .   / |  :
+             : / :  .   /  |  :h
+             :/________/   |  :
+             |   :.....|...|..:.. 
+             |  /      |  /    .
+             | /       | /    . d
+             |/________|/.................> axis_w
+             :         :
+             :....w....:
+
+
+     Example of centered on origin: cd=1, cw=1, ch=1
+
+                 axis_h           axis_d
+                    :           .     
+                 __________   .
+                /:  :    / |.
+               / :  :   / .| h
+              /__:_____/.  |
+             |   :.....|...| 
+             |  /   :..|../..............> axis_w
+             | /       | /   
+             |/________|/
+                         
+                   w
+
+      Example of parameter both_planes
+               
+      if both_planes == 1:
+          edges_to_chamfer = [1,2,3,4,5,6,7,8]
+      elif both_planes == 0:
+          edges_to_chamfer = [1,2,3,4]
+
+      axis_h=plane_fill
+             :               
+             :   ____2_____
+             :  /:       / |
+             : 1 :      3  |
+             :/_____4__/   |
+             |   :...6.|...|
+             |  /      |  /
+             | 5       | 7 
+             |/___8____|/.................> axis_w
+
+      Another example of parameter both_planes
+
+      if both_planes == 1:
+          edges_to_chamfer = [1,2,3,4,5,6,7,8]
+      elif both_planes == 0:
+          edges_to_chamfer = [5,6,7,8]
+
+          axis_h
+             :               
+             :   ____2_____
+             :  /:       / |
+             : 1 :      3  |
+             :/_____4__/   |
+             |   :...6.|...|
+             |  /      |  /
+             | 5       | 7 
+             |/___8____|/.................> axis_w
+             :
+             :
+             :
+           plane_fill = axis_h.negative()
+
+
+
+    Parameters:
+    -----------
+    box_d : positive float
+        depth of the box
+    box_w : positive float
+        width of the box
+    box_h : positive float
+        height of the box
+    axis_d : FreeCAD.Vector
+        depth vector of the coordinate system
+    axis_w : FreeCAD.Vector
+        width vector of the coordinate system, can be V0 if centered
+        and will be perpendicular to axis_d and axis_w
+    axis_h : FreeCAD.Vector
+        height vector of the coordinate system
+    cw : int
+        1: centered along axis_w
+    cd : int
+        1: centered along axis_d
+    ch : int
+        1: centered along axis_h
+    xtr_d : float, >= 0
+        extra depth, if there is an extra depth along axis_d
+    xtr_nd : float, >= 0
+        extra depth, if there is an extra depth along axis_d.negative
+    xtr_w : float, >= 0
+        extra width, if there is an extra width along axis_w
+    xtr_nw : float, >= 0
+        extra width, if there is an extra width along axis_w.negative
+    xtr_h : float, >= 0
+        extra height, if there is an extra height along axis_h
+    xtr_nh : float, >= 0
+        extra height, if there is an extra height along axis_h.negative
+    fillet : int
+        1: to fillet the edges
+        0: to chamfer the edges
+    radius : float >= 0
+        radius of the fillet/chamfer
+    plane_fill = FreeCAD.Vector
+        Vector perpendicular to the face that is going to be filleted/chamfered
+    both_planes : int
+        0: fillet/chamfer only the edges on the face perpendicular to
+           plane_fill and on the face that plane_fill goes outwards. See drawing
+        1: fillet/chamfer the edges on both faces perpendicular to
+           plane_fill 
+    pos : FreeCAD.Vector
+        Position of the box
+
+    Returns:
+    -----------
+    Shape of the filleted/chamfered box
+
+    """
+
+    # normalize axes:
+    # axis_l.normalize() could be used, but would change the vector
+    # used as parameter
+    axis_d = DraftVecUtils.scaleTo(axis_d,1)
+    axis_h = DraftVecUtils.scaleTo(axis_h,1)
+    if axis_w == V0:
+       axis_w = axis_d.cross(axis_h)
+    else:
+       axis_w = DraftVecUtils.scaleTo(axis_w,1)
+    plane_fill =  DraftVecUtils.scaleTo(plane_fill,1)
+    n_plane_fill = plane_fill.negative() 
+
+    shp_box = shp_box_dir_xtr (
+                     box_w = box_w, box_d = box_d, box_h = box_h,
+                     fc_axis_h = axis_h, fc_axis_d = axis_d, fc_axis_w = axis_w,
+                     cw=cw, cd=cd, ch=ch,
+                     xtr_d = xtr_d, xtr_nd = xtr_nd,
+                     xtr_w = xtr_h, xtr_nw = xtr_nw,
+                     xtr_h = xtr_h, xtr_nh = xtr_nh,
+                     pos=pos)
+    edg_list = []
+    if both_planes == 0: # need to sort the edges in two planes
+        edg_list_plane1 = []
+        edg_list_plane2 = []
+        ind_edg_plane1 = 0
+        ind_edg_plane2 = 0
+
+    for ind, edge in enumerate(shp_box.Edges):
+        vertex0 = edge.Vertexes[0]
+        vertex1 = edge.Vertexes[1]
+        p0 = vertex0.Point
+        p1 = vertex1.Point
+        vdif = p1 - p0
+        vdif.normalize()
+        # check that they are not parallel:
+        if (not DraftVecUtils.equals(vdif, plane_fill) and
+            not DraftVecUtils.equals(vdif, n_plane_fill)):
+            if both_planes == 1:
+                edg_list.append(edge)
+            else: #only take one face
+                scalar_proy = p0.dot(plane_fill)
+                #logger.debug ('%i', scalar_proy)
+                # see if this value is in either list
+                if ind_edg_plane1 > 0:
+                    # check if they are equal, but with a precision
+                    if equ(scalarproy_edg_plane1, scalar_proy) :
+                        ind_edg_plane1 += 1
+                        edg_list_plane1.append(edge)
+                    else: # not in the same plane. Plane 2 list
+                        if ind_edg_plane2 > 0:
+                            if equ(scalarproy_edg_plane2, scalar_proy) :
+                                ind_edg_plane2 += 1
+                                edg_list_plane2.append(edge)
+                            else:
+                                logger.error('error in plane to fillet')
+                        else: # first edge on list 2
+                            ind_edg_plane2 = 1
+                            edg_list_plane2.append(edge)
+                            scalarproy_edg_plane2 = scalar_proy
+                else: # first edge on plane 1
+                    ind_edg_plane1 = 1
+                    edg_list_plane1.append(edge)
+                    scalarproy_edg_plane1 = scalar_proy
+
+    if both_planes == 0:
+        if scalarproy_edg_plane1 > scalarproy_edg_plane2:
+            edg_list = edg_list_plane1
+        else:
+            edg_list = edg_list_plane2
+
+    if len(edg_list) != 0:
+        if fillet == 1:
+            #logger.debug('%s', str(edg_list))
+            shp_fillchmf = shp_box.makeFillet(radius, edg_list)
+        else:
+            #logger.debug('%s', str(edg_list))
+            shp_fillchmf = shp_box.makeChamfer(radius, edg_list)
+        doc.recompute()
+        return shp_fillchmf
+    else:
+        logger.debug('No edge to fillet or chamfer')
+        return
+
+# Test shp_boxdir_fillchmfplane
+#doc = FreeCAD.newDocument()
+#shp=shp_boxdir_fillchmfplane(10,3,4,
+#                             xtr_d = 1, xtr_nd = 3,
+#                             xtr_w = 2, xtr_nw = 2,
+#                             xtr_h = 3, xtr_nh = 1,
+#                             ch=0,
+#                             fillet=0,plane_fill=VYN, both_planes=0,
+#                             pos=FreeCAD.Vector(1,2,4))
+#Part.show(shp)
 
 # def shp_face_lgrail 
 # adds a shape of the profile (face) of a linear guide rail, the dent is just
@@ -4140,10 +4390,8 @@ def shp_filletchamfer_dir (shp, fc_axis = VZ,  fillet = 1, radius=1):
     nnorm = DraftVecUtils.scaleTo(fc_axis,1)
     # get the negative of the normalized vector
     nnorm_neg = nnorm.negative()
-    #logger.debug('filletchamfer: elen: %s',  e_len)
     for edge in shp.Edges:
-        #logger.debug('filletchamfer: edge Length: %s ind %s',
-        #             edge.Length, edge_ind)
+        #logger.debug('filletchamfer: edge Length: %s', edge.Length)
         # get the FreeCAD.Vector with the point
         p0 = edge.Vertexes[0].Point
         p1 = edge.Vertexes[1].Point
@@ -4155,10 +4403,11 @@ def shp_filletchamfer_dir (shp, fc_axis = VZ,  fillet = 1, radius=1):
         if ( DraftVecUtils.equals(v_vertex, nnorm) or
              DraftVecUtils.equals(v_vertex, nnorm_neg)):
             edgelist.append(edge)
+            #logger.debug('append edge Length: %s', edge.Length)
 
     if len(edgelist) != 0:
         if fillet == 1:
-            #logger.debug('%', str(edgelist))
+            #logger.debug('%s', str(edgelist))
             shp_fillcham = shp.makeFillet(radius, edgelist)
         else:
             shp_fillcham = shp.makeChamfer(radius, edgelist)
