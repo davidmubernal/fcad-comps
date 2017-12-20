@@ -16,7 +16,7 @@ import math;
 import logging;
 import DraftVecUtils;
 
-from FreeCAD import Base
+#from FreeCAD import Base
 
 # ---------------------- can be taken away after debugging
 import os;
@@ -152,6 +152,31 @@ def fc_isparal (fc1, fc2):
             return 1
         else:
             return 0
+
+def fc_isparal_nrm (fc1, fc2):
+
+    """
+    Very similar to fc_isparal, but in this case the arguments are normalized
+    so, less operations to do.
+    return 1 if fc1 and fc2 are paralell (colinear), 0 if they are not
+    Args:
+        fc1: FreeCAD.Vector
+        fc2: FreeCAD.Vector
+    Return:
+         1 if fc1 and fc2 are parallel, 0 if they are not 
+    """
+
+    if DraftVecUtils.isNull(fc1) == 1 or DraftVecUtils.isNull(fc2) == 1:
+        # if any of them are null, they are not parallel
+        return 0
+    else:
+        fc1neg = fc1.negative()
+        if (DraftVecUtils.equals(fc1,fc2) or
+            DraftVecUtils.equals(fc1neg,fc2)):
+            return 1
+        else:
+            return 0
+
 
 def fc_isonbase (fcv):
 
@@ -700,22 +725,17 @@ def shp_boxdir_fillchmfplane (
                      radius = 1.,
                      plane_fill = VZ,
                      both_planes = 1,
+                     edge_dir = V0,
                      pos=V0):
     """
     Creates a box shape (cuboid) along 3 axis.
-    The shape will be filleted or chamfered on the edgess of the plane defined
+    The shape will be filleted or chamfered on the edges of the plane defined
     by the plane_fill vector. If both_planes == 1, both faces will be
-    filleted/chm
+    filleted/chamfered
     if both_planes == 0, only the face that plane_fill is normal and goes
     outwards
-
-             ________
-            |\       \
-            | \       \  
-            |  \_______\  
-             \ |       |
-              \|_______|
-
+    if edge_dir has an edge direction, only those edges in that direction will
+    be filleted/chamfered
 
      Example of not centered on origin: cd=0, cw=0, ch=0
 
@@ -748,12 +768,22 @@ def shp_boxdir_fillchmfplane (
                          
                    w
 
-      Example of parameter both_planes
+      Example of parameter both_planes and edge_dir
                
       if both_planes == 1:
-          edges_to_chamfer = [1,2,3,4,5,6,7,8]
+          if edge_dir == V0:
+              edges_to_chamfer = [1,2,3,4,5,6,7,8]
+          elif edge_dir == axis_w:
+              edges_to_chamfer = [2,4,6,8]
+          elif edge_dir == axis_d:
+              edges_to_chamfer = [1,3,5,7]
       elif both_planes == 0:
-          edges_to_chamfer = [1,2,3,4]
+          if edge_dir == V0:
+              edges_to_chamfer = [1,2,3,4]
+          elif edge_dir == axis_w:
+              edges_to_chamfer = [2,4]
+          elif edge_dir == axis_d:
+              edges_to_chamfer = [1,3]
 
       axis_h=plane_fill
              :               
@@ -786,6 +816,7 @@ def shp_boxdir_fillchmfplane (
              :
              :
              :
+             V
            plane_fill = axis_h.negative()
 
 
@@ -835,6 +866,10 @@ def shp_boxdir_fillchmfplane (
            plane_fill and on the face that plane_fill goes outwards. See drawing
         1: fillet/chamfer the edges on both faces perpendicular to
            plane_fill 
+    edge_dir : FreeCAD.Vector
+        V0: fillet/chamfer all the edges of that/those faces
+        axis: fillet/chamfer only the edges of that/those faces that are
+              paralell to this axis
     pos : FreeCAD.Vector
         Position of the box
 
@@ -854,6 +889,7 @@ def shp_boxdir_fillchmfplane (
     else:
        axis_w = DraftVecUtils.scaleTo(axis_w,1)
     plane_fill =  DraftVecUtils.scaleTo(plane_fill,1)
+    edge_dir =  DraftVecUtils.scaleTo(edge_dir,1)
     n_plane_fill = plane_fill.negative() 
 
     shp_box = shp_box_dir_xtr (
@@ -878,41 +914,47 @@ def shp_boxdir_fillchmfplane (
         p1 = vertex1.Point
         vdif = p1 - p0
         vdif.normalize()
-        # check that they are not parallel:
-        if (not DraftVecUtils.equals(vdif, plane_fill) and
-            not DraftVecUtils.equals(vdif, n_plane_fill)):
-            if both_planes == 1:
-                edg_list.append(edge)
-            else: #only take one face
-                scalar_proy = p0.dot(plane_fill)
-                #logger.debug ('%i', scalar_proy)
-                # see if this value is in either list
-                if ind_edg_plane1 > 0:
-                    # check if they are equal, but with a precision
-                    if equ(scalarproy_edg_plane1, scalar_proy) :
-                        ind_edg_plane1 += 1
-                        edg_list_plane1.append(edge)
-                    else: # not in the same plane. Plane 2 list
-                        if ind_edg_plane2 > 0:
-                            if equ(scalarproy_edg_plane2, scalar_proy) :
-                                ind_edg_plane2 += 1
+        # check that they are not parallel to the normal:
+        if not fc_isparal_nrm(vdif, plane_fill) :
+            # all the edges or check if they are parallel to edge_dir
+            if edge_dir == V0 or fc_isparal_nrm(vdif,edge_dir):
+                if both_planes == 1:
+                    edg_list.append(edge)
+                else: #only take one face
+                    scalar_proy = p0.dot(plane_fill)
+                    #logger.debug ('%i', scalar_proy)
+                    # see if this value is in either list
+                    if ind_edg_plane1 > 0:
+                        # check if they are equal, but with a precision
+                        if equ(scalarproy_edg_plane1, scalar_proy) :
+                            ind_edg_plane1 += 1
+                            edg_list_plane1.append(edge)
+                        else: # not in the same plane. Plane 2 list
+                            if ind_edg_plane2 > 0:
+                                if equ(scalarproy_edg_plane2, scalar_proy) :
+                                    ind_edg_plane2 += 1
+                                    edg_list_plane2.append(edge)
+                                else:
+                                    logger.error('error in plane to fillet')
+                            else: # first edge on list 2
+                                ind_edg_plane2 = 1
                                 edg_list_plane2.append(edge)
-                            else:
-                                logger.error('error in plane to fillet')
-                        else: # first edge on list 2
-                            ind_edg_plane2 = 1
-                            edg_list_plane2.append(edge)
-                            scalarproy_edg_plane2 = scalar_proy
-                else: # first edge on plane 1
-                    ind_edg_plane1 = 1
-                    edg_list_plane1.append(edge)
-                    scalarproy_edg_plane1 = scalar_proy
+                                scalarproy_edg_plane2 = scalar_proy
+                    else: # first edge on plane 1
+                        ind_edg_plane1 = 1
+                        edg_list_plane1.append(edge)
+                        scalarproy_edg_plane1 = scalar_proy
 
     if both_planes == 0:
-        if scalarproy_edg_plane1 > scalarproy_edg_plane2:
-            edg_list = edg_list_plane1
+        if ind_edg_plane1 > 0:
+            if scalarproy_edg_plane1 > scalarproy_edg_plane2:
+                edg_list = edg_list_plane1
+            else:
+                edg_list = edg_list_plane2
+        elif edge_dir == V0:
+            logger.debug('No axis edge to fillet or chamfer')
         else:
-            edg_list = edg_list_plane2
+            logger.debug('Probably wrong edge_dir')
 
     if len(edg_list) != 0:
         if fillet == 1:
@@ -935,6 +977,7 @@ def shp_boxdir_fillchmfplane (
 #                             xtr_h = 3, xtr_nh = 1,
 #                             ch=0,
 #                             fillet=0,plane_fill=VYN, both_planes=0,
+#                             edge_dir = VZ,
 #                             pos=FreeCAD.Vector(1,2,4))
 #Part.show(shp)
 
