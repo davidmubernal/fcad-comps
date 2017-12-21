@@ -879,6 +879,7 @@ def shp_boxdir_fillchmfplane (
 
     """
 
+    doc = FreeCAD.ActiveDocument
     # normalize axes:
     # axis_l.normalize() could be used, but would change the vector
     # used as parameter
@@ -3282,6 +3283,9 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
               support=1,
               fc_normal = VZ,
               fc_verx1 = VX,
+              #default value has to be 0 for backward compatibility
+              #because it didnt exist before
+              pos_n = 0,
               pos = V0):
     """ 
     Similar to shp_bolt, but it can be done in any direction
@@ -3314,13 +3318,18 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
            fc_normal = (0,0,-1):     Z
                                      :
                          ....... ____:____
-             xtr_head=1  .......|    :....|...... X
-                                |         |
-                                |__     __|
-                                   |   |
-                                   |   |
-                                   |   |
-                                   |___|
+           ..xtr_head=1  .......|    :....|...... X  pos_n = 0
+           :      l_head+:      |         |
+           :             :......|__     __|          pos_n = 1
+           :+ l_bolt               |   |
+           :                       |   |
+           :.......................|   |.............pos_n = 2
+                                   |___|....xtr_shank
+                                     :
+                                     :
+                                   fc_normal
+
+
 
            fc_normal = (0,0,1):      Z
                                      :
@@ -3338,6 +3347,11 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
                  axis that the first vertex of the nut will point
                  it has to be perpendicular to fc_normal, 
 
+        pos_n: location of pos along the normal, at the cylinder center
+            0: at the top of the head (excluding xtr_head)
+            1: at the union of the head and the shank
+            2: at the end of the shank (excluding xtr_shank)
+
         pos: FreeCAD.Vector of the position of the center of the head of the
               bolt
 
@@ -3348,6 +3362,12 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
     elements = []
     nnormal = DraftVecUtils.scaleTo(fc_normal,1)
 
+    # vectors to pos_n = 0 (to the end of the head)
+    n0to = {}
+    n0to[0] = V0
+    n0to[1] = DraftVecUtils.scale(nnormal, l_head) # xtr_head not included
+    n0to[2] = DraftVecUtils.scale(nnormal, l_bolt) # xtr_head/shank not included
+    pos0 = (n0to[pos_n]).negative()
 
     shp_shank = shp_cylcenxtr (r_shank, l_bolt, nnormal,
                                 ch=0,
@@ -3356,7 +3376,7 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
                                 # the head end is bottom
                                 # No need to add extra, the head will do
                                 xtr_bot = 0,
-                                pos = pos)
+                                pos = pos0)
     elements.append (shp_shank)
     # head:
     if hex_head == 0:
@@ -3365,7 +3385,7 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
                                   # no extra on top, the shank will be there
                                   xtr_top = 0,
                                   xtr_bot = xtr_head,
-                                  pos = pos)
+                                  pos = pos0)
         if not fc_isperp(nnormal, fc_verx1):
             # get any perpendicular vector:
             fc_verx1 = get_fc_perpend1(nnormal)     
@@ -3386,7 +3406,7 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
                                      # no extra on top, the shank will be there
                                      xtr_top = 0,
                                      xtr_bot = xtr_head,
-                                     pos=pos)
+                                     pos=pos0)
 
     # Dont append the head, because multifuse requires one outside of the list
     # elements.append (shp_head)
@@ -3402,11 +3422,11 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
                                  fc_normal=nnormal,
                                  fc_verx1=fc_verx1_triangle,
                                  centered = 0,
-                                 pos=pos)
+                                 pos=pos0)
         # take vertexes away:
         sup1away_l = l_head + kcomp.LAYER3D_H
         if hex_head == 0:
-            shp_sup1away = shp_cyl(r_head, sup1away_l, nnormal, pos)
+            shp_sup1away = shp_cyl(r_head, sup1away_l, nnormal, pos0)
         else:
             shp_sup1away = shp_regprism_dirxtr (
                                         n_sides=6,
@@ -3415,7 +3435,7 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
                                         fc_normal=nnormal,
                                         fc_verx1=fc_verx1,
                                         centered = 0,
-                                        pos = pos)
+                                        pos = pos0)
         shp_sup1cut = shp_sup1.common(shp_sup1away)
         elements.append (shp_sup1cut)
         # another support
@@ -3428,7 +3448,7 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
                                  fc_normal=nnormal,
                                  fc_verx1=fc_verx1,
                                  centered = 0,
-                                 pos=pos)
+                                 pos=pos0)
         elements.append (shp_sup2)
   
     # union of elements
@@ -3436,10 +3456,17 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
     shp_bolt = shp_bolt.removeSplitter()
     return shp_bolt
 
-
-
-
-
+#doc = FreeCAD.newDocument()
+shp = shp_bolt_dir (r_shank = 5, l_bolt=50, r_head=10, l_head=12,
+                   hex_head = 1,
+                   xtr_head=1,
+                   xtr_shank=1,
+                   support=0,
+                   fc_normal = FreeCAD.Vector(1,1,1),
+                   fc_verx1 = VX,
+                   pos_n = 1,
+                   pos = V0)
+Part.show(shp)
 
 
 def addBoltNut_hole (r_shank,        l_bolt, 
