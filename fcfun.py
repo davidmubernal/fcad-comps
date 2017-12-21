@@ -3367,7 +3367,7 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
     n0to[0] = V0
     n0to[1] = DraftVecUtils.scale(nnormal, l_head) # xtr_head not included
     n0to[2] = DraftVecUtils.scale(nnormal, l_bolt) # xtr_head/shank not included
-    pos0 = (n0to[pos_n]).negative()
+    pos0 = pos + (n0to[pos_n]).negative()
 
     shp_shank = shp_cylcenxtr (r_shank, l_bolt, nnormal,
                                 ch=0,
@@ -3457,16 +3457,16 @@ def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
     return shp_bolt
 
 #doc = FreeCAD.newDocument()
-shp = shp_bolt_dir (r_shank = 5, l_bolt=50, r_head=10, l_head=12,
-                   hex_head = 1,
-                   xtr_head=1,
-                   xtr_shank=1,
-                   support=0,
-                   fc_normal = FreeCAD.Vector(1,1,1),
-                   fc_verx1 = VX,
-                   pos_n = 1,
-                   pos = V0)
-Part.show(shp)
+#shp = shp_bolt_dir (r_shank = 5, l_bolt=50, r_head=10, l_head=12,
+#                   hex_head = 1,
+#                   xtr_head=1,
+#                   xtr_shank=1,
+#                   support=0,
+#                   fc_normal = FreeCAD.Vector(1,1,1),
+#                   fc_verx1 = VX,
+#                   pos_n = 1,
+#                   pos = V0)
+#Part.show(shp)
 
 
 def addBoltNut_hole (r_shank,        l_bolt, 
@@ -3660,6 +3660,7 @@ def shp_boltnut_dir_hole (r_shank,        l_bolt,
                           support   = supp_head,
                           fc_normal = nnormal_head,
                           fc_verx1  = nverx1,
+                          pos_n     = 0,
                           pos       = pos_head)
 
     # Nut:
