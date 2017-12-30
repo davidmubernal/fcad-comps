@@ -5130,6 +5130,36 @@ def calc_rot_z (v_refz, v_refx):
     return vrot
     
 
+def get_rot (v1, v2):
+    """ Calculate the rotation from v1 to v2
+    the difference with previous verions, such fc_calc_rot, calc_rot, calc_rot
+    is that it is for any vector direction.
+    The difference with DraftVecUtils.getRotation is that getRotation doesnt
+    work for vectors with 180 degrees.
+
+    MAYBE IT IS NOT NECESSARY, just use FreeCAD.Rotation
+    rotation.Axis, math.degrees(rotation.Angle)
+
+    Parameters:
+    -----------
+    v1 : FreeCAD.Vector
+    v2 : FreeCAD.Vector
+
+    returns a tuple representing a quaternion rotation between v2 and v1
+    """
+
+    #normalize vectors
+    nv1 = DraftVecUtils.scaleTo(v1,1.)
+    nv2 = DraftVecUtils.scaleTo(v2,1.)
+
+    if DraftVecUtils.equals(nv1,nv2.negative()):
+        # we have to flip, but DraftVecUtils.getRotation doesnt get it done
+        # for this case
+        return FreeCAD.Rotation(VX,180)
+    else:
+        return DraftVecUtils.getRotation(nv1,nv2)
+
+
 #  ---------------- calc_desp_ncen ------------------------
 #  similar to calc_rot, but calculates de displacement, when we don't want
 #  to have all of the dimensions centered
