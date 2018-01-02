@@ -1270,6 +1270,194 @@ def shp_cylcenxtr (r, h, normal = VZ,
     return shpcyl
 
 
+def shp_cyl_gen (r, h, axis_h = VZ, 
+                       axis_r1 = None, axis_r2 = None,
+                       cen_h = 0, cen_r1 = 1, cen_r2 = 1,
+                       xtr_top=0, xtr_bot=0, xtr_r=0, pos = V0):
+    """
+    This is a generalization of shp_cylcenxtr.
+    Makes a cylinder in any position and direction, with optional extra
+    heights and radius, and various locations in the cylinder
+
+    Returns: a TopoShape
+
+    Parameters:
+    -----------
+    r : float
+        radius of the cylinder
+    h : float
+        height of the cylinder
+    axis_h : FreeCAD.Vector
+        vector along the cylinder height
+    pos : FreeCAD.Vector
+        position of the cylinder
+    axis_r1 : FreeCAD.Vector
+        vector along the cylinder radius, a direction perpendicular to axis_h
+        only make sense if cen_r1 = 0
+    axis_r2 : FreeCAD.Vector
+        vector along the cylinder radius,
+        a direction perpendicular to axis_h and axis_r1
+        only make sense if cen_r2 = 0
+    cen_h : int
+        cylinder centered at its height (see drawing)
+        1: the cylinder pos is centered along its height
+        0: the cylinder pos is at its base
+    cen_r1 : int
+        cylinder centered at its radius (see drawing), not counting the extra
+        1: the cylinder pos is centered along axis_r1
+        0: the cylinder pos is at the cylinder radius axis_r1
+    cen_r2 : int
+        cylinder centered at its radius (see drawing), not counting the extra
+        1: the cylinder pos is centered along axis_r2
+        0: the cylinder pos is at the cylinder radius axis_r2
+    xtr_top : float
+        Extra height on top, it is not taken under consideration when
+        calculating the cylinder center along the height
+    xtr_bot : float
+        Extra height at the bottom, it is not taken under consideration when
+        calculating the cylinder center along the height or the position of
+        the base
+    xtr_r : float
+        Extra length of the radius, it is not taken under consideration when
+        calculating cen_r1 or cen_r2
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+
+
+    
+    cen_h = 0, cen_r1 = 1, cen_r2 = 1
+    pos at 0:
+            axis_r2
+              :
+              :
+             . .    
+           .     .
+         (    0    ) ---- axis_r1
+           .     .
+             . .    
+
+           axis_h
+              :
+              :
+          ...............
+         :____:____:....: xtr_top
+         |         |
+         |         |
+         |         |
+         |         |
+         |         |
+         |         |
+         |_________|....>axis_r1
+         :....0....:....: xtr_bot        This 0 will be pos0
+
+
+    cen_h = 1, cen_r1 = 0, cen_r2 = 1
+    pos at x:
+            axis_r2
+              :
+              :
+             . .    
+           .     .
+         x         ) ---- axis_r1
+           .     .
+             . .    
+
+           axis_h
+              :
+              :
+          ...............
+         :____:____:....: xtr_top
+         |         |
+         |         |
+         |         |
+         x         |....>axis_r1
+         |         |
+         |         |
+         |_________|.....
+         :....0....:....: xtr_bot        This 0 will be pos0
+
+
+    cen_h = 1, cen_r1 = 0, cen_r2 = 0
+    pos at x:
+
+            axis_r2
+              :
+              :
+             . .    
+           .     .
+         (         ) ---- axis_r1
+           .     .
+         x   . .    
+
+           axis_h
+              :
+              :
+          ...............
+         :____:____:....: xtr_top
+        ||         |
+        ||         |
+        ||         |
+        |x         |....>axis_r1
+        ||         |
+        ||         |
+        ||_________|.....
+        ::....0....:....: xtr_bot
+        :;
+        xtr_r
+
+   """
+   
+
+    # calculate pos0, which is at the center of the circle and at the base
+    # counting xtr_bot it is is > 0
+    axis_h = DraftVecUtils.scaleTo(axis_h, 1)
+    
+    if cen_r1 == 1:
+        r1_to_pos0 = V0
+    else:
+        if axis_r1 is not None:
+            axis_r1 = DraftVecUtils.scaleTo(axis_r1, 1)
+            r1_to_pos0 = DraftVecUtils.scale(axis_r1, r)
+        else :
+            logger.error('axis_r1 not defined while cen_r1 !=0')
+
+    if cen_r2 == 1:
+        r2_to_pos0 = V0
+    else:
+        if axis_r2 is not None:
+            axis_r2 = DraftVecUtils.scaleTo(axis_r2, 1)
+            r2_to_pos0 = DraftVecUtils.scale(axis_r2, r)
+        else :
+            logger.error('axis_r2 not defined while cen_r2 !=0')
+
+    if cen_h == 1: # we have to move the circle half the height down + xtr_bot
+        h_to_pos0 = DraftVecUtils.scale(axis_h, -(h/2. + xtr_bot))
+    else:
+        h_to_pos0 = DraftVecUtils.scale(axis_h, - xtr_bot)
+
+    pos0 = pos + h_to_pos0 + r1_to_pos0 + r2_to_pos0
+
+    cir =  Part.makeCircle (r + xtr_r,   # Radius
+                            pos0,        # Position
+                            axis_h)      # direction
+
+    print "circle: %", cir.Curve
+
+    wire_cir = Part.Wire(cir)
+    face_cir = Part.Face(wire_cir)
+
+    extrude_dir = DraftVecUtils.scale(axis_h, h+xtr_bot+xtr_top)
+    shpcyl = face_cir.extrude(extrude_dir)
+
+    return shpcyl
+
+#cyl = shp_cyl_gen (r=2, h=5, axis_h = FreeCAD, 
+#                       axis_r1 = VX, axis_r2 = VY,
+#                       cen_h = 1, cen_r1 = 0, cen_r2 = 0,
+#                       xtr_top=0, xtr_bot=1, xtr_r=0, pos = V0)
+#Part.show(cyl)
+
 
 
 # Add cylinder, with inner hole:
