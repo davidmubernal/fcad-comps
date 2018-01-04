@@ -128,7 +128,7 @@ class SinglePart (object):
         """
         # just in case the value is 0 or 1, and it is an int
         self.color = (float(color[0]),float(color[1]), float(color[2]))
-        self.fco_.ViewObject.ShapeColor = self.color
+        self.fco.ViewObject.ShapeColor = self.color
 
     # ----- 
     def set_place (self, place = V0):
