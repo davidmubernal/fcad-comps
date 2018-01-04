@@ -207,12 +207,11 @@ def fc_isonbase (fcv):
 
 
 def get_fc_perpend1(fcv):
+    """ gets a 'random' perpendicular FreeCAD.Vector
 
-    """ gets a perpendicular FreeCAD.Vector
-    similar to get_vecname_perpend1, but there are more cases here
-
-    Args:
-        vec: 'x', '-x', 'y', '-y', 'z', '-z'
+    Parameters:
+    -----------
+        fcv : FreeCAD.Vector
     """
 
     if DraftVecUtils.isNull(fcv):
@@ -226,17 +225,18 @@ def get_fc_perpend1(fcv):
     elif fcv.y == 0:
         fcp = FreeCAD.Vector(-fcv.z, 0, fcv.x)
     elif fcv.z == 0:
-        fcp = FreeCAD.Vector(fcv.y, -fcv.x,0)
-    else: # none of them are zero
+        fcp = FreeCAD.Vector(fcv.y, -fcv.x, 0)
+    else: # none of them are zero (same as before)
         fcp = FreeCAD.Vector(fcv.y, -fcv.x, 0)
 
     return fcp
 
 
 
-def add_fcobj(shp, name):
+def add_fcobj(shp, name, doc = None):
     """ just creates a freeCAD object of the shape, just to save one line"""
-    doc = FreeCAD.ActiveDocument
+    if doc is None:
+        doc = FreeCAD.ActiveDocument
     fcobj = doc.addObject("Part::Feature", name)
     fcobj.Shape = shp
     return fcobj
@@ -1453,12 +1453,12 @@ def shp_cyl_gen (r, h, axis_h = VZ,
 
     return shpcyl
 
-cyl = shp_cyl_gen (r=2, h=1, axis_h = VZ, 
-                       axis_ra = VX, axis_rb = VY,
-                       pos_h = 0, pos_ra = 1, pos_rb = 1,
-                       xtr_top=0, xtr_bot=1, xtr_r=1,
-                       pos = FreeCAD.Vector(1,2,0))
-Part.show(cyl)
+#cyl = shp_cyl_gen (r=2, h=1, axis_h = VZ, 
+#                       axis_ra = VX, axis_rb = VY,
+#                       pos_h = 0, pos_ra = 1, pos_rb = 1,
+#                       xtr_top=0, xtr_bot=1, xtr_r=1,
+#                       pos = FreeCAD.Vector(1,2,0))
+#Part.show(cyl)
 
 
 
