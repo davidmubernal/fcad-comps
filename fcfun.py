@@ -1300,8 +1300,8 @@ def shp_cyl_gen (r, h, axis_h = VZ,
         It can be None
     pos_h : int
         location of pos along axis_h (0, 1)
-        0: the cylinder pos is at its base (not considering xtr_h)
-        1: the cylinder pos is centered along its height
+        0: the cylinder pos is centered along its height
+        1: the cylinder pos is at its base (not considering xtr_h)
     pos_ra : int
         location of pos along axis_ra (0, 1)
         0: pos is at the circunference center
@@ -1328,14 +1328,14 @@ def shp_cyl_gen (r, h, axis_h = VZ,
 
 
     
-    pos_h = 0, pos_ra = 0, pos_rb = 0
-    pos at x:
+    pos_h = 1, pos_ra = 0, pos_rb = 0
+    pos at 1:
             axis_rb
               :
               :
              . .    
            .     .
-         (    0    ) ---- axis_ra       This 0 will be pos0
+         (    o    ) ---- axis_ra       This o will be pos_o (origin)
            .     .
              . .    
 
@@ -1350,11 +1350,11 @@ def shp_cyl_gen (r, h, axis_h = VZ,
          |         |
          |         |
          |         |
-         |____x____|...............> axis_ra
-         :....0....:....: xtr_bot             This 0 will be pos0
+         |____1____|...............> axis_ra
+         :....o....:....: xtr_bot             This o will be pos_o
 
 
-    pos_h = 1, pos_ra = 1, pos_rb = 0
+    pos_h = 0, pos_ra = 1, pos_rb = 0
     pos at x:
 
        axis_rb
@@ -1378,10 +1378,10 @@ def shp_cyl_gen (r, h, axis_h = VZ,
          |         |
          |         |
          |_________|.....
-         :....0....:....: xtr_bot        This 0 will be pos0
+         :....o....:....: xtr_bot        This o will be pos_o
 
 
-    pos_h = 1, pos_ra = 1, pos_rb = 1
+    pos_h = 0, pos_ra = 1, pos_rb = 1
     pos at x:
 
        axis_rb
@@ -1405,44 +1405,44 @@ def shp_cyl_gen (r, h, axis_h = VZ,
         ||         |
         ||         |
         ||_________|.....
-        ::....0....:....: xtr_bot
+        ::....o....:....: xtr_bot
         :;
         xtr_r
 
    """
    
 
-    # calculate pos0, which is at the center of the circle and at the base
+    # calculate pos_o, which is at the center of the circle and at the base
     # counting xtr_bot if is is > 0
     axis_h = DraftVecUtils.scaleTo(axis_h, 1)
     
     if pos_ra == 0:
-        ra_to_pos0 = V0
+        ra_to_o = V0
     else:
         if axis_ra is not None:
             axis_ra = DraftVecUtils.scaleTo(axis_ra, 1)
-            ra_to_pos0 = DraftVecUtils.scale(axis_ra, r)
+            ra_to_o = DraftVecUtils.scale(axis_ra, r)
         else :
             logger.error('axis_ra not defined while pos_ra ==1')
 
     if pos_rb == 0:
-        rb_to_pos0 = V0
+        rb_to_o = V0
     else:
         if axis_rb is not None:
             axis_rb = DraftVecUtils.scaleTo(axis_rb, 1)
-            rb_to_pos0 = DraftVecUtils.scale(axis_rb, r)
+            rb_to_o = DraftVecUtils.scale(axis_rb, r)
         else :
             logger.error('axis_rb not defined while pos_rb ==1')
 
-    if pos_h == 1: # we have to move the circle half the height down + xtr_bot
-        h_to_pos0 = DraftVecUtils.scale(axis_h, -(h/2. + xtr_bot))
+    if pos_h == 0: # we have to move the circle half the height down + xtr_bot
+        h_to_o = DraftVecUtils.scale(axis_h, -(h/2. + xtr_bot))
     else:
-        h_to_pos0 = DraftVecUtils.scale(axis_h, - xtr_bot)
+        h_to_o = DraftVecUtils.scale(axis_h, - xtr_bot)
 
-    pos0 = pos + h_to_pos0 + ra_to_pos0 + rb_to_pos0
+    pos_o = pos + h_to_o + ra_to_o + rb_to_o
 
     cir =  Part.makeCircle (r + xtr_r,   # Radius
-                            pos0,        # Position
+                            pos_o,        # Position
                             axis_h)      # direction
 
     wire_cir = Part.Wire(cir)
@@ -1453,11 +1453,12 @@ def shp_cyl_gen (r, h, axis_h = VZ,
 
     return shpcyl
 
-#cyl = shp_cyl_gen (r=2, h=1, axis_h = VZ, 
+#cyl = shp_cyl_gen (r=2, h=2, axis_h = VZ, 
 #                       axis_ra = VX, axis_rb = VY,
-#                       pos_h = 0, pos_ra = 1, pos_rb = 1,
-#                       xtr_top=0, xtr_bot=1, xtr_r=1,
-#                       pos = FreeCAD.Vector(1,2,0))
+#                       pos_h = 1, pos_ra = 1, pos_rb = 0,
+#                       xtr_top=0, xtr_bot=1, xtr_r=2,
+#                       pos = V0)
+#                       #pos = FreeCAD.Vector(1,2,0))
 #Part.show(cyl)
 
 
