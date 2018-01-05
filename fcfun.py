@@ -1632,12 +1632,12 @@ def shp_cylhole_gen (r_out, r_in, h,
         vector along the cylinder height
     axis_ra : FreeCAD.Vector
         vector along the cylinder radius, a direction perpendicular to axis_h
-        only make sense if pos_ra = 0.
-        It can be None.
+        it is not necessary if pos_ra == 0
+        It can be None, but if None, axis_rb has to be None
     axis_rb : FreeCAD.Vector
         vector along the cylinder radius,
         a direction perpendicular to axis_h and axis_ra
-        only make sense if pos_rb = 0
+        it is not necessary if pos_ra == 0
         It can be None
     pos_h : int
         location of pos along axis_h (0, 1)
