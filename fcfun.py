@@ -1654,9 +1654,9 @@ def shp_cylhole_gen (r_out, r_in, h,
     pos_rb : int
         location of pos along axis_ra (0, 1)
         0: pos is at the circunference center
-        1: pos is at the inner circunsference, on axis_ra, at r_in from the
+        1: pos is at the inner circunsference, on axis_rb, at r_in from the
            circle center (not at r_in + xtr_r_in)
-        2: pos is at the outer circunsference, on axis_ra, at r_out from the
+        2: pos is at the outer circunsference, on axis_rb, at r_out from the
            circle center (not at r_out + xtr_r_out)
     xtr_top : float
         Extra height on top, it is not taken under consideration when

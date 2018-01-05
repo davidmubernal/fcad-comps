@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# -- Classes for FreeCAD pieces or parts
+# -- Classes for FreeCAD pieces, parts or shapes
 # ----------------------------------------------------------------------------
 # -- (c) Felipe Machado
 # -- Area of Electronic Technology. Rey Juan Carlos University (urjc.es)
@@ -19,124 +19,26 @@ import FreeCADGui
 import Part
 import DraftVecUtils
 
+# to get the current directory. Freecad has to be executed from the same
+# directory this file is
+filepath = os.getcwd()
+# to get the components
+# In FreeCAD can be added: Preferences->General->Macro->Macro path
+sys.path.append(filepath) 
+#sys.path.append(filepath + '/' + 'comps')
+sys.path.append(filepath + '/../../' + 'comps')
+
+
 import kcomp   # import material constants and other constants
 import fcfun   # import my functions for freecad. FreeCad Functions
+import shp_clss
 
 from fcfun import V0, VX, VY, VZ, V0ROT
 from fcfun import VXN, VYN, VZN
 
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-
-class TopoShp (object):
-    """ This a the object that contains an OpenCasCade Topological Shape
-    https://www.freecadweb.org/wiki/Part_Module#Explaining_the_concepts
-
-    It is created because it contains methods and attributes to operate with it
-    The class SinglePart is a child of this one, because they also contain a
-    an OpenCasCade Topological Shape. So they will inherit all their properties
-
-    These object have their own coordinate axes:
-    axis_d: depth
-    axis_w: width
-    axis_h: height
-
-    """
-    def __init__(self, axis_d = None, axis_w = None, axis_h = None):
-        if axis_h is not None:
-            axis_h = DraftVecUtils.scaleTo(axis_h,1)
-        if axis_d is not None:
-            axis_d = DraftVecUtils.scaleTo(axis_d,1)
-        if axis_w is not None:
-            axis_w = DraftVecUtils.scaleTo(axis_w,1)
-        self.axis_d = axis_d
-        self.axis_w = axis_w
-        self.axis_h = axis_h
-
-        # the TopoShape has an origin, and distance vectors from it to 
-        # the different points along the coordinate system  
-        self.d_o = {}  # along axis_d
-        self.w_o = {}  # along axis_w
-        self.h_o = {}  # along axis_h
-
-
-    def vec_d(self, d):
-        """ creates a vector along axis_d (depth) with the length of argument d
-
-        Returns a FreeCAD.Vector
-
-        Parameter:
-        ----------
-        d : float
-            depth: lenght of the vector along axis_d
-        """
-
-        # self.axis_d is normalized, so no need to use DraftVecUtils.scaleTo
-        vec_d = DraftVecUtils.scale(self.axis_d, d)
-        return vec_d
-
-
-    def vec_w(self, w):
-        """ creates a vector along axis_w (width) with the length of argument w
-
-        Returns a FreeCAD.Vector
-
-        Parameter:
-        ----------
-        w : float
-            width: lenght of the vector along axis_w
-        """
-
-        # self.axis_w is normalized, so no need to use DraftVecUtils.scaleTo
-        vec_w = DraftVecUtils.scale(self.axis_w, w)
-        return vec_w
-
-
-    def vec_h(self, h):
-        """ creates a vector along axis_h (height) with the length of argument h
-
-        Returns a FreeCAD.Vector
-
-        Parameter:
-        ----------
-        h : float
-            height: lenght of the vector along axis_h
-        """
-
-        # self.axis_h is normalized, so no need to use DraftVecUtils.scaleTo
-        vec_h = DraftVecUtils.scale(self.axis_h, h)
-        return vec_h
-
-    def vec_d_w_h(self, d, w, h):
-        """ creates a vector with:
-            depth  : along axis_d
-            width  : along axis_w
-            height : along axis_h
-
-        Returns a FreeCAD.Vector
-
-        Parameters:
-        ----------
-        d, w, h : float
-            depth, widht and height
-        """
-
-        vec = self.vec_d(d) + self.vec_w(w) + self.vec_h(h)
-        return vec
-
-    def set_pos_o(self):
-        """ calculates the position of the origin, and saves it in
-        attribute pos_o
-        No arguments, all values are taken from self
-        """
- 
-        vec_from_pos_o =  (  self.d_o[self.pos_d]
-                           + self.w_o[self.pos_w]
-                           + self.h_o[self.pos_h])
-        vec_to_pos_o =  vec_from_pos_o.negative()
-        self.pos_o = self.pos + vec_to_pos_o
-
 
 
 # Possible names: Single Part, Element, Piece
@@ -163,7 +65,7 @@ class TopoShp (object):
 # exact. Not to print because it has no tolerances
 # with tolerances (to be printed)
 # rough
-class SinglePart (TopoShp):
+class SinglePart (object):
     """
     This is a 3D model that only has one part.
     It can be either a part that forms a whole object with other parts, 
@@ -174,13 +76,9 @@ class SinglePart (TopoShp):
     Depth, Width, Height
 
     Attributes:
-    shp : Topological Shape
-        The shape of this part
+    ------------
     fco: FreeCAD Object
         The freecad object of this part
-    print_ax: FreeCAD.Vector
-        The best direction to print, pointing upwards
-        it can be V0 if there is no best direction
 
     place : FreeCAD.Vector
         Position of the object
@@ -197,22 +95,16 @@ class SinglePart (TopoShp):
         1.: full intesity on that channel
 
     """
-    def __init__(self, axis_d = None, axis_w = None, axis_h = None,
-                 model_type = 0, tol = kcomp.TOL):
+    def __init__(self):
         # bring the active document
         self.doc = FreeCAD.ActiveDocument
-
-        TopoShp.__init__(self,
-                         axis_d = axis_d, axis_w = axis_w, axis_h = axis_h,
-                         tol = tol)
 
         # placement of the piece at V0, altough pos can set it anywhere
         self.place = V0
 
-        self.tol = tol
-        self.model_type = model_type
-
-
+        self.create_fco(self.name)
+        #self.tol = tol
+        #self.model_type = model_type
 
     def set_color (self, color = (1.,1.,1.)):
         """ Sets a new color for the piece
@@ -480,5 +372,203 @@ class PartsSet (object):
         fcad_filename = self.fcad_path + name + '.FCStd'
         print fcad_filename
         self.doc.saveAs (fcad_filename)
+
+
+
+
+
+
+class Washer (SinglePart, shp_clss.ShpCylHole):
+    """ Washer, that is, a cylinder with a inner hole
+
+    Parameters:
+    -----------
+    r_out : float
+        external (outside) radius
+    r_in : float
+        internal radius
+    h : float
+        height
+    axis_h : FreeCAD.Vector
+        vector along the cylinder height
+    pos_h : int
+        location of pos along axis_h (0,1)
+        0: the cylinder pos is centered along its height
+        1: the cylinder pos is at its base
+    tol : float
+        Tolerance for the inner and outer radius.
+        It is the tolerance for the diameter, so the radius will be added/subs
+        have of this tolerance
+        tol will be added to the inner radius (so it will be larger)
+        tol will be substracted to the outer radius (so it will be smaller)
+        
+    model_type : int
+        type of model:
+        exact, rough
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+    Attributes:
+    -----------
+    All the parameters and attributes of father class CylHole
+
+    metric : int or float (in case of M2.5) or even str for inches ?
+        Metric of the washer
+
+    """
+    def __init__(self, r_out, r_in, h, axis_h, pos_h, tol = 0, pos = V0,
+                 model_type = 0, # exact
+                 name = ''):
+
+        # sets the object name if not already set by a child class
+        if not hasattr(self, 'metric'):
+            self.metric = int(2 * r_in)
+        default_name = 'washer' + str(self.metric)
+        self.set_name (name, default_name, change = 0)
+
+        tol_r = tol / 2.
+
+        # First the shape is created
+        shp_clss.ShpCylHole.__init__(self, r_out = r_out, r_in = r_in,
+                                     h = h, axis_h = axis_h,
+                                     pos_h = pos_h,
+                                     # inside tolerance is more
+                                     xtr_r_in = tol_r,
+                                     # outside tolerance is less
+                                     xtr_r_out = - tol_r,
+                                     pos = pos)
+
+        # Then the Part
+        SinglePart.__init__(self)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): # so we keep the attributes by CylHole
+                setattr(self, i, values[i])
+
+
+
+class Din125Washer (Washer):
+    """ Din 125 Washer, this is the small washer
+
+    Parameters:
+    -----------
+    metric : int (maybe float: 2.5)
+ 
+    axis_h : FreeCAD.Vector
+        vector along the cylinder height
+    pos_h : int
+        location of pos along axis_h (0,1)
+        0: the cylinder pos is at its base
+        1: the cylinder pos is centered along its height
+    tol : float
+        Tolerance for the inner and outer radius.
+        It is the tolerance for the diameter, so the radius will be added/subs
+        have of this tolerance
+        tol will be added to the inner radius (so it will be larger)
+        tol will be substracted to the outer radius (so it will be smaller)
+    model_type : int
+        type of model:
+        exact, rough
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+    Attributes:
+    -----------
+    All the parameters and attributes of father class CylHole
+
+    metric : int or float (in case of M2.5) or even str for inches ?
+        Metric of the washer
+
+    model_type : int
+    """
+    def __init__(self, metric, axis_h, pos_h, tol = 0, pos = V0,
+                 model_type = 0, # exact
+                 name = ''):
+
+        # sets the object name if not already set by a child class
+        self.metric = metric
+        default_name = 'din125_washer_m' + str(self.metric)
+        self.set_name (name, default_name, change = 0)
+
+        washer_dict = kcomp.D125[metric]
+        Washer.__init__(self,
+                        r_out = washer_dict['do']/2.,
+                        r_in = washer_dict['di']/2.,
+                        h = washer_dict['t'],
+                        axis_h = axis_h,
+                        pos_h = pos_h,
+                        tol = tol, pos = pos,
+                        model_type = model_type)
+
+
+class Din9021Washer (Washer):
+    """ Din 9021 Washer, this is the larger washer
+
+    Parameters:
+    -----------
+    metric : int (maybe float: 2.5)
+ 
+    axis_h : FreeCAD.Vector
+        vector along the cylinder height
+    pos_h : int
+        location of pos along axis_h (0,1)
+        0: the cylinder pos is at its base
+        1: the cylinder pos is centered along its height
+    tol : float
+        Tolerance for the inner and outer radius.
+        It is the tolerance for the diameter, so the radius will be added/subs
+        have of this tolerance
+        tol will be added to the inner radius (so it will be larger)
+        tol will be substracted to the outer radius (so it will be smaller)
+    model_type : int
+        type of model:
+        exact, rough
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+    Attributes:
+    -----------
+    All the parameters and attributes of father class CylHole
+
+    metric : int or float (in case of M2.5) or even str for inches ?
+        Metric of the washer
+
+    model_type : int
+    """
+    def __init__(self, metric, axis_h, pos_h, tol = 0, pos = V0,
+                 model_type = 0, # exact
+                 name = ''):
+
+        # sets the object name if not already set by a child class
+        self.metric = metric
+        default_name = 'din9021_washer_m' + str(self.metric)
+        self.set_name (name, default_name, change = 0)
+
+        washer_dict = kcomp.D9021[metric]
+        Washer.__init__(self,
+                        r_out = washer_dict['do']/2.,
+                        r_in = washer_dict['di']/2.,
+                        h = washer_dict['t'],
+                        axis_h = axis_h,
+                        pos_h = pos_h,
+                        tol = tol, pos = pos,
+                        model_type = model_type)
+
+
+
+
+doc = FreeCAD.newDocument()
+washer = Din125Washer( metric = 5,
+                    axis_h = VZ, pos_h = 1, tol = 0, pos = V0,
+                    model_type = 0, # exact
+                    name = '')
+wash = Din9021Washer( metric = 5,
+                    axis_h = VZ, pos_h = 1, tol = 0,
+                    pos = washer.pos + DraftVecUtils.scale(VZ,washer.h),
+                    model_type = 0, # exact
+                    name = '')
 
 

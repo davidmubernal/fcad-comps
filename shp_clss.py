@@ -1,7 +1,5 @@
 # ----------------------------------------------------------------------------
-# -- TopoShp childran classes
-# -- comps library
-# -- Python functions for FreeCAD
+# -- TopoShp class and children
 # ----------------------------------------------------------------------------
 # -- (c) Felipe Machado
 # -- Area of Electronic Technology. Rey Juan Carlos University (urjc.es)
@@ -28,7 +26,6 @@ import sys
 sys.path.append(filepath)
 
 import fcfun
-import fc_clss
 import kcomp
 
 from fcfun import V0, VX, VY, VZ, V0ROT
@@ -38,7 +35,116 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-class ShpCyl (fc_clss.TopoShp):
+class TopoShp (object):
+    """ This a the object that contains an OpenCasCade Topological Shape
+    https://www.freecadweb.org/wiki/Part_Module#Explaining_the_concepts
+
+    It is created because it contains methods and attributes to operate with it
+    The class SinglePart is a child of this one, because they also contain a
+    an OpenCasCade Topological Shape. So they will inherit all their properties
+
+    These object have their own coordinate axes:
+    axis_d: depth
+    axis_w: width
+    axis_h: height
+
+    """
+    def __init__(self, axis_d = None, axis_w = None, axis_h = None):
+        if axis_h is not None:
+            axis_h = DraftVecUtils.scaleTo(axis_h,1)
+        if axis_d is not None:
+            axis_d = DraftVecUtils.scaleTo(axis_d,1)
+        if axis_w is not None:
+            axis_w = DraftVecUtils.scaleTo(axis_w,1)
+        self.axis_d = axis_d
+        self.axis_w = axis_w
+        self.axis_h = axis_h
+
+        # the TopoShape has an origin, and distance vectors from it to 
+        # the different points along the coordinate system  
+        self.d_o = {}  # along axis_d
+        self.w_o = {}  # along axis_w
+        self.h_o = {}  # along axis_h
+
+
+    def vec_d(self, d):
+        """ creates a vector along axis_d (depth) with the length of argument d
+
+        Returns a FreeCAD.Vector
+
+        Parameter:
+        ----------
+        d : float
+            depth: lenght of the vector along axis_d
+        """
+
+        # self.axis_d is normalized, so no need to use DraftVecUtils.scaleTo
+        vec_d = DraftVecUtils.scale(self.axis_d, d)
+        return vec_d
+
+
+    def vec_w(self, w):
+        """ creates a vector along axis_w (width) with the length of argument w
+
+        Returns a FreeCAD.Vector
+
+        Parameter:
+        ----------
+        w : float
+            width: lenght of the vector along axis_w
+        """
+
+        # self.axis_w is normalized, so no need to use DraftVecUtils.scaleTo
+        vec_w = DraftVecUtils.scale(self.axis_w, w)
+        return vec_w
+
+
+    def vec_h(self, h):
+        """ creates a vector along axis_h (height) with the length of argument h
+
+        Returns a FreeCAD.Vector
+
+        Parameter:
+        ----------
+        h : float
+            height: lenght of the vector along axis_h
+        """
+
+        # self.axis_h is normalized, so no need to use DraftVecUtils.scaleTo
+        vec_h = DraftVecUtils.scale(self.axis_h, h)
+        return vec_h
+
+    def vec_d_w_h(self, d, w, h):
+        """ creates a vector with:
+            depth  : along axis_d
+            width  : along axis_w
+            height : along axis_h
+
+        Returns a FreeCAD.Vector
+
+        Parameters:
+        ----------
+        d, w, h : float
+            depth, widht and height
+        """
+
+        vec = self.vec_d(d) + self.vec_w(w) + self.vec_h(h)
+        return vec
+
+    def set_pos_o(self):
+        """ calculates the position of the origin, and saves it in
+        attribute pos_o
+        No arguments, all values are taken from self
+        """
+ 
+        vec_from_pos_o =  (  self.d_o[self.pos_d]
+                           + self.w_o[self.pos_w]
+                           + self.h_o[self.pos_h])
+        vec_to_pos_o =  vec_from_pos_o.negative()
+        self.pos_o = self.pos + vec_to_pos_o
+
+
+class ShpCyl (TopoShp):
     """
     Creates a shape of a cylinder
     Makes a cylinder in any position and direction, with optional extra
@@ -87,6 +193,9 @@ class ShpCyl (fc_clss.TopoShp):
         calculating pos_d or pos_w
     pos : FreeCAD.Vector
         Position of the cylinder, taking into account where the center is
+    print_ax: FreeCAD.Vector
+        The best direction to print, pointing upwards
+        it can be V0 if there is no best direction
 
 
     Attributes:
@@ -99,6 +208,9 @@ class ShpCyl (fc_clss.TopoShp):
         vectors from the origin to the different points along axis_d
     w_o : dictionary of FreeCAD.Vector
         vectors from the origin to the different points along axis_w
+    shp : OCC Topological Shape
+        The shape of this part
+
 
     
     pos_h = 1, pos_d = 0, pos_w = 0
@@ -189,7 +301,7 @@ class ShpCyl (fc_clss.TopoShp):
                  pos_h = 0, pos_d = 0, pos_w = 0,
                  xtr_top=0, xtr_bot=0, xtr_r=0, pos = V0):
 
-        fc_clss.TopoShp.__init__(self, axis_d, axis_w, axis_h)
+        TopoShp.__init__(self, axis_d, axis_w, axis_h)
 
         # save the arguments as attributes:
         frame = inspect.currentframe()
@@ -235,7 +347,7 @@ class ShpCyl (fc_clss.TopoShp):
 
 
 
-class ShpCylHole (fc_clss.TopoShp):
+class ShpCylHole (TopoShp):
     """
     Creates a shape of a hollow cylinder
     Similar to fcfun shp_cylhole_gen, but creates the object with the useful
@@ -369,7 +481,7 @@ class ShpCylHole (fc_clss.TopoShp):
                  pos = V0):
 
 
-        fc_clss.TopoShp.__init__(self, axis_d, axis_w, axis_h)
+        TopoShp.__init__(self, axis_d, axis_w, axis_h)
 
         # save the arguments as attributes:
         frame = inspect.currentframe()
@@ -407,10 +519,7 @@ class ShpCylHole (fc_clss.TopoShp):
                                        pos   = self.pos_o)        # Position
 
         self.shp = shpcyl
-
-
-
-
+        self.prnt_ax = self.axis_h
 
 
 #cyl = ShpCylHole (r_in=2, r_out=5, h=4,
