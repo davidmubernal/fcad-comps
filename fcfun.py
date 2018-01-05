@@ -10,17 +10,17 @@
 # --- LGPL Licence
 # ----------------------------------------------------------------------------
 
-import FreeCAD;
-import Part;
-import math;
-import logging;
-import DraftVecUtils;
+import FreeCAD
+import Part
+import math
+import logging
+import DraftVecUtils
 
 #from FreeCAD import Base
 
 # ---------------------- can be taken away after debugging
-import os;
-import sys;
+import os
+import sys
 # directory this file is
 filepath = os.getcwd()
 import sys
@@ -30,7 +30,7 @@ sys.path.append(filepath)
 # ---------------------- can be taken away after debugging
 
 
-import kcomp # before was mat_cte
+import kcomp
 
 from kcomp import LAYER3D_H
 

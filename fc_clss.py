@@ -28,6 +28,117 @@ from fcfun import VXN, VYN, VZN
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
+class TopoShp (object):
+    """ This a the object that contains an OpenCasCade Topological Shape
+    https://www.freecadweb.org/wiki/Part_Module#Explaining_the_concepts
+
+    It is created because it contains methods and attributes to operate with it
+    The class SinglePart is a child of this one, because they also contain a
+    an OpenCasCade Topological Shape. So they will inherit all their properties
+
+    These object have their own coordinate axes:
+    axis_d: depth
+    axis_w: width
+    axis_h: height
+
+    """
+    def __init__(self, axis_d = None, axis_w = None, axis_h = None):
+        if axis_h is not None:
+            axis_h = DraftVecUtils.scaleTo(axis_h,1)
+        if axis_d is not None:
+            axis_d = DraftVecUtils.scaleTo(axis_d,1)
+        if axis_w is not None:
+            axis_w = DraftVecUtils.scaleTo(axis_w,1)
+        self.axis_d = axis_d
+        self.axis_w = axis_w
+        self.axis_h = axis_h
+
+        # the TopoShape has an origin, and distance vectors from it to 
+        # the different points along the coordinate system  
+        self.d_o = {}  # along axis_d
+        self.w_o = {}  # along axis_w
+        self.h_o = {}  # along axis_h
+
+
+    def vec_d(self, d):
+        """ creates a vector along axis_d (depth) with the length of argument d
+
+        Returns a FreeCAD.Vector
+
+        Parameter:
+        ----------
+        d : float
+            depth: lenght of the vector along axis_d
+        """
+
+        # self.axis_d is normalized, so no need to use DraftVecUtils.scaleTo
+        vec_d = DraftVecUtils.scale(self.axis_d, d)
+        return vec_d
+
+
+    def vec_w(self, w):
+        """ creates a vector along axis_w (width) with the length of argument w
+
+        Returns a FreeCAD.Vector
+
+        Parameter:
+        ----------
+        w : float
+            width: lenght of the vector along axis_w
+        """
+
+        # self.axis_w is normalized, so no need to use DraftVecUtils.scaleTo
+        vec_w = DraftVecUtils.scale(self.axis_w, w)
+        return vec_w
+
+
+    def vec_h(self, h):
+        """ creates a vector along axis_h (height) with the length of argument h
+
+        Returns a FreeCAD.Vector
+
+        Parameter:
+        ----------
+        h : float
+            height: lenght of the vector along axis_h
+        """
+
+        # self.axis_h is normalized, so no need to use DraftVecUtils.scaleTo
+        vec_h = DraftVecUtils.scale(self.axis_h, h)
+        return vec_h
+
+    def vec_d_w_h(self, d, w, h):
+        """ creates a vector with:
+            depth  : along axis_d
+            width  : along axis_w
+            height : along axis_h
+
+        Returns a FreeCAD.Vector
+
+        Parameters:
+        ----------
+        d, w, h : float
+            depth, widht and height
+        """
+
+        vec = self.vec_d(d) + self.vec_w(w) + self.vec_h(h)
+        return vec
+
+    def set_pos_o(self):
+        """ calculates the position of the origin, and saves it in
+        attribute pos_o
+        No arguments, all values are taken from self
+        """
+ 
+        vec_from_pos_o =  (  self.d_o[self.pos_d]
+                           + self.w_o[self.pos_w]
+                           + self.h_o[self.pos_h])
+        vec_to_pos_o =  vec_from_pos_o.negative()
+        self.pos_o = self.pos + vec_to_pos_o
+
+
+
 # Possible names: Single Part, Element, Piece
 # Either:
 # - have an attribute to indicate what kind of part is it, or
@@ -52,7 +163,7 @@ logger = logging.getLogger(__name__)
 # exact. Not to print because it has no tolerances
 # with tolerances (to be printed)
 # rough
-class SinglePart (object):
+class SinglePart (TopoShp):
     """
     This is a 3D model that only has one part.
     It can be either a part that forms a whole object with other parts, 
@@ -63,7 +174,7 @@ class SinglePart (object):
     Depth, Width, Height
 
     Attributes:
-    shp : TopoShape
+    shp : Topological Shape
         The shape of this part
     fco: FreeCAD Object
         The freecad object of this part
@@ -72,7 +183,7 @@ class SinglePart (object):
         it can be V0 if there is no best direction
 
     place : FreeCAD.Vector
-        Position of the tensioner set.
+        Position of the object
         There is the parameter pos, where the piece is built and can be at
         any position.
         Once the piece is built, its placement (Placement.Base) is at V0:
@@ -91,26 +202,17 @@ class SinglePart (object):
         # bring the active document
         self.doc = FreeCAD.ActiveDocument
 
-        if axis_h is not None:
-            axis_h = DraftVecUtils.scaleTo(axis_h,1)
-        if axis_d is not None:
-            axis_d = DraftVecUtils.scaleTo(axis_d,1)
-        if axis_w is not None:
-            axis_w = DraftVecUtils.scaleTo(axis_w,1)
-        self.axis_d = axis_d
-        self.axis_w = axis_w
-        self.axis_h = axis_h
-
-        # -- initializing pos_d, pos_w, pos_h vectors:
-        self.d0to = {0 : V0} #d0to[0] = V0 # no distance from 0 to 0
-        self.w0to = {0 : V0} #w0to[0] = V0 # no distance from 0 to 0
-        self.h0to = {0 : V0} #h0to[0] = V0 # no distance from 0 to 0
+        TopoShp.__init__(self,
+                         axis_d = axis_d, axis_w = axis_w, axis_h = axis_h,
+                         tol = tol)
 
         # placement of the piece at V0, altough pos can set it anywhere
         self.place = V0
 
         self.tol = tol
         self.model_type = model_type
+
+
 
     def set_color (self, color = (1.,1.,1.)):
         """ Sets a new color for the piece
