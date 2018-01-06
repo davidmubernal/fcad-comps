@@ -245,7 +245,7 @@ class SinglePart (object):
 
 # Possible names: Parts     , Pieces,         Elements,
 #                      Group        Ensemble,         Set, 
-class PartsSet (object):
+class PartsSet (shp_clss.TopoShp):
     """
     This is a 3D model that has a set of parts (SinglePart or others)
     
@@ -269,24 +269,11 @@ class PartsSet (object):
     """
 
     def __init__(self, axis_d, axis_w, axis_h):
+        
         # bring the active document
         self.doc = FreeCAD.ActiveDocument
 
-        axis_d = DraftVecUtils.scaleTo(axis_d,1)
-        axis_h = DraftVecUtils.scaleTo(axis_h,1)
-        if axis_w == V0:
-            # this happens when is symmetrical on the width
-            axis_w = axis_h.cross(axis_d)
-        else:
-            axis_w = DraftVecUtils.scaleTo(axis_w,1)
-        self.axis_d = axis_d
-        self.axis_w = axis_w
-        self.axis_h = axis_h
-
-        # -- initializing pos_d, pos_w, pos_h vectors:
-        self.d0to = {0 : V0} #d0to[0] = V0 # no distance from 0 to 0
-        self.w0to = {0 : V0} #w0to[0] = V0 # no distance from 0 to 0
-        self.h0to = {0 : V0} #h0to[0] = V0 # no distance from 0 to 0
+        shp_clss.TopoShp.__init__(self, axis_d, axis_w, axis_h)
 
         self.parts_lst = [] # list of all the parts (SinglePart, ...)
 
@@ -374,6 +361,33 @@ class PartsSet (object):
         print fcad_filename
         self.doc.saveAs (fcad_filename)
 
+    def set_name (self, name = '', default_name = '', change = 0):
+        """ Sets the name attribute to the value of parameter name
+        if name is empty, it will take default_name.
+        if change == 1, it will change the self.name attribute to name, 
+            default_name
+        if change == 0, if self.name is not empty, it will preserve it
+
+        Parameters:
+        -----------
+        name : str
+            This is the name, but it can be empty.
+        default_name : str
+            This is the default_name, if not name
+        change : int
+            1: change the value of self.name
+            0: preserve the value of self.name if it exists
+
+        """
+        # attribute name has not been created
+        if (not hasattr(self, 'name') or  # attribute name has not been created
+            not self.name or              # attribute name is empty
+            change == 1):                 # attribute has te be changed
+            if not name:
+                self.name = default_name
+            else:
+                self.name = name
+
 
 
 
@@ -453,7 +467,7 @@ class Washer (SinglePart, shp_clss.ShpCylHole):
 
 
 class Din125Washer (Washer):
-    """ Din 125 Washer, this is the small washer
+    """ Din 125 Washer, this is the regular washer
 
     Parameters:
     -----------
@@ -562,16 +576,16 @@ class Din9021Washer (Washer):
 
 
 
-doc = FreeCAD.newDocument()
-washer = Din125Washer( metric = 5,
-                    axis_h = VZ, pos_h = 1, tol = 0, pos = V0,
-                    model_type = 0, # exact
-                    name = '')
-wash = Din9021Washer( metric = 5,
-                    axis_h = VZ, pos_h = 1, tol = 0,
-                    pos = washer.pos + DraftVecUtils.scale(VZ,washer.h),
-                    model_type = 0, # exact
-                    name = '')
+#doc = FreeCAD.newDocument()
+#washer = Din125Washer( metric = 5,
+#                    axis_h = VZ, pos_h = 1, tol = 0, pos = V0,
+#                    model_type = 0, # exact
+#                    name = '')
+#wash = Din9021Washer( metric = 5,
+#                    axis_h = VZ, pos_h = 1, tol = 0,
+#                    pos = washer.pos + DraftVecUtils.scale(VZ,washer.h),
+#                    model_type = 0, # exact
+#                    name = '')
 
 
 class BearingOutl (SinglePart, shp_clss.ShpCylHole):
@@ -681,8 +695,237 @@ class BearingOutl (SinglePart, shp_clss.ShpCylHole):
             SinglePart.__init__(self)
 
 
-bear = BearingOutl( bearing_nb = 608,
-                    axis_h = VZN, pos_h = 1, tol = 0,
-                    pos = washer.pos + DraftVecUtils.scale(VZN,washer.h),
-                    name = '')
+#bear = BearingOutl( bearing_nb = 608,
+#                    axis_h = VZN, pos_h = 1, tol = 0,
+#                    pos = washer.pos + DraftVecUtils.scale(VZN,washer.h),
+#                    name = '')
+
+
+
+
+class BearWashSet (PartsSet):
+    """ A set of bearings and washers, usually to make idle pulleys
+
+    Parameters:
+    -----------
+    holcyl_list : list 
+    r_out : float
+        external (outside) radius
+    r_in : float
+        internal radius
+    h : float
+        height
+    axis_h : FreeCAD.Vector
+        vector along the cylinder height
+    pos_h : int
+        location of pos along axis_h (0,1,2,3)
+        0: pos is centered along its height
+        1: pos is at the base of the bearing
+        2: pos is at the base of the regular washer
+        3: pos is at the base of the large washer (this is the bottom)
+    axis_d : FreeCAD.Vector
+        vector perpendicular to the axis_h, along the radius
+    pos_d : int
+        location of pos along axis_d (0,1,2,3)
+        0: pos is centered at the cylinder axis
+        1: pos is at the bearing internal radius (defined by netric)
+        2: pos is at the bearing external radius
+        3: pos is at the large washer external radius
+    axis_w : FreeCAD.Vector
+        vector perpendicular to the axis_h and axis_d, along the radius
+    pos_w : int
+        location of pos along axis_w (0,1,2,3)
+        0: pos is centered at the cylinder axis
+        1: pos is at the bearing internal radius (defined by netric)
+        2: pos is at the bearing external radius
+        3: pos is at the large washer external radius
+        
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+    Attributes:
+    -----------
+    metric : int or float (in case of M2.5) or even str for inches ?
+        Metric of the washer
+
+    pos_o : FreeCAD.Vector
+        Position of the origin of the shape
+    h_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_h
+    d_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_d
+    w_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_w
+    h0_cen : int
+    d0_cen : int
+    w0_cen : int
+        indicates if pos_h = 0 (pos_d, pos_w) is at the center along
+        axis_h, axis_d, axis_w, or if it is at the end.
+        1 : at the center (symmetrical, or almost symmetrical)
+        0 : at the end
+
+    tot_h : float
+        Total height of the set: idler pulley
+
+
+    idler pulley without the washer for the bolt because it is between a holder,
+    The holder is in dots, not in the group
+    pos_o is at the bottom: see o in the drawing
+
+                 axis_h
+                   :            pos_h
+                ...:...
+                :     :                  bolt head
+      ..........:.....:........
+                               :         Holder for the pulley group
+      ....._________________...:
+          |_________________|            large washer
+              |_________|                regular washer
+              |         |
+              |         |         0      bearing
+              |_________|         1
+           ___|_________|___      2      regular washer
+      ....|________o________|..   3      large washer
+                               :
+      .........................:         Holder for the pulley group
+                :.....:                  nut
+                  :.:                    bolt shank
+ 
+                   01   2   3   pos_d, pos_w
+    """
+
+    # large washer (din9021) metric
+    lwash_m_dict = { 3: 4, 4: 6}
+    # regular washer (din125) has the same metric as the pulley
+    # bearing tipe
+    bear_m_dict = { 3: 603, 4: 624}
+
+    def __init__(self, metric,
+                 axis_h, pos_h,
+                 axis_d = None, pos_d = 0,
+                 axis_w = None, pos_w = 0,
+                 pos = V0,
+                 name = ''):
+
+        default_name = 'bearing_idlpulley_m' + str(metric)
+        self.set_name (name, default_name, change = 0)
+
+        PartsSet.__init__(self,
+                          axis_d = axis_d, axis_w = axis_w, axis_h = axis_h)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): # so we keep the attributes by CylHole
+                setattr(self, i, values[i])
+
+        try:
+            # lwash_m is the size (metric) of the large washer
+            self.lwash_m = self.lwash_m_dict[metric]
+            # bear_type is the type of bearing, such as 603, 624,...
+            self.bear_type = self.bear_m_dict[metric]
+            # lwash_dict is the dictionary with the dimensions of large washer
+            self.lwash_dict = kcomp.D9021[self.lwash_m]
+            # rwash_dict is the dictionary with the dimensions of regular washer
+            self.rwash_dict = kcomp.D125[metric]
+            # bear is the dictionary with the dimensions of the bearing
+            self.bear_dict = kcomp.BEARING[self.bear_type]
+        except KeyError:
+            logger.error('Bearing/washer key not found: ' + str(metric))
+        else:
+            # dimensions of each element
+            # height, along axis_h
+            self.lwash_h     = self.lwash_dict['t'] # height (thickness)
+            self.lwash_r_out = self.lwash_dict['do']/2.
+            self.rwash_h     = self.rwash_dict['t'] # height (thickness)
+            self.rwash_r_out = self.rwash_dict['do']/2.
+            self.bear_h      = self.bear_dict['t'] # height (thickness)
+            self.bear_r_out  = self.bear_dict['do']/2.
+            # total height:
+            self.tot_h = 2 * (lwash_h + rwash_h) + bear_h
+
+            # pos_h/d/w = 0 are at the center
+            self.h0_cen = 1
+            self.d0_cen = 1
+            self.w0_cen = 1
+
+            # the origin (pos_o) is at the base
+            # vectors from o (orig) along axis_h, to the pos_h points
+            # h_o is a dictionary created in TopoShp.__init__
+            self.h_o[0] = self.vec_h(  self.bear_h/2.
+                                     + self.rwash_h
+                                     + self.lwash_h)
+            self.h_o[1] = self.vec_h(self.rwash_h + self.lwash_h)
+            self.h_o[2] = self.vec_h(self.lwash_h)
+            self.h_o[3] = V0
+
+            self.d_o[0] = V0
+            if self.axis_d is not None:
+                self.d_o[1] = self.vec_d(-metric/2.)
+                self.d_o[2] = self.vec_d(-self.bear_r_out)
+                self.d_o[3] = self.vec_d(-self.lwash_r_out)
+            elif pos_d != 0:
+                logger.error('axis_d not defined while pos_d != 0')
+
+            self.w_o[0] = V0
+            if self.axis_d is not None:
+                self.w_o[1] = self.vec_w(-self.metric/2.)
+                self.w_o[2] = self.vec_w(-self.bear_r_out)
+                self.w_o[3] = self.vec_w(-self.lwash_r_out)
+            elif pos_w != 0:
+                logger.error('axis_w not defined while pos_w != 0')
+
+            # calculates the position of the origin, and keeps it in attribute
+            # pos_o
+            self.set_pos_o()
+
+            # creation of the bottom large washer
+            lwash_b = Din9021Washer(metric= self.lwash_m,
+                                    axis_h = self.axis_h,
+                                    pos_h = 1,
+                                    pos = self.pos_o,
+                                    name = 'idlpull_lwash_bt')
+            self.parts_lst.append(lwash_b)
+            # creation of the bottom regular washer
+            rwash_b = Din125Washer(metric= metric,
+                                   axis_h = self.axis_h,
+                                   pos_h = 1,
+                                   pos = lwash_b.get_pos_h(1),
+                                   name = 'idlpull_rwash_bt')
+            self.parts_lst.append(rwash_b)
+            # creation of the bearing
+            bearing = BearingOutl(bearing_nb = self.bear_type,
+                                  axis_h = self.axis_h,
+                                  pos_h = 1,
+                                  axis_d = self.axis_d,
+                                  axis_w = self.axis_w,
+                                  pos = rwash_b.get_pos_h(1),
+                                  name = 'idlpull_bearing')
+            self.parts_lst.append(bearing)
+            # creation of the top regular washer
+            rwash_t = Din125Washer(metric= metric,
+                                   axis_h = self.axis_h,
+                                   pos_h = 1,
+                                   pos = bearing.get_pos_h(1),
+                                   name = 'idlpull_rwash_tp')
+            self.parts_lst.append(rwash_t)
+            # creation of the top large washer
+            lwash_t = Din9021Washer(metric= self.lwash_m,
+                                    axis_h = self.axis_h,
+                                    pos_h = 1,
+                                    pos = rwash_t.get_pos_h(1),
+                                    name = 'idlpull_lwash_bt')
+            self.parts_lst.append(lwash_t)
+
+
+
+
+doc = FreeCAD.newDocument()
+idle_pulley = BearWashSet( metric=3,
+                 axis_h = VZ, pos_h = 0,
+                 axis_d = None, pos_d = 0,
+                 axis_w = None, pos_w = 0,
+                 pos = V0,
+                 name = '')
 

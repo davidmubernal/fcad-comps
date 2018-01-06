@@ -67,6 +67,7 @@ class TopoShp (object):
         self.h_o = {}  # along axis_h
 
 
+
     def vec_d(self, d):
         """ creates a vector along axis_d (depth) with the length of argument d
 
@@ -143,6 +144,151 @@ class TopoShp (object):
         vec_to_pos_o =  vec_from_pos_o.negative()
         self.pos_o = self.pos + vec_to_pos_o
 
+    def get_o_to_d(self, pos_d):
+        """ returns the vector from origin pos_o to pos_d
+        If it is symmetrical along axis_d, pos_d == 0 will be at the middle
+        Then, pos_d > 0 will be the points on the positive side of axis_d
+        and   pos_d < 0 will be the points on the negative side of axis_d
+
+          d0_cen = 1
+                :
+           _____:_____
+          |     :     |   self.d_o[1] is the vector from orig to -1
+          |     :     |   self.d_o[0] is the vector from orig to 0
+          |_____:_____|......> axis_d
+         -2 -1  0  1  2
+
+         o---------> A:  o to  1  :
+         o------>    B:  o to  0  : d_o[0]
+         o--->       C:  o to -1  : d_o[1]
+         o    -->    D: -1 to  0  : d_o[0] - d_o[1] : B - C
+                     A = B + D
+                     A = B + (B-C) = 2B - C
+
+        d0_cen = 0
+          :
+          :___________
+          |           |   self.d_o[1] is the vector from orig to 1
+          |           |
+          |___________|......> axis_d
+          0  1  2  3  4
+
+
+        """
+        abs_pos_d = abs(pos_d)
+        if self.d0_cen == 1:
+            if pos_d <= 0:
+                try:
+                    vec = self.d_o[abs_pos_d]
+                except KeyError:
+                    logger.error('pos_d key not defined ' + str(pos_d))
+                else:
+                    return vec
+            else:
+                try:
+                    vec_0_to_d = (self.d_o[0]).sub(self.d_o[pos_d]) # D= B-C
+                except KeyError:
+                    logger.error('pos_d key not defined ' + str(pos_d))
+                else:
+                    vec_orig_to_d = self.d_o[0] + vec_0_to_d # A = B + D
+                    return vec_orig_to_d
+        else: #pos_d == 0 is at the end, distances are calculated directly
+            try:
+                vec = self.d_o[pos_d]
+            except KeyError:
+                logger.error('pos_d key not defined' + str(pos_d))
+            else:
+                return vec
+
+
+    def get_o_to_w(self, pos_w):
+        """ returns the vector from origin pos_o to pos_w
+        If it is symmetrical along axis_w, pos_w == 0 will be at the middle
+        Then, pos_w > 0 will be the points on the positive side of axis_w
+        and   pos_w < 0 will be the points on the negative side of axis_w
+        See get_o_to_d drawings
+        """
+        abs_pos_w = abs(pos_w)
+        if self.w0_cen == 1:
+            if pos_w <= 0:
+                try:
+                    vec = self.w_o[abs_pos_w]
+                except KeyError:
+                    logger.error('pos_w key not defined ' + str(pos_w))
+                else:
+                    return vec
+            else:
+                try:
+                    vec_0_to_w = (self.w_o[0]).sub(self.w_o[pos_w]) # D= B-C
+                except KeyError:
+                    logger.error('pos_w key not defined ' + str(pos_w))
+                else:
+                    vec_orig_to_w = self.w_o[0] + vec_0_to_w # A = B + D
+                    return vec_orig_to_w
+        else: #pos_w == 0 is at the end, distances are calculated directly
+            try:
+                vec = self.w_o[pos_w]
+            except KeyError:
+                logger.error('pos_w key not defined' + str(pos_w))
+            else:
+                return vec
+
+    def get_o_to_h(self, pos_h):
+        """ returns the vector from origin pos_o to pos_h
+        If it is symmetrical along axis_h, pos_h == 0 will be at the middle
+        Then, pos_h > 0 will be the points on the positive side of axis_h
+        and   pos_h < 0 will be the points on the negative side of axis_h
+        See get_o_to_d drawings
+        """
+        abs_pos_h = abs(pos_h)
+        if self.h0_cen == 1:
+            if pos_h <= 0:
+                try:
+                    vec = self.h_o[abs_pos_h]
+                except KeyError:
+                    logger.error('pos_h key not defined ' + str(pos_h))
+                else:
+                    return vec
+            else:
+                try:
+                    vec_0_to_h = (self.h_o[0]).sub(self.h_o[pos_h]) # D= B-C
+                except KeyError:
+                    logger.error('pos_h key not defined ' + str(pos_h))
+                else:
+                    vec_orig_to_h = self.h_o[0] + vec_0_to_h # A = B + D
+                    return vec_orig_to_h
+        else: #pos_h == 0 is at the end, distances are calculated directly
+            try:
+                vec = self.h_o[pos_h]
+            except KeyError:
+                logger.error('pos_h key not defined' + str(pos_h))
+            else:
+                return vec
+
+    def get_pos_d(self, pos_d):
+        """ returns the absolute position of the pos_d point
+        """
+        return self.pos_o + self.get_o_to_d(pos_d)
+
+    def get_pos_w(self, pos_w):
+        """ returns the absolute position of the pos_w point
+        """
+        return self.pos_o + self.get_o_to_w(pos_w)
+
+    def get_pos_h(self, pos_h):
+        """ returns the absolute position of the pos_h point
+        """
+        return self.pos_o + self.get_o_to_h(pos_h)
+
+    def get_pos_dwh(self, pos_d, pos_w, pos_h):
+        """ returns the absolute position of the pos_d, pos_w, pos_h point
+        """
+        pos = (self.pos_o + self.get_o_to_d(pos_d)
+                          + self.get_o_to_w(pos_w)
+                          + self.get_o_to_h(pos_h))
+        return pos
+
+
 
 class ShpCyl (TopoShp):
     """
@@ -197,7 +343,6 @@ class ShpCyl (TopoShp):
         The best direction to print, pointing upwards
         it can be V0 if there is no best direction
 
-
     Attributes:
     -----------
     pos_o : FreeCAD.Vector
@@ -208,6 +353,13 @@ class ShpCyl (TopoShp):
         vectors from the origin to the different points along axis_d
     w_o : dictionary of FreeCAD.Vector
         vectors from the origin to the different points along axis_w
+    h0_cen : int
+    d0_cen : int
+    w0_cen : int
+        indicates if pos_h = 0 (pos_d, pos_w) is at the center along
+        axis_h, axis_d, axis_w, or if it is at the end.
+        1 : at the center (symmetrical, or almost symmetrical)
+        0 : at the end
     shp : OCC Topological Shape
         The shape of this part
 
@@ -259,7 +411,7 @@ class ShpCyl (TopoShp):
          |         |
          |         |
          |         |
-         x         |....>axis_d
+         x         |....>axis_d    h = 0
          |         |
          |         |
          |_________|.....
@@ -314,18 +466,24 @@ class ShpCyl (TopoShp):
         # h_o is a dictionary created in TopoShp.__init__
         self.h_o[0] =  self.vec_h(h/2. + xtr_bot)
         self.h_o[1] =  self.vec_h(xtr_bot)
+        # pos_h = 0 is at the center
+        self.h0_cen = 1
 
         self.d_o[0] = V0
         if self.axis_d is not None:
             self.d_o[1] = self.vec_d(-r)
         elif pos_d == 1:
             logger.error('axis_d not defined while pos_d ==1')
+        # pos_d = 0 is at the center
+        self.d0_cen = 1
 
         self.w_o[0] = V0
         if self.axis_w is not None:
             self.w_o[1] = self.vec_w(-r)
         elif pos_w == 1:
             logger.error('axis_w not defined while pos_w ==1')
+        # pos_w = 0 is at the center
+        self.w0_cen = 1
 
         # calculates the position of the origin, and keeps it in attribute pos_o
         self.set_pos_o()
@@ -411,6 +569,26 @@ class ShpCylHole (TopoShp):
     pos : FreeCAD.Vector
         Position of the cylinder, taking into account where the center is
 
+    Attributes:
+    -----------
+    pos_o : FreeCAD.Vector
+        Position of the origin of the shape
+    h_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_h
+    d_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_d
+    w_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_w
+    h0_cen : int
+    d0_cen : int
+    w0_cen : int
+        indicates if pos_h = 0 (pos_d, pos_w) is at the center along
+        axis_h, axis_d, axis_w, or if it is at the end.
+        1 : at the center (symmetrical, or almost symmetrical)
+        0 : at the end
+    shp : OCC Topological Shape
+        The shape of this part
+
 
     pos_h = 1, pos_d = 0, pos_w = 0
     pos at 1:
@@ -494,6 +672,8 @@ class ShpCylHole (TopoShp):
         # h_o is a dictionary created in TopoShp.__init__
         self.h_o[0] =  self.vec_h(h/2. + xtr_bot)
         self.h_o[1] =  self.vec_h(xtr_bot)
+        # pos_h = 0 is at the center
+        self.h0_cen = 1
 
         self.d_o[0] = V0
         if self.axis_d is not None:
@@ -501,6 +681,8 @@ class ShpCylHole (TopoShp):
             self.d_o[2] = self.vec_d(-r_out)
         elif pos_d != 0:
             logger.error('axis_d not defined while pos_d != 0')
+        # pos_d = 0 is at the center
+        self.d0_cen = 1
 
         self.w_o[0] = V0
         if self.axis_w is not None:
@@ -508,6 +690,8 @@ class ShpCylHole (TopoShp):
             self.w_o[2] = self.vec_w(-r_out)
         elif pos_w != 0:
             logger.error('axis_w not defined while pos_w != 0')
+        # pos_w = 0 is at the center
+        self.w0_cen = 1
 
         # calculates the position of the origin, and keeps it in attribute pos_o
         self.set_pos_o()
