@@ -47,7 +47,8 @@ logger = logging.getLogger(__name__)
 # - have subclasses to indicate the kind of part that it is
 #
 # Kind of possible parts are:
-# 0: Not to print: It is just a rough 3D model, for example bolts or bearings
+# 0: Not to print: It is just an outline, a rough/vague 3D model,
+#                  for example bolts or bearings
 #                  Some times the models dont have details, for example,
 #                  bearings are just cylinders with a inner hole. Or bolts
 #                  that dont have threads
@@ -397,6 +398,7 @@ class Washer (SinglePart, shp_clss.ShpCylHole):
         1: the cylinder pos is at its base
     tol : float
         Tolerance for the inner and outer radius.
+        Being an outline, probably it is not to print, so by default: tol = 0
         It is the tolerance for the diameter, so the radius will be added/subs
         have of this tolerance
         tol will be added to the inner radius (so it will be larger)
@@ -404,13 +406,13 @@ class Washer (SinglePart, shp_clss.ShpCylHole):
         
     model_type : int
         type of model:
-        exact, rough
+        exact, outline
     pos : FreeCAD.Vector
         Position of the cylinder, taking into account where the center is
 
     Attributes:
     -----------
-    All the parameters and attributes of father class CylHole
+    All the parameters and attributes of parent classes SinglePart ShpCylHole
 
     metric : int or float (in case of M2.5) or even str for inches ?
         Metric of the washer
@@ -471,7 +473,7 @@ class Din125Washer (Washer):
         tol will be substracted to the outer radius (so it will be smaller)
     model_type : int
         type of model:
-        exact, rough
+        0: exact, 1: outline
     pos : FreeCAD.Vector
         Position of the cylinder, taking into account where the center is
 
@@ -525,7 +527,7 @@ class Din9021Washer (Washer):
         tol will be substracted to the outer radius (so it will be smaller)
     model_type : int
         type of model:
-        exact, rough
+        0: exact, 1: outline
     pos : FreeCAD.Vector
         Position of the cylinder, taking into account where the center is
 
@@ -571,4 +573,116 @@ wash = Din9021Washer( metric = 5,
                     model_type = 0, # exact
                     name = '')
 
+
+class BearingOutl (SinglePart, shp_clss.ShpCylHole):
+    """ Bearing outline , that is, a cylinder with a inner hole.
+    It does not include the balls and parts
+
+    Parameters:
+    -----------
+    bearing_nb : int
+        Bearing number code
+    axis_h : FreeCAD.Vector
+        vector along the cylinder height
+    pos_h : int
+        location of pos along axis_h (0,1)
+        0: the cylinder pos is centered along its height
+        1: the cylinder pos is at its base
+    axis_d : FreeCAD.Vector
+        vector along the cylinder radius, a direction perpendicular to axis_h
+        it is not necessary if pos_d == 0
+        It can be None, but if None, axis_w has to be None
+    axis_w : FreeCAD.Vector
+        vector along one radius (perpendicular to axis_h and axis_d)
+        it can be None
+    pos_d : int
+        location of pos along axis_d (0, 1)
+        0: pos is at the circunference center
+        1: pos is at the inner circunsference, on axis_d, at r_in from the
+           circle center (not at r_in + xtr_r_in)
+        2: pos is at the outer circunsference, on axis_d, at r_out from the
+           circle center (not at r_out + xtr_r_out)
+    pos_w : int
+        location of pos along axis_w (0, 1)
+        0: pos is at the circunference center
+        1: pos is at the inner circunsference, on axis_w, at r_in from the
+           circle center (not at r_in + xtr_r_in)
+        2: pos is at the outer circunsference, on axis_w, at r_out from the
+           circle center (not at r_out + xtr_r_out)
+    tol : float
+        Tolerance for the inner and outer radius.
+        It is the tolerance for the diameter, so the radius will be added/subs
+        have of this tolerance
+        tol will be added to the inner radius (so it will be larger)
+        tol will be substracted to the outer radius (so it will be smaller)
+        
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+    Attributes:
+    -----------
+    All the parameters and attributes of parent classes SinglePart ShpCylHole
+
+    metric : int or float (in case of M2.5) or even str for inches ?
+        Metric of the washer
+
+    model_type : int
+        type of model:
+        1: outline (is not an exact model)
+
+    bearing_nb : int
+        number of the bearing, such as 624, 608, ... see kcomp.BEARING
+    bear_d : dictionary
+        dictionary with the dimensions of the bearing
+
+    """
+    def __init__(self, bearing_nb, axis_h, pos_h,
+                 axis_d = None, axis_w = None,
+                 pos_d = 0, pos_w = 0, tol = 0, pos = V0,
+                 name = ''):
+
+        self.model_type = 1 # outline
+        # sets the object name if not already set by a child class
+        default_name = 'bearing_' + str(bearing_nb) 
+        self.set_name (name, default_name, change = 0)
+        self.bearing_nb = bearing_nb
+
+        print bearing_nb
+        print default_name
+
+        try:
+            bear_d = kcomp.BEARING[bearing_nb]
+            self.bear_d = bear_d
+        except KeyError:
+            logger.error('Bearing key not found: ' + str(bearing_nb))
+        else:
+            if tol == 0:
+                tol_r = 0
+            else:
+                tol_r = tol / 2. #just in case there is tolerance
+            # First the shape is created
+            shp_clss.ShpCylHole.__init__(self,
+                                         r_out = bear_d['do']/2.,
+                                         r_in = bear_d['di']/2.,
+                                         h = bear_d['t'],
+                                         axis_h = axis_h,
+                                         axis_d = axis_d,
+                                         axis_w = axis_w,
+                                         pos_d = pos_d,
+                                         pos_w = pos_w,
+                                         pos_h = pos_h,
+                                         # inside tolerance is more
+                                         xtr_r_in = tol_r,
+                                         # outside tolerance is less
+                                         xtr_r_out = - tol_r,
+                                         pos = pos)
+
+            # Then the Part
+            SinglePart.__init__(self)
+
+
+bear = BearingOutl( bearing_nb = 608,
+                    axis_h = VZN, pos_h = 1, tol = 0,
+                    pos = washer.pos + DraftVecUtils.scale(VZN,washer.h),
+                    name = '')
 

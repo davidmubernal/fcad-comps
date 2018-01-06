@@ -7,10 +7,9 @@ w_o : dictionary of distance Vectors
 h_o : dictionary of distance Vectors
 pos_o : FreeCAD.Vector
 prnt_ax : FreeCAD.Vector
-</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>130</x><y>140</y><w>270</w><h>210</h></coordinates><panel_attributes>SinglePart
+</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>130</x><y>160</y><w>270</w><h>190</h></coordinates><panel_attributes>SinglePart
 fc_clss.py
 -
-doc
 place : FreeCAD.Vector
 tol : float
 model_type : int
@@ -22,7 +21,7 @@ create_fco(name)
 set_place(Vector)
 export_stl(str, str)
 save_fcad</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>420</x><y>10</y><w>270</w><h>170</h></coordinates><panel_attributes>TopoShp
-fc_clss.py
+shp_clss.py
 -
 axis_d : FreeCAD.Vector
 axis_w : FreeCAD.Vector
