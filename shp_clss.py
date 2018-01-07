@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# -- TopoShp class and children
+# -- Obj3D class and children
 # ----------------------------------------------------------------------------
 # -- (c) Felipe Machado
 # -- Area of Electronic Technology. Rey Juan Carlos University (urjc.es)
@@ -35,18 +35,24 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-class TopoShp (object):
-    """ This a the object that contains an OpenCasCade Topological Shape
-    https://www.freecadweb.org/wiki/Part_Module#Explaining_the_concepts
+class Obj3D (object):
+    """ This is the the basic class, that provides reference axes and 
+    methods to get positions
 
-    It is created because it contains methods and attributes to operate with it
-    The class SinglePart is a child of this one, because they also contain a
-    an OpenCasCade Topological Shape. So they will inherit all their properties
+    It is the parent class of other classes, no instantiation of this class
 
-    These object have their own coordinate axes:
+    These objects have their own coordinate axes:
     axis_d: depth
     axis_w: width
     axis_h: height
+
+    They have an origin point pos_o (created in a child class)
+    and have different interesting points
+    d_o
+    w_o
+    h_o
+
+    and methods to get to them
 
     """
     def __init__(self, axis_d = None, axis_w = None, axis_h = None):
@@ -290,7 +296,7 @@ class TopoShp (object):
 
 
 
-class ShpCyl (TopoShp):
+class ShpCyl (Obj3D):
     """
     Creates a shape of a cylinder
     Makes a cylinder in any position and direction, with optional extra
@@ -453,7 +459,7 @@ class ShpCyl (TopoShp):
                  pos_h = 0, pos_d = 0, pos_w = 0,
                  xtr_top=0, xtr_bot=0, xtr_r=0, pos = V0):
 
-        TopoShp.__init__(self, axis_d, axis_w, axis_h)
+        Obj3D.__init__(self, axis_d, axis_w, axis_h)
 
         # save the arguments as attributes:
         frame = inspect.currentframe()
@@ -463,7 +469,7 @@ class ShpCyl (TopoShp):
                 setattr(self, i, values[i])
 
         # vectors from o (orig) along axis_h, to the pos_h points
-        # h_o is a dictionary created in TopoShp.__init__
+        # h_o is a dictionary created in Obj3D.__init__
         self.h_o[0] =  self.vec_h(h/2. + xtr_bot)
         self.h_o[1] =  self.vec_h(xtr_bot)
         # pos_h = 0 is at the center
@@ -505,7 +511,7 @@ class ShpCyl (TopoShp):
 
 
 
-class ShpCylHole (TopoShp):
+class ShpCylHole (Obj3D):
     """
     Creates a shape of a hollow cylinder
     Similar to fcfun shp_cylhole_gen, but creates the object with the useful
@@ -659,7 +665,7 @@ class ShpCylHole (TopoShp):
                  pos = V0):
 
 
-        TopoShp.__init__(self, axis_d, axis_w, axis_h)
+        Obj3D.__init__(self, axis_d, axis_w, axis_h)
 
         # save the arguments as attributes:
         frame = inspect.currentframe()
@@ -669,7 +675,7 @@ class ShpCylHole (TopoShp):
                 setattr(self, i, values[i])
 
         # vectors from o (orig) along axis_h, to the pos_h points
-        # h_o is a dictionary created in TopoShp.__init__
+        # h_o is a dictionary created in Obj3D.__init__
         self.h_o[0] =  self.vec_h(h/2. + xtr_bot)
         self.h_o[1] =  self.vec_h(xtr_bot)
         # pos_h = 0 is at the center

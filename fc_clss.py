@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# -- Classes for FreeCAD pieces, parts or shapes
+# -- Classes for FreeCAD pieces, parts, part sets
 # ----------------------------------------------------------------------------
 # -- (c) Felipe Machado
 # -- Area of Electronic Technology. Rey Juan Carlos University (urjc.es)
@@ -245,7 +245,7 @@ class SinglePart (object):
 
 # Possible names: Parts     , Pieces,         Elements,
 #                      Group        Ensemble,         Set, 
-class PartsSet (shp_clss.TopoShp):
+class PartsSet (shp_clss.Obj3D):
     """
     This is a 3D model that has a set of parts (SinglePart or others)
     
@@ -273,7 +273,7 @@ class PartsSet (shp_clss.TopoShp):
         # bring the active document
         self.doc = FreeCAD.ActiveDocument
 
-        shp_clss.TopoShp.__init__(self, axis_d, axis_w, axis_h)
+        shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
 
         self.parts_lst = [] # list of all the parts (SinglePart, ...)
 
@@ -708,13 +708,8 @@ class BearWashSet (PartsSet):
 
     Parameters:
     -----------
-    holcyl_list : list 
-    r_out : float
-        external (outside) radius
-    r_in : float
-        internal radius
-    h : float
-        height
+    metric : int
+        Metric (diameter) of the bolt that holds the set
     axis_h : FreeCAD.Vector
         vector along the cylinder height
     pos_h : int
@@ -843,7 +838,7 @@ class BearWashSet (PartsSet):
             self.bear_h      = self.bear_dict['t'] # height (thickness)
             self.bear_r_out  = self.bear_dict['do']/2.
             # total height:
-            self.tot_h = 2 * (lwash_h + rwash_h) + bear_h
+            self.tot_h = 2 * (self.lwash_h + self.rwash_h) + self.bear_h
 
             # pos_h/d/w = 0 are at the center
             self.h0_cen = 1
@@ -852,7 +847,7 @@ class BearWashSet (PartsSet):
 
             # the origin (pos_o) is at the base
             # vectors from o (orig) along axis_h, to the pos_h points
-            # h_o is a dictionary created in TopoShp.__init__
+            # h_o is a dictionary created in Obj3D.__init__
             self.h_o[0] = self.vec_h(  self.bear_h/2.
                                      + self.rwash_h
                                      + self.lwash_h)
