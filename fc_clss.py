@@ -66,6 +66,8 @@ logger = logging.getLogger(__name__)
 # exact. Not to print because it has no tolerances
 # with tolerances (to be printed)
 # rough
+
+
 class SinglePart (object):
     """
     This is a 3D model that only has one part.
@@ -80,6 +82,10 @@ class SinglePart (object):
     ------------
     fco: FreeCAD Object
         The freecad object of this part
+
+    place : FreeCAD Object
+        When this part is an object of another one (set). This is the vector to
+        place this part into the the set
 
     place : FreeCAD.Vector
         Position of the object
@@ -106,6 +112,12 @@ class SinglePart (object):
         self.create_fco(self.name)
         #self.tol = tol
         #self.model_type = model_type
+
+    def get_parts(self):
+        """ returns an empty list, because it is a SinglePart.
+        Therefore has no parts
+        """
+        return []
 
     def set_color (self, color = (1.,1.,1.)):
         """ Sets a new color for the piece
@@ -276,8 +288,34 @@ class PartsSet (shp_clss.Obj3D):
         shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
 
         self.parts_lst = [] # list of all the parts (SinglePart, ...)
+        self.place = V0
 
+    def append_part (self, part):
+        """ Appends a new part to the list of parts
+        """
+        self.parts_lst.append(part)
 
+    def get_parts (self):
+        """ get a list of the parts, 
+        """
+        return self.parts_lst
+
+    def add_part_place(self, child_part, vec_o_to_childpart = V0):
+        """ Modifies the attribute child_part.place, which defines the
+        displacement of the child_part respect to self.pos_o
+        Adds this displacement to the part's children
+        """
+        displacement = (self.pos_o - self.pos) + vec_o_to_childpart
+        child_part.place = child_part.place + displacement
+        try:
+            child_part.fco.Placement.Base = child_part.place
+        except AttributeError: # only SimpleParts objects have fco, not PartsSet
+            pass
+        # add this displacement to all the children
+        part_list = child_part.get_parts()
+        for grandchild_i in part_list:
+            child_part.add_part_place(grandchild_i)
+        
     def set_color (self, color = (1.,1.,1.), part_i = 0):
         """ Sets a new color for the whole set of parts or for the selected
         parts
@@ -669,7 +707,7 @@ class BearingOutl (SinglePart, shp_clss.ShpCylHole):
             self.bear_d = bear_d
         except KeyError:
             logger.error('Bearing key not found: ' + str(bearing_nb))
-        else:
+        else: # no exception:
             if tol == 0:
                 tol_r = 0
             else:
@@ -761,6 +799,10 @@ class BearWashSet (PartsSet):
 
     tot_h : float
         Total height of the set: idler pulley
+    r_in : float
+        inner radius, the radius of the bearing
+    r_ext : float
+        external radius, the radius of the large washer
 
 
     idler pulley without the washer for the bolt because it is between a holder,
@@ -839,6 +881,10 @@ class BearWashSet (PartsSet):
             self.bear_r_out  = self.bear_dict['do']/2.
             # total height:
             self.tot_h = 2 * (self.lwash_h + self.rwash_h) + self.bear_h
+            #  inner radius of the pulley, the radius of the bearing
+            self.r_in = self.bear_r_out
+            # external radius, the radius of the large washer
+            self.r_ext = self.lwash_r_out
 
             # pos_h/d/w = 0 are at the center
             self.h0_cen = 1
@@ -881,14 +927,14 @@ class BearWashSet (PartsSet):
                                     pos_h = 1,
                                     pos = self.pos_o,
                                     name = 'idlpull_lwash_bt')
-            self.parts_lst.append(lwash_b)
+            self.append_part(lwash_b)
             # creation of the bottom regular washer
             rwash_b = Din125Washer(metric= metric,
                                    axis_h = self.axis_h,
                                    pos_h = 1,
                                    pos = lwash_b.get_pos_h(1),
                                    name = 'idlpull_rwash_bt')
-            self.parts_lst.append(rwash_b)
+            self.append_part(rwash_b)
             # creation of the bearing
             bearing = BearingOutl(bearing_nb = self.bear_type,
                                   axis_h = self.axis_h,
@@ -897,30 +943,30 @@ class BearWashSet (PartsSet):
                                   axis_w = self.axis_w,
                                   pos = rwash_b.get_pos_h(1),
                                   name = 'idlpull_bearing')
-            self.parts_lst.append(bearing)
+            self.append_part(bearing)
             # creation of the top regular washer
             rwash_t = Din125Washer(metric= metric,
                                    axis_h = self.axis_h,
                                    pos_h = 1,
                                    pos = bearing.get_pos_h(1),
                                    name = 'idlpull_rwash_tp')
-            self.parts_lst.append(rwash_t)
+            self.append_part(rwash_t)
             # creation of the top large washer
             lwash_t = Din9021Washer(metric= self.lwash_m,
                                     axis_h = self.axis_h,
                                     pos_h = 1,
                                     pos = rwash_t.get_pos_h(1),
                                     name = 'idlpull_lwash_bt')
-            self.parts_lst.append(lwash_t)
+            self.append_part(lwash_t)
 
 
 
 
-doc = FreeCAD.newDocument()
-idle_pulley = BearWashSet( metric=3,
-                 axis_h = VZ, pos_h = 0,
-                 axis_d = None, pos_d = 0,
-                 axis_w = None, pos_w = 0,
-                 pos = V0,
-                 name = '')
+#doc = FreeCAD.newDocument()
+#idle_pulley = BearWashSet( metric=3,
+#                 axis_h = VZ, pos_h = 0,
+#                 axis_d = None, pos_d = 0,
+#                 axis_w = None, pos_w = 0,
+#                 pos = V0,
+#                 name = '')
 

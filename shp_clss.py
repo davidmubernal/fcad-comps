@@ -271,6 +271,25 @@ class Obj3D (object):
             else:
                 return vec
 
+    def get_d_ab(self, pta, ptb):
+        """ returns the vector along axis_d from pos_w = pta to pos_w = ptb
+        """
+        vec = self.get_o_to_d(ptb).sub(self.get_o_to_d(pta))
+        return vec
+
+    def get_w_ab(self, pta, ptb):
+        """ returns the vector along axis_h from pos_w = pta to pos_w = ptb
+        """
+        vec = self.get_o_to_w(ptb).sub(self.get_o_to_w(pta))
+        return vec
+
+    def get_h_ab(self, pta, ptb):
+        """ returns the vector along axis_h from pos_h = pta to pos_h = ptb
+        """
+        vec = self.get_o_to_h(ptb).sub(self.get_o_to_h(pta))
+        return vec
+
+
     def get_pos_d(self, pos_d):
         """ returns the absolute position of the pos_d point
         """
