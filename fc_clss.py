@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 # -- (c) Felipe Machado
 # -- Area of Electronic Technology. Rey Juan Carlos University (urjc.es)
-# -- https://github.com/felipe-m/freecad_filter_stage
+# -- https://github.com/felipe-m/fcad-comps
 # -- December-2017
 # ----------------------------------------------------------------------------
 # --- LGPL Licence
@@ -107,7 +107,9 @@ class SinglePart (object):
         self.doc = FreeCAD.ActiveDocument
 
         # placement of the piece at V0, altough pos can set it anywhere
-        self.place = V0
+        #self.place = V0
+        #self.displacement = V0
+        self.rel_place = V0
 
         self.create_fco(self.name)
         #self.tol = tol
@@ -176,6 +178,17 @@ class SinglePart (object):
 
 
     # ----- 
+    def place_fcos (self, displacement = V0):
+        """ Place the freecad objects
+        
+        """
+        #if type(place) is tuple:
+        #   place = FreeCAD.Vector(place) # change to FreeCAD.Vector
+        
+        tot_displ = self.pos_o_adjust + displacement + self.rel_place
+        self.tot_displ = tot_displ
+        self.fco.Placement.Base = tot_displ
+    
     def set_place (self, place = V0):
         """ Sets a new placement for the piece
 
@@ -288,7 +301,9 @@ class PartsSet (shp_clss.Obj3D):
         shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
 
         self.parts_lst = [] # list of all the parts (SinglePart, ...)
-        self.place = V0
+        self.abs_place = V0
+        self.rel_place = V0
+        self.displacement = V0
 
     def append_part (self, part):
         """ Appends a new part to the list of parts
@@ -299,13 +314,53 @@ class PartsSet (shp_clss.Obj3D):
         """ get a list of the parts, 
         """
         return self.parts_lst
+        
+    def get_abs_place (self):
+        """ gets the placement of the object, with any adjustment
+        So the shape has been created at pos, and this is any movement done after this
+        Movement of the freecadobject
+        """
+        
+        return self.abs_place
 
-    def add_part_place(self, child_part, vec_o_to_childpart = V0):
+    def get_rel_place (self):
+        """ gets the placement of the object, with any adjustment
+        So the shape has been created at pos, and this is any movement done after this
+        Movement of the freecadobject
+        """
+        
+        return self.rel_place
+
+        
+    def set_part_place(self, child_part, vec_o_to_childpart = V0, add = 0):
         """ Modifies the attribute child_part.place, which defines the
         displacement of the child_part respect to self.pos_o
         Adds this displacement to the part's children
         """
-        displacement = (self.pos_o - self.pos) + vec_o_to_childpart
+        
+        #displacement = self.place + self.pos_o_adjust + vec_o_to_childpart
+        if add == 0:
+            child_part.rel_place = vec_o_to_childpart
+        else:
+            child_part.rel_place = child_part.rel_place + vec_o_to_childpart
+        #child_part.abs_place = self.get_abs_place() + child_part.rel_place
+        try:
+            child_part.fco.Placement.Base = child_part.abs_place
+        except AttributeError: # only SimpleParts objects have fco, not PartsSet
+            pass
+        # add this displacement to all the children
+        #part_list = child_part.get_parts()
+        #for grandchild_i in part_list:
+            #child_part.set_part_place(grandchild_i, add = 1)
+        
+        
+    def mov_place(self, child_part, vec_o_to_childpart = V0):
+        """ Modifies the attribute child_part.place, which defines the
+        displacement of the child_part respect to self.pos_o
+        Adds this displacement to the part's children
+        """
+        
+        displacement = (self.pos_o - self.pos) + vec_o_to_childpart + self.place
         child_part.place = child_part.place + displacement
         try:
             child_part.fco.Placement.Base = child_part.place
@@ -340,21 +395,18 @@ class PartsSet (shp_clss.Obj3D):
             self.parts_lst[part_i-1].set_color(color)
 
     # ----- 
-    def set_place (self, place = V0):
-        """ Sets a new placement for whole set of parts
-
-        Parameters:
-        -----------
-        place : FreeCAD.Vector
-            new position of the parts
+    def place_fcos (self, displacement = V0):
+        """ Place the freecad objects
         """
-        if type(place) is tuple:
-            place = FreeCAD.Vector(place) # change to FreeCAD.Vector
-        if type(place) is FreeCAD.Vector:
-            # set the new position for every freecad object
-            for part in self.parts_lst:
-                part.set_place(place)
-            self.place = place
+        #if type(place) is tuple:
+        #   place = FreeCAD.Vector(place) # change to FreeCAD.Vector
+        
+        tot_displ = self.pos_o_adjust + displacement + self.rel_place
+        self.tot_displ = tot_displ
+        # set the new position for every freecad object
+        for part in self.parts_lst:
+            part.place_fcos(tot_displ)
+
 
     # ----- Export to STL method
     def export_stl(self, part_i = 0, prefix = ""):

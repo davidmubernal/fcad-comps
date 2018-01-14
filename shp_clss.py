@@ -54,6 +54,10 @@ class Obj3D (object):
 
     and methods to get to them
 
+    pos_o_adjustment : FreeCAD.Vector
+        if not V0 indicates that shape has not been placed at pos_o, so the FreeCAD object
+        will need to be placed at pos_o_adjust
+            
     """
     def __init__(self, axis_d = None, axis_w = None, axis_h = None):
         if axis_h is not None:
@@ -71,6 +75,8 @@ class Obj3D (object):
         self.d_o = {}  # along axis_d
         self.w_o = {}  # along axis_w
         self.h_o = {}  # along axis_h
+        
+        self.pos_o_adjust = V0
 
 
 
@@ -138,17 +144,25 @@ class Obj3D (object):
         vec = self.vec_d(d) + self.vec_w(w) + self.vec_h(h)
         return vec
 
-    def set_pos_o(self):
+    def set_pos_o(self, adjust=0):
         """ calculates the position of the origin, and saves it in
         attribute pos_o
-        No arguments, all values are taken from self
+        Parameters:
+        -----------
+        adjust : int
+            If, when created, wasnt possible to set the piece at pos_o, and it
+			was placed at pos, then the position will be adjusted
+            
+        The rest of the arguments can be taken No arguments, all values are taken from self
         """
- 
+
         vec_from_pos_o =  (  self.d_o[self.pos_d]
                            + self.w_o[self.pos_w]
                            + self.h_o[self.pos_h])
         vec_to_pos_o =  vec_from_pos_o.negative()
         self.pos_o = self.pos + vec_to_pos_o
+        if adjust == 1:
+            self.pos_o_adjust = vec_to_pos_o # self.pos_o - self.pos
 
     def get_o_to_d(self, pos_d):
         """ returns the vector from origin pos_o to pos_d
