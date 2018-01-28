@@ -150,10 +150,9 @@ class Obj3D (object):
         Parameters:
         -----------
         adjust : int
-            If, when created, wasnt possible to set the piece at pos_o, and it
-			was placed at pos, then the position will be adjusted
+             1: If, when created, wasnt possible to set the piece at pos_o,
+                and it was placed at pos, then the position will be adjusted
             
-        The rest of the arguments can be taken No arguments, all values are taken from self
         """
 
         vec_from_pos_o =  (  self.d_o[self.pos_d]

@@ -110,6 +110,7 @@ class SinglePart (object):
         #self.place = V0
         #self.displacement = V0
         self.rel_place = V0
+        self.extra_mov = V0
 
         self.create_fco(self.name)
         #self.tol = tol
@@ -185,7 +186,8 @@ class SinglePart (object):
         #if type(place) is tuple:
         #   place = FreeCAD.Vector(place) # change to FreeCAD.Vector
         
-        tot_displ = self.pos_o_adjust + displacement + self.rel_place
+        tot_displ = (  self.pos_o_adjust + displacement
+                     + self.rel_place + self.extra_mov)
         self.tot_displ = tot_displ
         self.fco.Placement.Base = tot_displ
     
@@ -303,6 +305,7 @@ class PartsSet (shp_clss.Obj3D):
         self.parts_lst = [] # list of all the parts (SinglePart, ...)
         self.abs_place = V0
         self.rel_place = V0
+        self.extra_mov = V0
         self.displacement = V0
 
     def append_part (self, part):
@@ -415,7 +418,8 @@ class PartsSet (shp_clss.Obj3D):
         #if type(place) is tuple:
         #   place = FreeCAD.Vector(place) # change to FreeCAD.Vector
         
-        tot_displ = self.pos_o_adjust + displacement + self.rel_place
+        tot_displ = (  self.pos_o_adjust + displacement 
+                     + self.rel_place + self.extra_mov)
         self.tot_displ = tot_displ
         #if this set has been grouped, we dont have to go to its children
         try:
