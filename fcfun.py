@@ -3008,6 +3008,288 @@ def wire_sim_xy (vecList):
 # ------------------- end def wire_sim_xy
 
 
+# ------------------- def shp_cablewireturn_wire
+
+def shp_cableturn_wire (d, w, corner_r,
+                        conn_d, conn_sep,
+                        closed = 0,
+                        axis_d = VY,
+                        axis_w = VX,
+                        pos_d = 0,
+                        pos_w = 0,
+                        pos=V0):
+
+    """
+    Creates a electrical wire turn, in any direction
+    But it is a wire in FreeCAD, has no volumen
+
+
+           axis_d
+             :
+             :
+        .....:w ..... 
+       :     :      :                          pos_d
+        ____________ ...... ..                   3
+       /            \      :..corner_r
+       |            |      :
+       |            |      :
+       |            |      + d                   2
+       |            |      :
+       |            |      :
+       |            |      :
+        \___ o ____/ ......:                     1
+            \ /            :
+            | |            + conn_d
+            | |            : 
+            | |............:...........axis_w    0
+            : :
+           conn_sep
+
+       1     0  pos_w
+
+       pos_o (orig) is at pos_d=0, pos_w=0, marked with o
+
+
+ 
+    Parameters:
+    -----------
+    d : float
+        depth/length of the turn
+    w : float
+        width of the turn
+    corner_r : float
+        radius of the corners
+    conn_d : float
+        depth/length of the connector part
+        0: there is no connecting wire
+    conn_sep : float
+        separation of the connectors
+    closed : boolean
+        0 : the ends are not closed
+        1 : the ends are closed
+    axis_d :  FreeCAD.Vector
+        Coordinate System Vector along the depth
+    axis_w :  FreeCAD.Vector
+        Coordinate System Vector along the width
+    pos_d : int
+        location of pos along the axis_d (0,1,2,3), see drawing
+        0: reference at the beginning of the connector
+        1: reference at the beginning of the turn, at the side of the connector
+        2: reference at the middle of the turn
+        3: reference at the end of the turn
+    pos_w : int
+        location of pos along the axis_w (0,1), see drawing
+        0: reference at the center of simmetry
+        1: reference at the end of the turn
+    pos: FreeCAD vector of the position of the reference
+
+
+    returns the shape of the wire
+    """
+
+    # normalize the axis
+    axis_d = DraftVecUtils.scaleTo(axis_d,1)
+    axis_w = DraftVecUtils.scaleTo(axis_w,1)
+
+    d_o = {}
+    # distances from the pos_o to pos_d 
+    d_o[0] = DraftVecUtils.scale(axis_d, -conn_d)
+    d_o[1] = V0
+    d_o[2] = DraftVecUtils.scale(axis_d, d/2.)
+    d_o[3] = DraftVecUtils.scale(axis_d, d)
+
+    w_o = {}
+    # distances from the pos_o to pos_w 
+    w_o[0] = V0
+    w_o[1] = DraftVecUtils.scale(axis_w, -w/2.)
+
+    # reference position
+    pos_o = pos + d_o[pos_d].negative() + w_o[pos_w].negative()
+
+    if (2 * corner_r + conn_sep >= w ) or (2 * corner_r >= d):
+        corner_r = min(d/2.1,(w-conn_sep)/4.1)
+        logger.warning('radius too large, taking:' + str(corner_r))
+
+    
+
+    #           w_t
+    #       ____________  ..... ..                   3
+    #      /B          C\      :..corner_r
+    #      |            |      :
+    #      |            |      :
+    # w_l  |            | w_r  + d                   2
+    #      |            |      :
+    #      |            |      :
+    #      | A         D|      :
+    #       \___   ____/ ......:                     1
+    #           \ /            :
+    #           | |            + conn_d
+    #           | |            : 
+    #           \_/............:...........axis_w    0
+    #
+    # Define the 4 corners 0, 1, 2, 3, that are at the center of the radius
+    # of the corners
+
+    # vector with length of the radius along axis_w 
+    d_rad =  DraftVecUtils.scale(axis_d, corner_r)
+    d_rad_n = d_rad.negative()
+    w_rad =  DraftVecUtils.scale(axis_w, corner_r)
+    w_rad_n = w_rad.negative()
+    # vector with half the length of the separation of connectors along axis_w 
+    w_hsep =  DraftVecUtils.scale(axis_w, conn_sep/2.)
+    w_hsep_n = w_hsep.negative()
+
+    pt_A = pos_o + d_o[1] + w_o[1] + d_rad + w_rad
+    pt_B = pos_o + d_o[3] + w_o[1] + d_rad_n + w_rad
+    pt_C = pos_o + d_o[3] + w_o[1].negative() + d_rad_n + w_rad_n
+    pt_D = pos_o + d_o[1] + w_o[1].negative() + d_rad + w_rad_n
+
+    if corner_r > 0 :
+        corner_r45 = corner_r/math.sqrt(2)
+        d_rad45 =  DraftVecUtils.scale(axis_d, corner_r45)
+        d_rad45_n = d_rad45.negative()
+        w_rad45 =  DraftVecUtils.scale(axis_w, corner_r45)
+        w_rad45_n = w_rad45.negative()
+
+        pt_A1 = pt_A + d_rad_n
+        pt_A2 = pt_A + d_rad45_n + w_rad45_n
+        pt_A3 = pt_A + w_rad_n
+        corner_A = Part.Arc(pt_A1, pt_A2, pt_A3).toShape()
+
+        pt_B1 = pt_B + w_rad_n
+        pt_B2 = pt_B + d_rad45 + w_rad45_n
+        pt_B3 = pt_B + d_rad
+        corner_B = Part.Arc(pt_B1, pt_B2, pt_B3).toShape()
+
+        pt_C1 = pt_C + d_rad
+        pt_C2 = pt_C + d_rad45 + w_rad45
+        pt_C3 = pt_C + w_rad
+        corner_C = Part.Arc(pt_C1, pt_C2, pt_C3).toShape()
+
+        pt_D1 = pt_D + w_rad
+        pt_D2 = pt_D + d_rad45_n + w_rad45
+        pt_D3 = pt_D + d_rad_n
+        corner_D = Part.Arc(pt_D1, pt_D2, pt_D3).toShape()
+
+        line_AB = Part.Line(pt_A3, pt_B1).toShape()
+        line_BC = Part.Line(pt_B3, pt_C1).toShape()
+        line_CD = Part.Line(pt_C3, pt_D1).toShape()
+
+        top_wire = Part.Wire([corner_A, line_AB,
+                              corner_B, line_BC,
+                              corner_C, line_CD,
+                              corner_D])
+        top_wire_firstpt = pt_A1
+        top_wire_lastpt = pt_D3
+        if conn_d == 0:
+            # the turn ends here:
+            if closed == 1:
+                line_bot = Part.Line(pt_D3, pt_A1).toShape()
+                cable_wire = Part.Wire([line_bot,top_wire,])
+            else:
+                #
+                #      | A         D|
+                #       \___E   F___/
+                #      
+                pt_E =  pos_o + w_hsep_n
+                pt_F =  pos_o + w_hsep
+                line_EA = Part.Line(pt_E, pt_A1).toShape()
+                line_DF = Part.Line(pt_D3, pt_F).toShape()
+                cable_wire = Part.Wire([line_EA,top_wire, line_DF])
+        else :
+            if conn_d < corner_r :
+                conn_d = corner_r * 1.1
+                logger.warning('radius larger than connector length')
+                logger.warning('making it: ' + str(conn_d))
+            # Points E1, E2, E3, F1, F2, F3:
+            pt_E = pos_o + w_hsep_n + d_rad_n + w_rad_n # radius center
+            pt_F = pos_o + w_hsep + d_rad_n + w_rad # radius center
+            # E3 is the closest to A
+            pt_E3 = pt_E + d_rad
+            pt_E2 = pt_E + d_rad45 + w_rad45
+            pt_E1 = pt_E + w_rad
+
+            # F1 is the closest to D
+            pt_F3 = pt_F + w_rad_n
+            pt_F2 = pt_F + d_rad45 + w_rad45_n
+            pt_F1 = pt_F + d_rad
+            
+            corner_E = Part.Arc(pt_E1, pt_E2, pt_E3).toShape()
+            corner_F = Part.Arc(pt_F1, pt_F2, pt_F3).toShape()
+            line_EA = Part.Line(pt_E3, pt_A1).toShape()
+            line_DF = Part.Line(pt_D3, pt_F1).toShape()
+
+            pt_G =  pos_o + w_hsep_n + d_o[0]
+            pt_H =  pos_o + w_hsep + d_o[0]
+            line_GE = Part.Line(pt_G, pt_E1).toShape()
+            line_FH = Part.Line(pt_F3, pt_H).toShape()
+
+
+            cable_wire = Part.Wire([line_GE, corner_E, line_EA,top_wire,
+                                    line_DF, corner_F, line_FH])
+            if closed == 1:
+                line_HG = Part.Line(pt_H, pt_G).toShape()
+                cable_wire = Part.Wire([cable_wire, line_HG])
+        
+        
+    else : # no corners
+        line_AB = Part.Line(pt_A, pt_B).toShape()
+        line_BC = Part.Line(pt_B, pt_C).toShape()
+        line_CD = Part.Line(pt_C, pt_D).toShape()
+        top_wire = Part.Wire([line_AB, line_BC,line_CD])
+        top_wire_firstpt = pt_A
+        top_wire_lastpt = pt_D
+        # points E - F
+        #      |            |
+        #      |____E   F___|
+        #      
+        if conn_d == 0:
+            # the turn ends here:
+            if closed == 1:
+                line_bot = Part.Line(pt_D, pt_A).toShape()
+                cable_wire = Part.Wire([line_bot,top_wire,])
+            else :
+                pt_E =  pos_o + w_hsep_n
+                pt_F =  pos_o + w_hsep
+                line_EA = Part.Line(pt_E, pt_A).toShape()
+                line_DF = Part.Line(pt_D, pt_F).toShape()
+                cable_wire = Part.Wire([line_EA,top_wire, line_DF])
+        else:
+            pt_E =  pos_o + w_hsep_n
+            pt_F =  pos_o + w_hsep
+            line_EA = Part.Line(pt_E, pt_A).toShape()
+            line_DF = Part.Line(pt_D, pt_F).toShape()
+            # points E - F
+            #      |            |
+            #      |____E   F___|
+            #           |   |
+            #           |   |
+            #           G   H
+            pt_G =  pt_E + d_o[0]
+            pt_H =  pt_F + d_o[0]
+            line_GE = Part.Line(pt_G, pt_E).toShape()
+            line_FH = Part.Line(pt_F, pt_H).toShape()
+            cable_wire = Part.Wire([line_GE, line_EA,top_wire,
+                                    line_DF, line_FH])
+            if closed == 1 :
+                line_HG = Part.Line(pt_H, pt_G).toShape()
+                cable_wire = Part.Wire([cable_wire, line_HG])
+
+
+    Part.show(cable_wire)
+    return (cable_wire)
+
+cablewire=  shp_cableturn_wire (d=20, w=30, corner_r=1,
+                        conn_d=4, conn_sep=3,
+                        closed = 1,
+                        axis_d = VY,
+                        axis_w = VX,
+                        pos_d = 0,
+                        pos_w = 0,
+                        pos=V0)
+
+
+
 def regpolygon_vecl (n_sides, radius, x_angle=0):
 
     """
