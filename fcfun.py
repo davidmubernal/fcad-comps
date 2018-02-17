@@ -3029,6 +3029,7 @@ def wire_sim_xy (vecList):
 
 def wire_cableturn (d, w, corner_r,
                         conn_d, conn_sep,
+                        xtr_conn_d = 0,
                         closed = 0,
                         axis_d = VY,
                         axis_w = VX,
@@ -3079,6 +3080,10 @@ def wire_cableturn (d, w, corner_r,
     conn_d : float
         depth/length of the connector part
         0: there is no connecting wire
+    xtr_conn_d : float
+        if conn_d > 0, there can be and extra length of connector to make 
+        unions, it will not be counted as pos_d = 0
+        It will not work well if it is closed
     conn_sep : float
         separation of the connectors
     closed : boolean
@@ -3114,6 +3119,8 @@ def wire_cableturn (d, w, corner_r,
     d_o[1] = V0
     d_o[2] = DraftVecUtils.scale(axis_d, d/2.)
     d_o[3] = DraftVecUtils.scale(axis_d, d)
+
+    xtr_conn_d_vec = DraftVecUtils.scale(axis_d, -xtr_conn_d)
 
     w_o = {}
     # distances from the pos_o to pos_w 
@@ -3218,6 +3225,7 @@ def wire_cableturn (d, w, corner_r,
                 conn_d = corner_r * 1.1
                 logger.warning('radius larger than connector length')
                 logger.warning('making it: ' + str(conn_d))
+                logger.warning('Distances mabe be WRONG')
             # Points E1, E2, E3, F1, F2, F3:
             pt_E = pos_o + w_hsep_n + d_rad_n + w_rad_n # radius center
             pt_F = pos_o + w_hsep + d_rad_n + w_rad # radius center
@@ -3236,8 +3244,8 @@ def wire_cableturn (d, w, corner_r,
             line_EA = Part.Line(pt_E3, pt_A1).toShape()
             line_DF = Part.Line(pt_D3, pt_F1).toShape()
 
-            pt_G =  pos_o + w_hsep_n + d_o[0]
-            pt_H =  pos_o + w_hsep + d_o[0]
+            pt_G =  pos_o + w_hsep_n + d_o[0] + xtr_conn_d_vec
+            pt_H =  pos_o + w_hsep + d_o[0] + xtr_conn_d_vec
             line_GE = Part.Line(pt_G, pt_E1).toShape()
             line_FH = Part.Line(pt_F3, pt_H).toShape()
 
@@ -3282,8 +3290,8 @@ def wire_cableturn (d, w, corner_r,
             #           |   |
             #           |   |
             #           G   H
-            pt_G =  pt_E + d_o[0]
-            pt_H =  pt_F + d_o[0]
+            pt_G =  pt_E + d_o[0] + xtr_conn_d_vec
+            pt_H =  pt_F + d_o[0] + xtr_conn_d_vec
             line_GE = Part.Line(pt_G, pt_E).toShape()
             line_FH = Part.Line(pt_F, pt_H).toShape()
             cable_wire = Part.Wire([line_GE, line_EA,top_wire,
@@ -3314,6 +3322,7 @@ def wire_cableturn (d, w, corner_r,
 
 def shp_cableturn (d, w, thick_d, corner_r,
                         conn_d, conn_sep,
+                        xtr_conn_d = 0,
                         closed = 0,
                         axis_d = VY,
                         axis_w = VX,
@@ -3369,6 +3378,10 @@ def shp_cableturn (d, w, thick_d, corner_r,
         0: there is no connecting wire
     conn_sep : float
         separation of the connectors
+    xtr_conn_d : float
+        if conn_d > 0, there can be and extra length of connector to make 
+        unions, it will not be counted as pos_d = 0
+        It will not work well if it is closed
     closed : boolean
         0 : the ends are not closed
         1 : the ends are closed
@@ -3399,6 +3412,7 @@ def shp_cableturn (d, w, thick_d, corner_r,
 
     cablewire =  wire_cableturn (d=d, w=w, corner_r=corner_r,
                                  conn_d=conn_d, conn_sep=conn_sep,
+                                 xtr_conn_d = xtr_conn_d,
                                  closed = closed,
                                  axis_d = axis_d,
                                  axis_w = axis_w,
@@ -3444,6 +3458,7 @@ def shp_cableturn (d, w, thick_d, corner_r,
 shp_cable = shp_cableturn (d = 20, w=30, thick_d=1,
                         corner_r=1,
                         conn_d=4, conn_sep=3,
+                        xtr_conn_d = 10,
                         closed = 0,
                         axis_d = VY,
                         axis_w = VX,
