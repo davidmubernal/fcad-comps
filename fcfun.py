@@ -94,6 +94,23 @@ EQUAL_TOL = 0.001 # less than a micron is the same
 COS30 = 0.86603   
 COS45 = 0.707   
 
+
+
+def RotateView(axisX=1.0,axisY=0.0,axisZ=0.0,angle=45.0):
+    import math
+    from pivy import coin
+    try:
+        cam = Gui.ActiveDocument.ActiveView.getCameraNode()
+        rot = coin.SbRotation()
+        rot.setValue(coin.SbVec3f(axisX,axisY,axisZ),math.radians(angle))
+        nrot = cam.orientation.getValue() * rot
+        cam.orientation = nrot
+        print axisX," ",axisY," ",axisZ," ",angle
+    except Exception:
+        print "Not ActiveView " 
+
+
+
 # to compare numbers that they are almost the same, but because of 
 # floating point calculations they are not exactly the same
 def equ (x,y):
@@ -3008,9 +3025,9 @@ def wire_sim_xy (vecList):
 # ------------------- end def wire_sim_xy
 
 
-# ------------------- def shp_cablewireturn_wire
+# ------------------- def wire_cableturn
 
-def shp_cableturn_wire (d, w, corner_r,
+def wire_cableturn (d, w, corner_r,
                         conn_d, conn_sep,
                         closed = 0,
                         axis_d = VY,
@@ -3276,17 +3293,167 @@ def shp_cableturn_wire (d, w, corner_r,
                 cable_wire = Part.Wire([cable_wire, line_HG])
 
 
-    Part.show(cable_wire)
+    #Part.show(cable_wire)
     return (cable_wire)
 
-cablewire=  shp_cableturn_wire (d=20, w=30, corner_r=1,
+#cablewire=  wire_cableturn (d=20, w=30, corner_r=1,
+#                        conn_d=4, conn_sep=3,
+#                        closed = 0,
+#                        axis_d = VY,
+#                        axis_w = VX,
+#                        pos_d = 0,
+#                        pos_w = 0,
+#                        pos=V0)
+
+
+
+
+
+
+# ------------------- def shp_cableturn
+
+def shp_cableturn (d, w, thick_d, corner_r,
+                        conn_d, conn_sep,
+                        closed = 0,
+                        axis_d = VY,
+                        axis_w = VX,
+                        pos_d = 0,
+                        pos_w = 0,
+                        pos=V0):
+
+    """
+    Creates a shape of an electrical cable turn, in any direction
+    But it is a shape in FreeCAD
+    See function wire_cableturn
+
+
+           axis_d
+             :
+             :
+        .....:w ..... 
+       :     :      :                          pos_d
+        ____________ ...... ..                   3
+       /            \      :..corner_r
+       |            |      :
+       |            |      :
+       |            |      + d                   2
+       |            |      :
+       |            |      :
+       |            |      :
+        \___ o ____/ ......:                     1
+            \ /            :
+            | |            + conn_d
+            | |            : 
+            | |............:...........axis_w    0
+            : :
+           conn_sep
+
+       1     0  pos_w
+
+       pos_o (orig) is at pos_d=0, pos_w=0, marked with o
+
+
+ 
+    Parameters:
+    -----------
+    d : float
+        depth/length of the turn
+    w : float
+        width of the turn
+    thick_d : float
+        diameter of the wire
+    corner_r : float
+        radius of the corners
+    conn_d : float
+        depth/length of the connector part
+        0: there is no connecting wire
+    conn_sep : float
+        separation of the connectors
+    closed : boolean
+        0 : the ends are not closed
+        1 : the ends are closed
+    axis_d :  FreeCAD.Vector
+        Coordinate System Vector along the depth
+    axis_w :  FreeCAD.Vector
+        Coordinate System Vector along the width
+    pos_d : int
+        location of pos along the axis_d (0,1,2,3), see drawing
+        0: reference at the beginning of the connector
+        1: reference at the beginning of the turn, at the side of the connector
+        2: reference at the middle of the turn
+        3: reference at the end of the turn
+    pos_w : int
+        location of pos along the axis_w (0,1), see drawing
+        0: reference at the center of simmetry
+        1: reference at the end of the turn
+    pos: FreeCAD vector of the position of the reference
+
+
+    returns the shape of the wire
+    """
+
+    # normalize the axis
+    axis_d = DraftVecUtils.scaleTo(axis_d,1)
+    axis_w = DraftVecUtils.scaleTo(axis_w,1)
+
+
+    cablewire =  wire_cableturn (d=d, w=w, corner_r=corner_r,
+                                 conn_d=conn_d, conn_sep=conn_sep,
+                                 closed = closed,
+                                 axis_d = axis_d,
+                                 axis_w = axis_w,
+                                 pos_d = pos_d,
+                                 pos_w = pos_w,
+                                 pos=pos)
+
+
+
+    d_o = {}
+    # distances from the pos_o to pos_d 
+    d_o[0] = DraftVecUtils.scale(axis_d, -conn_d)
+    d_o[1] = V0
+    d_o[2] = DraftVecUtils.scale(axis_d, d/2.)
+    d_o[3] = DraftVecUtils.scale(axis_d, d)
+
+    w_o = {}
+    # distances from the pos_o to pos_w 
+    w_o[0] = V0
+    w_o[1] = DraftVecUtils.scale(axis_w, -w/2.)
+
+    # reference position
+    pos_o = pos + d_o[pos_d].negative() + w_o[pos_w].negative()
+
+    # the section of the wire at the end pos_d = 3
+    pos_section = pos_o + d_o[3]
+
+    circle = Part.makeCircle (thick_d/2., pos_section, axis_w)
+    wire_circle = Part.Wire(circle)
+    face_circle = Part.Face(wire_circle)
+
+    #shp_cable = cablewire.makePipe(wire_circle) # hollow tube
+    #shp_cable = cablewire.makePipe(face_circle) # filled tube
+    # filled tube
+    # Is solid, Frenet, 0: defaul, 1: right corners, 2: rounded corners
+    shp_cable = cablewire.makePipeShell([wire_circle], True, False, 2)
+    
+    #Part.show(shp_cable)
+
+    return (shp_cable)
+
+
+shp_cable = shp_cableturn (d = 20, w=30, thick_d=1,
+                        corner_r=1,
                         conn_d=4, conn_sep=3,
-                        closed = 1,
+                        closed = 0,
                         axis_d = VY,
                         axis_w = VX,
                         pos_d = 0,
                         pos_w = 0,
                         pos=V0)
+
+
+
+
 
 
 
