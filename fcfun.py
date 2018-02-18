@@ -2003,7 +2003,7 @@ def add3CylsHole (r1, h1, r2, h2, rring, hring, thick,
 #              :   :
 #              :.l.:
 #
-# l: length of the parallels
+# l: length of the parallels (from center to center)
 # r: Radius of the semicircles
 # axis_rect: 'x' the parallels are on axis X (as in the drawing)
 #             'y' the parallels are on axis Y
@@ -2067,7 +2067,7 @@ def shp_stadium_wire_dir (length, radius, fc_axis_l = VX,
                length
  
     Arguments:
-    length: length of the parallels
+    length: length of the parallels (distance between semcircle centers)
     radius: Radius of the semicircles
     fc_axis_l: vector on the direction of the paralles
     fc_axis_s: vector on the direction perpendicular to the paralles
@@ -2206,6 +2206,7 @@ def shp_stadium_dir (
     makes a stadium shape in any direction
     see shp_stadium_wire_dir for the arguments
 
+    length: length of the parallels (distance between semcircle centers)
     height: height the stadium
     fc_axis_s: direction on the short axis, not necessary if ref_s == 1
          it will be the perpendicular of the other 2 vectors
@@ -5306,17 +5307,19 @@ def shp_filletchamfer_dir (shp, fc_axis = VZ,  fillet = 1, radius=1):
     for edge in shp.Edges:
         #logger.debug('filletchamfer: edge Length: %s', edge.Length)
         # get the FreeCAD.Vector with the point
-        p0 = edge.Vertexes[0].Point
-        p1 = edge.Vertexes[1].Point
-        v_vertex = p1.sub(p0)  #substraction
-        # I could calculate the angle, but I think it will take more
-        # time than normalizing and checking if they are the same
-        v_vertex.normalize()
-        # check if they are the same vector (they are parallel):
-        if ( DraftVecUtils.equals(v_vertex, nnorm) or
-             DraftVecUtils.equals(v_vertex, nnorm_neg)):
-            edgelist.append(edge)
-            #logger.debug('append edge Length: %s', edge.Length)
+        if len(edge.Vertexes) == 2:
+            p0 = edge.Vertexes[0].Point
+            p1 = edge.Vertexes[1].Point
+            v_vertex = p1.sub(p0)  #substraction
+            # I could calculate the angle, but I think it will take more
+            # time than normalizing and checking if they are the same
+            v_vertex.normalize()
+            # check if they are the same vector (they are parallel):
+            if ( DraftVecUtils.equals(v_vertex, nnorm) or
+                 DraftVecUtils.equals(v_vertex, nnorm_neg)):
+                edgelist.append(edge)
+                #logger.debug('append edge Length: %s', edge.Length)
+                #logger.debug(str(p0) + ' - ' + str(p1))
 
     if len(edgelist) != 0:
         if fillet == 1:
