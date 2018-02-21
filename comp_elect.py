@@ -56,7 +56,7 @@ from fcfun import V0, VX, VY, VZ, VXN, VYN, VZN
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 
 Gui.ActiveDocument = Gui.getDocument(doc.Label)
 guidoc = Gui.getDocument(doc.Label)
@@ -262,7 +262,7 @@ turn = ShpSingleTurnConmut(d = 40, w=20,
                     axis_d = VY,
                     #axis_w = FreeCAD.Vector(-1,0,0), # 180
                     #axis_w = FreeCAD.Vector(1,0,-1),
-                    axis_w = FreeCAD.Vector(0,0,-1),
+                    axis_w = FreeCAD.Vector(1,0,1),
                     #axis_w = FreeCAD.Vector(1,0,1),
                     #axis_w = FreeCAD.Vector(1,0,0),
                     pos_d = 0,

@@ -2643,7 +2643,7 @@ def shp_belt_dir (center_sep, rad1, rad2, height,
     fc_axis_h: vector on the hieght direction
     ref_l: reference (zero) of the fc_axis_l
             1: reference on the center 
-            2: reference at one of the semicircle centers (point 2)
+            2: reference at rad1 semicircle centers (point 2)
                the other circle center will be on the direction of fc_axis_l
             3: reference at the end of rad1 circle
                the other end will be on the direction of fc_axis_l

@@ -418,7 +418,9 @@ class PartsSet (shp_clss.Obj3D):
         #if type(place) is tuple:
         #   place = FreeCAD.Vector(place) # change to FreeCAD.Vector
         
-        tot_displ = (  self.pos_o_adjust + displacement 
+        # having pos_o_adjust and rel_place made the sum twice
+        #tot_displ = (  self.pos_o_adjust + displacement 
+        tot_displ = (  displacement 
                      + self.rel_place + self.extra_mov)
         self.tot_displ = tot_displ
         #if this set has been grouped, we dont have to go to its children
