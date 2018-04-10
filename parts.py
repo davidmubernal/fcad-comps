@@ -3790,6 +3790,7 @@ class NemaMotorHolder (object):
                   reinf_thick = 4.,
                   motor_min_h =10.,
                   motor_max_h =20.,
+                  rail = 1, # if there is a rail or not at the profile side
                   motor_xtr_space = 2., # counting on one side
                   bolt_wall_d = 4.,
                   bolt_wall_sep = 30., # optional
@@ -3959,7 +3960,9 @@ class NemaMotorHolder (object):
             # hole for the rails
             hole_pos = (motaxwall_pos + add_p
                         + DraftVecUtils.scale(axis_h_n, motor_min_h))
-            shp_hole = fcfun.shp_box_dir_xtr(box_w = boltwallshank_r_tol * 2.,
+            if rail == 1:
+                shp_hole = fcfun.shp_box_dir_xtr(
+                                       box_w = boltwallshank_r_tol * 2.,
                                        box_d = wall_thick,
                                        box_h = motor_max_h - motor_min_h,
                                        fc_axis_h = axis_h_n,
@@ -3967,8 +3970,7 @@ class NemaMotorHolder (object):
                                        cw=1, cd=0, ch=0,
                                        xtr_d =1, xtr_nd=1, #to cut
                                        pos = hole_pos)
-            
-            holes.append(shp_hole)
+                holes.append(shp_hole)
             # hole for the ending of the rails (semicircles)
             for add_h in (DraftVecUtils.scale(axis_h_n, motor_min_h),
                           DraftVecUtils.scale(axis_h_n, motor_max_h)):
@@ -4062,7 +4064,8 @@ h_nema = NemaMotorHolder (
                   motor_thick = 4.,
                   reinf_thick = 4.,
                   motor_min_h =8.,
-                  motor_max_h = 38.,
+                  motor_max_h = 33.,
+                  rail = 0,
                   motor_xtr_space = 2., # counting on one side
                   bolt_wall_d = 4.,
                   chmf_r = 1.,
