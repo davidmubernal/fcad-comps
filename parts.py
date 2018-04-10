@@ -4034,15 +4034,35 @@ class NemaMotorHolder (object):
 
 
 
+#doc = FreeCAD.newDocument()
+#h_nema = NemaMotorHolder ( 
+#                  nema_size = 17,
+#                  wall_thick = 5.,
+#                  motor_thick = 4.,
+#                  reinf_thick = 4.,
+#                  motor_min_h =8.,
+#                  motor_max_h = 12.,
+#                  motor_xtr_space = 2., # counting on one side
+#                  bolt_wall_d = 4.,
+#                  chmf_r = 1.,
+#                  fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
+#                  fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
+#                  #fc_axis_p = VY,
+#                  ref_axis = 1, 
+#                  #ref_bolt = 0,
+#                  pos = V0, # FreeCAD.Vector(3,2,5),
+#                  wfco = 1,
+#                  name = 'nema_holder')
+
 
 doc = FreeCAD.newDocument()
 h_nema = NemaMotorHolder ( 
                   nema_size = 17,
-                  wall_thick = 6.,
+                  wall_thick = 5.,
                   motor_thick = 4.,
                   reinf_thick = 4.,
-                  motor_min_h =25.,
-                  motor_max_h = 55,
+                  motor_min_h =8.,
+                  motor_max_h = 38.,
                   motor_xtr_space = 2., # counting on one side
                   bolt_wall_d = 4.,
                   chmf_r = 1.,
