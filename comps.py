@@ -11,14 +11,15 @@
 # ----------------------------------------------------------------------------
 
 
-import FreeCAD;
-import Part;
+import FreeCAD
+import Part
 import logging
 import os
-import Draft;
-import DraftGeomUtils;
-import DraftVecUtils;
-import math;
+import inspect
+import Draft
+import DraftGeomUtils
+import DraftVecUtils
+import math
 #import copy;
 #import Mesh;
 
@@ -33,6 +34,8 @@ sys.path.append(filepath)
 
 import kcomp # before, it was called mat_cte
 import fcfun
+import shp_clss
+import fc_clss
 
 from fcfun import V0, VX, VY, VZ, V0ROT, addBox, addCyl, addCyl_pos, fillet_len
 from fcfun import VXN, VYN, VZN
@@ -2900,4 +2903,427 @@ class LinGuide(object):
 #                    axis_l = 'z', 
 #                    axis_b='x',
 #                    boltend_sep = 8., bl_pos=0.5, name='lg_nx')
+
+
+class ShpGtPulley (shp_clss.Obj3D):
+    """ Creates a GT pulley, no exact dimensions, just for the model
+
+ 
+             flange_d
+          ......+......
+         :             :
+         :_____________:....................
+         |_____:_:_____|...: top_flange_h   :
+            |  : :  |      :                :
+            |  : :  |      :+ toothed_h     :
+          __|__:_:__|__....:                :
+         | ____:_:_____|....+ bot_flange_h  :
+          |    : :    |                      + tot_h
+          |    : :    |                     :
+          |    : :    |                     :
+          |____:_:____|_....................:
+          :    : :     :
+          :    :.:     :
+          :     +      :
+          :   shaft_d  :
+          :            :
+          :............:
+                +
+              base_d
+
+
+    Parameters:
+    -----------
+    pitch : float/int
+        distance between teeth: Typically 2mm, or 3mm
+    n_teeth: int
+        number of teeth of the pulley
+    toothed_h: float
+        height of the toothed part of the pulley
+    top_flange_h: float
+        height (thickness) of the top flange, if 0, no top flange
+    bot_flange_h: float
+        height (thickness) of the bot flange, if 0, no bottom flange
+    tot_h: float
+        total height of the pulley
+    flange_d: float
+        flange diameter, if 0, it will be the same as the base_d
+    base_d: float
+        base diameter
+    shaft_d: float
+        shaft diameter
+    tol: float
+        tolerance for radius (it will substracted to the radius)
+        twice for the diameter. Or added if a shape to substract
+    axis_h : FreeCAD.Vector
+        height vector of coordinate system (this is required)
+    axis_d : FreeCAD.Vector
+        depth vector of coordinate system (perpendicular to the height)
+        can be NULL
+    axis_w : FreeCAD.Vector
+        width vector of coordinate system
+        if V0: it will be calculated using the cross product: axis_h x axis_d
+    pos_h : int
+        location of pos along the axis_h (0,1,2,3,4,5)
+        0: at the base
+        1: at the base of the bottom flange
+        2: at the base of the toothed part
+        3: at the center of the toothed part
+        4: at the end (top) of the toothed part
+        5: at the end (top) of the pulley
+    pos_d : int
+        location of pos along the axis_d (0,1,2,3,4,5)
+        0: at the center of symmetry
+        1: at the inner radius
+        2: at the external radius
+        3: at the pitch radius (outside the toothed part)
+        4: at the end of the base (not the toothed part)
+        5: at the end of the flange (V0 is no flange)
+    pos_w : int
+        location of pos along the axis_w (0,1,2,3,4,5)
+        same as pos_d
+    pos : FreeCAD.Vector
+        position of the piece
+
+
+    The toothed part of the pulley has 2 diameters, besides there also is
+    the pitch diameter that is external to the outer diameter (related to
+    the belt pitch)
+
+
+                 tooth_outd : external diameter of the toothed part
+               .....+.....    of the pulley
+              :           :
+              :           :
+            | | |  : :  | | |
+            | | |  : :  | | |
+            | | |  : :  | | |
+            | | |  : :  | | |
+            | | |  : :  | | |
+            :   :       :   :
+            :   :.......:   :
+            :       +       :
+            :   tooth_ind   :  internal diameter of the toothed part
+            :               :  of the pulley
+            :...............:
+                    +
+                 pitch_d = (n_teeth x pitch) / pi  (diameter)
+                                    |
+                                    v
+                                perimeter (n_teeth x pitch)
+
+
+ 
+       _   _   _   _ ...............................
+     _/ \_/ \_/ \_/ \_....:+ tooth_height: 0.75    + belt_height: 1.38        
+                      ....:+ PLD: 0.254            :            
+     _________________.............................:
+       :   :
+       :...:
+         + tooth separation 2mm (pitch)
+ 
+ 
+     PLD: Pitch Line Distance (I think), where the tensile cord is
+          when the belt is on a pulley, that would be the distance added
+          to the outside diameter of the belt. What is called the pitch
+          diameter: for a GT2 is 
+
+
+              axis_h
+                :
+                :
+         _______:_______ .....5
+        |______:_:______|.....4
+            |  : :  |
+            |  : :  |........3
+            |  : :  |
+         ___|__:_:__|___ .....2
+        |______:_:______|.....1
+         |     : :     | 
+         |     : :     | 
+         |     : :     | 
+         |_____:o:_____|......0   
+         :      :   :
+         :      :   :
+                0...12345.......axis_d, axis_w
+
+         pos_o (origin) is at pos_h=0, pos_d=0, pos_w=0 (marked with o)
+
+    """
+
+    def __init__(self,
+                 pitch = 2.,
+                 n_teeth = 20,
+                 toothed_h = 7.5,
+                 top_flange_h = 1.,
+                 bot_flange_h = 0,
+                 tot_h = 16.,
+                 flange_d = 15.,
+                 base_d = 15.,
+                 shaft_d = 5.,
+                 tol = 0,
+                 axis_d = VX,
+                 axis_w = VY,
+                 axis_h = VZ,
+                 pos_d = 0,
+                 pos_w = 0,
+                 pos_h = 0,
+                 pos = V0):
+
+
+        if (((axis_d is None) or (axis_d == V0)) and
+            ((axis_w is None) or (axis_w == V0))):
+            # both are null, we create a random perpendicular vectors
+            axis_d = fcfun.get_fc_perpend1(axis_h)
+            axis_w = axis_h.cross(axis_d)
+        else:
+            if ((axis_d is None) or (axis_d == V0)):
+                axis_d = axis_w.cross(axis_h)
+            elif ((axis_w is None) or (axis_w == V0)):
+                axis_w = axis_h.cross(axis_d)
+            # all axis are defined
+      
+        shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
+
+        if (top_flange_h > 0 or bot_flange_h > 0) and flange_d == 0:
+            logger.debug("Flange height is not null, but diameter is null")
+            logger.debug("Flange diameter will be the same as the base")
+            flange_d = base_d
+            
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        # belt dictionary:
+        self.belt_dict = kcomp.GT[pitch]
+        # diameters of the pulley:
+        # pitch diameter, it is not on the pulley, but outside, on the belt
+        self.pitch_d = n_teeth * pitch / math.pi
+        self.pitch_r = self.pitch_d /2.
+        # out radius and diameter, diameter at the outer part of the teeth
+        self.tooth_out_r = self.pitch_r - self.belt_dict['PLD']
+        self.tooth_out_d = 2 * self.tooth_out_r
+        # inner radius and diameter, diameter at the inner part of the teeth
+        self.tooth_in_r = self.tooth_out_r - self.belt_dict['TOOTH_H']
+        self.tooth_in_d = 2 * self.tooth_in_r
+
+        self.base_r = base_d / 2.
+        self.shaft_r = shaft_d / 2.
+        self.flange_r = flange_d / 2.
+
+        # height of the base, without the toothed part and the flange
+        self.base_h = tot_h - toothed_h - top_flange_h - bot_flange_h
+
+        self.h0_cen = 0
+        self.d0_cen = 1 # symmetrical
+        self.w0_cen = 1 # symmetrical
+
+        # vectors from the origin to the points along axis_h:
+        self.h_o[0] = V0
+        self.h_o[1] = self.vec_h(self.base_h)
+        self.h_o[2] = self.vec_h(self.base_h + bot_flange_h)
+        self.h_o[3] = self.vec_h(self.base_h + bot_flange_h + toothed_h/2.)
+        self.h_o[4] = self.vec_h(self.tot_h - top_flange_h)
+        self.h_o[5] = self.vec_h(self.tot_h)
+
+        # vectors from the origin to the points along axis_d:
+        # these are negative because actually the pos_d indicates a negative
+        # position along axis_d
+        self.d_o[0] = V0
+        self.d_o[1] = self.vec_d(-self.tooth_in_r)
+        self.d_o[2] = self.vec_d(-self.tooth_out_r)
+        self.d_o[3] = self.vec_d(-self.pitch_r)
+        self.d_o[4] = self.vec_d(-self.base_r)
+        self.d_o[5] = self.vec_d(-self.flange_r)
+
+        # position along axis_w
+        self.w_o[0] = V0
+        self.w_o[1] = self.vec_w(-self.tooth_in_r)
+        self.w_o[2] = self.vec_w(-self.tooth_out_r)
+        self.w_o[3] = self.vec_w(-self.pitch_r)
+        self.w_o[4] = self.vec_d(-self.base_r)
+        self.w_o[5] = self.vec_d(-self.flange_r)
+
+
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        shp_fuse_list = []
+        # Cilynder with a hole, with an extra for the fusion
+        # calculation of the extra at the bottom to make the fusion
+        if self.bot_flange_h > 0:
+            xtr_bot = self.bot_flange_h/2.
+        elif self.base_d > self.tooth_out_d:
+            xtr_bot = self.base_h/2.
+        else:
+            xtr_bot = 0
+        # external diameter (maybe later teeth will be made
+        shp_tooth_cyl = fcfun.shp_cylhole_gen(r_out = self.tooth_out_r,
+                                              r_in  = self.shaft_r + tol,
+                                              h = self.toothed_h,
+                                              axis_h = self.axis_h,
+                                              pos_h = 1, #position at the bottom
+                                              xtr_top = top_flange_h/2.,
+                                              xtr_bot = xtr_bot,
+                                              pos = self.get_pos_h(2))
+        shp_fuse_list.append(shp_tooth_cyl)
+        if self.bot_flange_h > 0:
+            # same width
+            if self.flange_d == self.base_d:
+                shp_base_flg_cyl = fcfun.shp_cylholedir(
+                                     r_out = self.base_r,
+                                     r_in  = self.shaft_r + tol,
+                                     h = self.base_h + self.bot_flange_h,
+                                     normal = self.axis_h,
+                                     pos = self.pos_o)
+                shp_fuse_list.append(shp_base_flg_cyl)
+            else:
+                shp_base_cyl = fcfun.shp_cylholedir(
+                                     r_out = self.base_r,
+                                     r_in  = self.shaft_r + tol,
+                                     h = self.base_h,
+                                     normal = self.axis_h,
+                                     pos = self.pos_o)
+                shp_bot_flange_cyl = fcfun.shp_cylholedir(
+                                     r_out = self.flange_r,
+                                     r_in  = self.shaft_r + tol,
+                                     h = self.bot_flange_h,
+                                     normal = self.axis_h,
+                                     pos = self.get_pos_h(1))
+                shp_fuse_list.append(shp_base_cyl)
+                shp_fuse_list.append(shp_bot_flange_cyl)
+        else: #no bottom flange
+            shp_base_cyl = fcfun.shp_cylholedir(
+                                     r_out = self.base_r,
+                                     r_in  = self.shaft_r + tol,
+                                     h = self.base_h,
+                                     normal = self.axis_h,
+                                     pos = self.pos_o)
+            shp_fuse_list.append(shp_base_cyl)
+        if self.top_flange_h > 0:
+            shp_top_flange_cyl = fcfun.shp_cylholedir(
+                                     r_out = self.flange_r,
+                                     r_in  = self.shaft_r + tol,
+                                     h = self.top_flange_h,
+                                     normal = self.axis_h,
+                                     pos = self.get_pos_h(4))
+            shp_fuse_list.append(shp_top_flange_cyl)
+
+        shp_pulley = fcfun.fuseshplist(shp_fuse_list)
+
+        shp_pulley = shp_pulley.removeSplitter()
+
+        self.shp = shp_pulley
+
+        # normal axes to print without support
+        self.prnt_ax = self.axis_h
+
+
+#shpObjPulley = ShpGtPulley()
+
+
+#doc = FreeCAD.newDocument()
+#shpObjPulley = ShpGtPulley(
+#                 pitch = 2.,
+#                 n_teeth = 20,
+#                 toothed_h = 7.5,
+#                 top_flange_h = 1.,
+#                 bot_flange_h = 2,
+#                 tot_h = 16.,
+#                 flange_d = 18.,
+#                 base_d = 15.,
+#                 shaft_d = 5.,
+#                 tol = 0,
+#                 axis_d = VX,
+#                 axis_w = VY,
+#                 axis_h = VZ,
+#                 pos_d = 0,
+#                 pos_w = 0,
+#                 pos_h = 0,
+#                 pos = FreeCAD.Vector(3,2,10))
+#
+#Part.show(shpObjPulley.shp)
+
+class PartGtPulley (fc_clss.SinglePart, ShpGtPulley):
+    """ Integration of a ShpGtPulley object into a PartGtPulley
+    object, so it is a FreeCAD object that can be visualized in FreeCAD
+    """
+
+    def __init__(self,
+                 pitch = 2.,
+                 n_teeth = 20,
+                 toothed_h = 7.5,
+                 top_flange_h = 1.,
+                 bot_flange_h = 0,
+                 tot_h = 16.,
+                 flange_d = 15.,
+                 base_d = 15.,
+                 shaft_d = 5.,
+                 tol = 0,
+                 axis_d = VX,
+                 axis_w = VY,
+                 axis_h = VZ,
+                 pos_d = 0,
+                 pos_w = 0,
+                 pos_h = 0,
+                 pos = V0,
+                 model_type = 1, # dimensional model
+                 name = ''):
+
+        default_name = 'gt' + str(int(pitch)) + '_pulley_' + str(n_teeth)
+        self.set_name (name, default_name, change = 0)
+        # First the shape is created
+        ShpGtPulley.__init__(self,
+                 pitch = pitch,
+                 n_teeth = n_teeth,
+                 toothed_h = toothed_h,
+                 top_flange_h = top_flange_h,
+                 bot_flange_h = bot_flange_h,
+                 tot_h = tot_h,
+                 flange_d = flange_d,
+                 base_d = base_d,
+                 shaft_d = shaft_d,
+                 tol = tol,
+                 axis_d = axis_d,
+                 axis_w = axis_w,
+                 axis_h = axis_h,
+                 pos_d = pos_d,
+                 pos_w = pos_w,
+                 pos_h = pos_h,
+                 pos = pos)
+
+        # Then the Part
+        fc_clss.SinglePart.__init__(self)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): 
+                setattr(self, i, values[i])
+
+
+#doc = FreeCAD.newDocument()
+#partPulley = PartGtPulley(
+#                 pitch = 2.,
+#                 n_teeth = 20,
+#                 toothed_h = 7.5,
+#                 top_flange_h = 1.,
+#                 bot_flange_h = 2,
+#                 tot_h = 16.,
+#                 flange_d = 18.,
+#                 base_d = 8.,
+#                 shaft_d = 5.,
+#                 tol = 0,
+#                 axis_d = VX,
+#                 axis_w = VY,
+#                 axis_h = VZ,
+#                 pos_d = 0,
+#                 pos_w = 0,
+#                 pos_h = 0,
+#                 pos = FreeCAD.Vector(3,2,10))
 

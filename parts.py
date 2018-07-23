@@ -3808,9 +3808,7 @@ class ThinLinBearHouseAsim (object):
 class NemaMotorHolder (object):
 
     """
-
-
-
+    Creates a holder for a Nema motor
          __________________
         ||                ||
         || O     __     O ||
@@ -3821,9 +3819,9 @@ class NemaMotorHolder (object):
         ||________________|| .....
         ||_______2________|| ..... wall_thick
 
-
-
-         ________3_________        3_________________ ....
+                                      motor_xtr_space
+                                       ::
+         ________3_________        3___::____________ ....
         |  ::  :    :  ::  |       |      :     :    |    + motor_thick
         |__::__:_1__:__::__|       2......:..1..:....|....:..........> fc_axis_n
         ||                ||       | :              /
@@ -3847,6 +3845,11 @@ class NemaMotorHolder (object):
         || ||          || ||                   :              :
         || ||          || ||...................:              :
         ||________________||..................................:
+        :  :            :  :
+        :  :            :  :
+        :  :............:  :
+        :   bolt_wall_sep  :
+        :                  :
         :                  :
         :.....tot_w........:
 
@@ -3854,6 +3857,50 @@ class NemaMotorHolder (object):
        1: ref_axis = 1 & ref_bolt = 0 
        2: ref_axis = 0 & ref_bolt = 0 
        --3: ref_axis = 0 & ref_bolt = 0 
+
+    Parameters:
+    -----------
+    nema_size : int
+        size of the motor (NEMA)
+    wall_thick: float
+        thickness of the side where the holder will be screwed to
+    motor_thick: float
+        thickness of the top side where the motor will be screwed to
+    reinf_thick: float
+        thickness of the reinforcement walls
+    motor_min_h: float
+        distance of from the inner top side to the top hole of the bolts to 
+        attach the holder (see drawing)
+    motor_max_h: float
+        distance of from the inner top side to the bottom hole of the bolts to 
+        attach the holder
+    rail: int
+        1: the holes for the bolts are not holes, there are 2 rails, from
+           motor_min_h to motor_max_h
+        0: just 2 pairs of holes. One pair at defined by motor_min_h and the
+           other defined by motor_max_h
+    motor_xtr_space: float
+        extra separation between the motor and the wall side
+    bolt_wall_d: int/float
+        metric of the bolts to attach the holder
+    bolt_wall_sep: float
+        separation between the 2 bolt holes (or rails). Optional.
+    chmf_r: float
+        radius of the chamfer, whenever chamfer is done
+    fc_axis_h: FreeCAD Vector
+        axis along the axis of the motor
+    fc_axis_n: FreeCAD Vector
+        axis normal to surface where the holder will be attached to
+    ref_axis: int
+        1: the zero of the vertical axis (axis_h) is on the motor axis
+        0: the zero of the vertical axis (axis_h) is at the wall
+    pos: FreeCAD.Vector
+        position of the holder (considering ref_axis)
+    wfco: int
+        1: creates a FreeCAD object
+        0: only creates a shape
+    name: string
+        Name of the FreeCAD object
 
     """
 
@@ -3866,7 +3913,7 @@ class NemaMotorHolder (object):
                   motor_max_h =20.,
                   rail = 1, # if there is a rail or not at the profile side
                   motor_xtr_space = 2., # counting on one side
-                  bolt_wall_d = 4.,
+                  bolt_wall_d = 4., # Metric of the wall bolts
                   bolt_wall_sep = 30., # optional
                   chmf_r = 1.,
                   fc_axis_h = VZ,
@@ -3931,6 +3978,7 @@ class NemaMotorHolder (object):
         # distance of the motor axis to de wall
         motax2wall_dist = (wall_thick + motor_w/2. + motor_xtr_space
                                + boltwallhead_l + washer_thick)
+        self.motax2wall_dist = motax2wall_dist
         if ref_axis == 1:
             ref2motax = V0  #point 1
             ref2motaxwall = DraftVecUtils.scale(axis_n_n, motax2wall_dist) 
@@ -3942,7 +3990,7 @@ class NemaMotorHolder (object):
         motaxwall_pos = pos + ref2motaxwall
 
         # point centered on the symmetrical plane, on top of axis_h and
-        # on the wall (pint 3)
+        # on the wall (point 3)
         ref2topwallcent = (  ref2motaxwall
                              + DraftVecUtils.scale(axis_h, motor_thick))
         topwallcent_pos = pos + ref2topwallcent
