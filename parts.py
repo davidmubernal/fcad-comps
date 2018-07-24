@@ -4570,9 +4570,92 @@ class ShpNemaMotorHolder (shp_clss.Obj3D):
         self.shp = shp_motorholder
 
 
-doc = FreeCAD.newDocument()
-shpob_nema = ShpNemaMotorHolder ( 
+#doc = FreeCAD.newDocument()
+#shpob_nema = ShpNemaMotorHolder ( 
+#                  nema_size = 17,
+#                  wall_thick = 4.,
+#                  motorside_thick = 4.,
+#                  reinf_thick = 4.,
+#                  motor_min_h =10.,
+#                  motor_max_h =20.,
+#                  rail = 1, # if there is a rail or not at the profile side
+#                  motor_xtr_space = 2., # counting on one side
+#                  bolt_wall_d = 4., # Metric of the wall bolts
+#                  #bolt_wall_sep = 30., # optional
+#                  chmf_r = 1.,
+#                  axis_h = VZ,
+#                  axis_d = VX,
+#                  axis_w = None,
+#                  pos_h = 1,  # 1: inner wall of the motor side
+#                  pos_d = 3,  # 3: motor axis
+#                  pos_w = 0,  # 0: center of symmetry
+#                  pos = V0)
+
+#Part.show(shpob_nema.shp)
+
+class PartNemaMotorHolder(fc_clss.SinglePart, ShpNemaMotorHolder):
+    """ Integration of a ShpNemaMotorHolder object into PartNemaMotorHolder
+    object, so it is a FreeCAD object that can be visualized in FreeCAD
+    """
+
+    def __init__ (self,
                   nema_size = 17,
+                  wall_thick = 4.,
+                  motorside_thick = 4.,
+                  reinf_thick = 4.,
+                  motor_min_h =10.,
+                  motor_max_h =20.,
+                  rail = 1, # if there is a rail or not at the profile side
+                  motor_xtr_space = 2., # counting on one side
+                  bolt_wall_d = 4., # Metric of the wall bolts
+                  bolt_wall_sep = 0, # optional
+                  chmf_r = 1.,
+                  axis_h = VZ,
+                  axis_d = VX,
+                  axis_w = None,
+                  pos_h = 1,  # 1: inner wall of the motor side
+                  pos_d = 3,  # 3: motor axis
+                  pos_w = 0,  # 0: center of symmetry
+                  pos = V0,
+                  model_type = 3, #to be printed
+                  name = ''):
+
+        default_name = 'nema' + str(nema_size) + '_motorholder'
+        self.set_name (name, default_name, change = 0)
+        # First the shape is created
+        ShpNemaMotorHolder.__init__(self,
+                  nema_size = nema_size,
+                  wall_thick = wall_thick,
+                  motorside_thick = motorside_thick,
+                  reinf_thick = reinf_thick,
+                  motor_min_h = motor_min_h,
+                  motor_max_h = motor_max_h,
+                  rail = rail, 
+                  motor_xtr_space = motor_xtr_space,
+                  bolt_wall_d = bolt_wall_d,
+                  bolt_wall_sep = bolt_wall_sep,
+                  chmf_r = chmf_r,
+                  axis_h = axis_h,
+                  axis_d = axis_d,
+                  axis_w = axis_w,
+                  pos_h = pos_h,
+                  pos_d = pos_d,
+                  pos_w = pos_w,
+                  pos = pos)
+
+        #then the part:
+        fc_clss.SinglePart.__init__(self)
+
+        # save the arguments that haven't been assigned as attributes
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): 
+                setattr(self, i, values[i])
+
+doc = FreeCAD.newDocument()
+part_nemahold = PartNemaMotorHolder ( 
+                  nema_size = 23,
                   wall_thick = 4.,
                   motorside_thick = 4.,
                   reinf_thick = 4.,
@@ -4590,8 +4673,6 @@ shpob_nema = ShpNemaMotorHolder (
                   pos_d = 3,  # 3: motor axis
                   pos_w = 0,  # 0: center of symmetry
                   pos = V0)
-
-Part.show(shpob_nema.shp)
 
 
 class Plate3CageCubes (object):
