@@ -3062,8 +3062,8 @@ class ShpGtPulley (shp_clss.Obj3D):
                  base_d = 15.,
                  shaft_d = 5.,
                  tol = 0,
-                 axis_d = VX,
-                 axis_w = VY,
+                 axis_d = None,
+                 axis_w = None,
                  axis_h = VZ,
                  pos_d = 0,
                  pos_w = 0,
@@ -3132,7 +3132,7 @@ class ShpGtPulley (shp_clss.Obj3D):
 
         # vectors from the origin to the points along axis_d:
         # these are negative because actually the pos_d indicates a negative
-        # position along axis_d
+        # position along axis_d (this happens when it is symmetrical)
         self.d_o[0] = V0
         self.d_o[1] = self.vec_d(-self.tooth_in_r)
         self.d_o[2] = self.vec_d(-self.tooth_out_r)
@@ -3147,7 +3147,6 @@ class ShpGtPulley (shp_clss.Obj3D):
         self.w_o[3] = self.vec_w(-self.pitch_r)
         self.w_o[4] = self.vec_d(-self.base_r)
         self.w_o[5] = self.vec_d(-self.flange_r)
-
 
         # calculates the position of the origin, and keeps it in attribute pos_o
         self.set_pos_o()
