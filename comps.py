@@ -1375,6 +1375,8 @@ def getaluprof_dir ( aludict, length,
 #
 
 class NemaMotor (object):
+    """ Not recommended for new designs, see ShpNemaMotor and PartNemaMotor
+    """
 
     def __init__ (self, size, length, shaft_l, 
                   circle_r, circle_h, name = "nemamotor", chmf = 1, 
@@ -1630,6 +1632,361 @@ class NemaMotor (object):
 #               #normal= FreeCAD.Vector(1,-0.75,1), pos = FreeCAD.Vector(0,5,2))
 #               normal= FreeCAD.Vector(0,0,-1), pos = FreeCAD.Vector(-2,5,2))
 
+
+# ----------- NEMA MOTOR
+
+class ShpNemaMotor (shp_clss.Obj3D):
+    """ Creates a shape of a Nema Motor
+    It can include a hole to cut the piece where it may be embedded
+
+
+               axis_h
+                  :
+                  :
+                  5 ............................
+                 | |                           :
+                 | |                           + shaft_l
+              ___|4|___.............           :
+        _____|____3____|_____......:..circle_h.:
+       | ::       2        :: |     :  
+       |                     |     :
+       |                     |     :
+       |                     |     + base_l
+       |                     |     :
+       |                     |     :
+       |                     |     :
+       |__________1__________|.....:
+                 : :               :
+                 : :               :
+                 : :               :+ rear_shaft_l (optional)
+                 : :               :
+                 :01...2..3..4.....:...........axis_d (same as axis_w)
+
+
+
+                axis_w
+                  :
+                  :
+        __________:__________.....
+       /                     \....: chmf_r
+       |  O               O  |
+       |          _          |
+       |       .     .       |
+       |      (  ( )  )      |........axis_d
+       |        .    .       |
+       |                     |
+       |  O               O  |
+       \_____________________/
+       :                     :
+       :.....................:
+                  +
+               motor_w (same as d): Nema size in inches /10
+
+
+    pos_o (origin) is at pos_h=1, pos_d=pos_w=0
+
+    Parameters:
+    -----------
+    nema_size : int
+        nema size of the motor. Nema 17 means that the front is 1.7 inches
+        each side (it is a square)
+    base_l : float,
+        length (height) of the base
+    shaft_l = float,
+        length (height) of the shaft, including the small cylinder (circle)
+        at the base
+    shaft_r = float,
+        radius of the shaft, if not defined, it will take the dimension defined
+        in kcomp
+    circle_r : float,
+        radius of the cylinder (circle) at the base of the shaft
+        if 0 -> no cylinder
+    circle_h : float,
+        height of the cylinder at the base of the shaft
+        if 0-> no cylinder
+    chmf_r : float, 
+        chamfer radius of the chamfer along the base length (height)
+    rear_shaft_l : float,
+        length of the rear shaft, 0 : no rear shaft
+    bolt_depth : 3.,
+        depth of the bolt holes of the motor
+    bolt_out : 0,
+        length of the bolts to be outside (to make holes), in case of a shape
+        to cut
+    cut_extra : 0,
+        In case that the shape is to make a hole for the motor, it will have
+        an extra size to make it fit. If 0, no extra size
+    axis_d : FreeCAD.Vector
+        depth vector of coordinate system
+    axis_w : FreeCAD.Vector
+        width vector of coordinate system
+    axis_h : FreeCAD.Vector
+        height vector of coordinate system
+    pos_d : int
+        location of pos along the axis_d (0,1,2,3,4), see drawing
+        0: at the axis of the shaft
+        1: at the radius of the shaft
+        2: at the end of the circle(cylinder) at the base of the shaft
+        3: at the bolts
+        4: at the end of the piece
+    pos_w : int
+        same as pos_d
+    pos_h : int
+        location of pos along the axis_h (0,1,2,3,4), see drawing
+        0: at the end of the rear shaft, if no rear shaft, it will be
+           the same as pos_h = 1
+        1: at the end of the bolt holes
+        2: at the base
+        3: at the other end of the base (not including the circle at the base
+           of the shaft)
+        4: at the end of the circle at the base of the shaft
+        5: at the end of the shaft
+    pos : FreeCAD.Vector
+        Position of the motor, at the point defined by pos_d, pos_w, pos_h
+
+    Attributes:
+    ----------
+    """
+
+    def __init__ (self,
+                  nema_size = 17,
+                  base_l = 32.,
+                  shaft_l = 20.,
+                  shaft_r = 0,
+                  circle_r = 11.,
+                  circle_h = 2.,
+                  chmf_r = 1, 
+                  rear_shaft_l=0,
+                  bolt_depth = 3.,
+                  bolt_out = 2,
+                  cut_extra = 0,
+                  axis_d = VX,
+                  axis_w = None,
+                  axis_h = VZ,
+                  pos_d = 0,
+                  pos_w = 0,
+                  pos_h = 1,
+                  pos = V0):
+
+        if (axis_w is None) or (axis_w == V0):
+            axis_w = axis_h.cross(axis_d)
+
+        shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+
+        self.motor_w = kcomp.NEMA_W[nema_size]
+        if shaft_r == 0:
+            self.shaft_d  = kcomp.NEMA_SHAFT_D[nema_size]
+            self.shaft_r  = self.shaft_d /2.
+            shaft_r  = self.shaft_r
+
+        self.nemabolt_sep = kcomp.NEMA_BOLT_SEP[nema_size]
+
+        nemabolt_d = kcomp.NEMA_BOLT_D[nema_size]
+        self.nemabolt_d = nemabolt_d
+        self.nemabolt_r = nemabolt_d/2.
+        mtol = kcomp.TOL - 0.1
+
+        self.h0_cen = 0
+        self.d0_cen = 1 # symmetrical
+        self.w0_cen = 1 # symmetrical
+
+        # vectors from the origin to the points along axis_h:
+        self.h_o[0] = self.vec_h(-self.rear_shaft_l)
+        self.h_o[1] = V0
+        self.h_o[2] = self.vec_h(self.base_l-bolt_depth)
+        self.h_o[3] = self.vec_h(self.base_l)
+        self.h_o[4] = self.vec_h(self.base_l + self.circle_h)
+        self.h_o[5] = self.vec_h(self.base_l + self.shaft_l)
+
+        # vectors from the origin to the points along axis_d:
+        # these are negative because actually the pos_d indicates a negative
+        # position along axis_d (this happens when it is symmetrical)
+        self.d_o[0] = V0
+        self.d_o[1] = self.vec_d(-self.shaft_r)
+        self.d_o[2] = self.vec_d(-self.circle_r)
+        self.d_o[3] = self.vec_d(-self.nemabolt_sep/2.)
+        self.d_o[4] = self.vec_d(-self.motor_w/2.)
+
+        # position along axis_w (similar to axis_d)
+        self.w_o[0] = V0
+        self.w_o[1] = self.vec_w(-self.shaft_r)
+        self.w_o[2] = self.vec_w(-self.circle_r)
+        self.w_o[3] = self.vec_w(-self.nemabolt_sep/2.)
+        self.w_o[4] = self.vec_w(-self.motor_w/2.)
+
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        # ---------- building of the piece ------------------
+
+        # -------- base of the motor
+        # if cut_extra, there will be extra at each side, since the piece
+        # is built from the center of symmetry, it will be equally extended
+        # on each side
+        shp_base = fcfun.shp_box_dir(box_w = self.motor_w + 2*cut_extra,
+                                     box_d = self.motor_w + 2*cut_extra,
+                                     box_h = self.base_l,
+                                     fc_axis_w = self.axis_w,
+                                     fc_axis_d = self.axis_d,
+                                     fc_axis_h = self.axis_h,
+                                     cw = 1, cd = 1, ch = 0,
+                                     pos = self.pos_o)
+
+        shp_base = fcfun.shp_filletchamfer_dir (shp_base, self.axis_h,
+                                                fillet = 0, radius = chmf_r)
+        shp_base = shp_base.removeSplitter()
+
+        fuse_list = []
+        holes_list = []
+
+        # --------- bolts (holes or extensions if cut_extra > 0)
+        for pt_d in (-3,3):
+            for pt_w in (-3,3):
+                if cut_extra == 0: # there will be holes for the bolts
+                    # pos_h=2 is at the end of the hole for the bolts
+                    bolt_pos = self.get_pos_dwh(pt_d,pt_w,2)
+                    shp_hole = fcfun.shp_cylcenxtr (r = self.nemabolt_r,
+                                                    h = bolt_depth,
+                                                    normal = self.axis_h,
+                                                    ch = 0,
+                                                    xtr_top = 1,
+                                                    xtr_bot = 0,
+                                                    pos = bolt_pos)
+                    holes_list.append(shp_hole)
+                else: # the bolts will protude to make holes in the shape to cut
+                    # pos_h=3 is at the end of the base
+                    bolt_pos = self.get_pos_dwh(pt_d,pt_w,3)
+                    shp_hole = fcfun.shp_cylcenxtr (r = self.nemabolt_r,
+                                                    h = bolt_out,
+                                                    normal = self.axis_h,
+                                                    ch = 0,
+                                                    xtr_top = 0,
+                                                    xtr_bot = 1,
+                                                    pos = bolt_pos)
+                    fuse_list.append(shp_hole)
+
+        if cut_extra == 0:
+            shp_holes = fcfun.fuseshplist(holes_list)
+            shp_base = shp_base.cut(shp_holes)
+            shp_base = shp_base.removeSplitter()
+
+
+        # -------- circle (flat cylinder) at the base of the shaft
+        # could add cut_extra to circle_h or circle_r, but it can be 
+        # set in the arguments
+        if circle_r > 0 and circle_h > 0:
+            shp_circle = fcfun.shp_cylcenxtr(r = circle_r,
+                                             h = circle_h,
+                                             normal = self.axis_h,
+                                             ch = 0, # not centered
+                                             xtr_top = 0, # no extra at top
+                                             xtr_bot = 1, # extra to fuse
+                                             pos = self.get_pos_h(3))
+            fuse_list.append(shp_circle)
+
+        # ------- Shaft
+        shp_shaft = fcfun.shp_cylcenxtr(r = self.shaft_r,
+                                        h = self.shaft_l,
+                                        normal = self.axis_h,
+                                        ch = 0, # not centered
+                                        xtr_top = 0, # no extra at top
+                                        xtr_bot = 1, # extra to fuse
+                                        pos = self.get_pos_h(4))
+        fuse_list.append(shp_shaft)
+
+        if rear_shaft_l > 0:
+            shp_rearshaft = fcfun.shp_cylcenxtr(r = self.shaft_r,
+                                        h = self.rear_shaft_l,
+                                        normal = self.axis_h,
+                                        ch = 0, # not centered
+                                        xtr_top = 1, # to fuse
+                                        xtr_bot = 0, # no extra at bottom
+                                        pos = self.get_pos_h(0))
+
+            fuse_list.append(shp_rearshaft)
+        
+        shp_motor = shp_base.multiFuse(fuse_list)
+        shp_motor = shp_motor.removeSplitter()
+        self.shp = shp_motor
+
+#doc =FreeCAD.newDocument()
+#snm = ShpNemaMotor(
+#                  cut_extra = 1,
+#                  pos_d = 2,
+#                  pos_w = 1,
+#                  pos_h = 1,
+#)
+#Part.show(snm.shp)
+
+class PartNemaMotor (fc_clss.SinglePart, ShpNemaMotor):
+    """ Integration of a ShpNemaMotor objecto into a PartNemaMotor object
+    so it will create a FreeCAD object that can be shown in FreeCAD GUI
+    See ShpNemaMotor to get info about the parameters
+    """
+
+    def __init__( self,
+                  nema_size = 17,
+                  base_l = 32.,
+                  shaft_l = 20.,
+                  shaft_r = 0,
+                  circle_r = 11.,
+                  circle_h = 2.,
+                  chmf_r = 1, 
+                  rear_shaft_l=0,
+                  bolt_depth = 3.,
+                  bolt_out = 2.,
+                  cut_extra = 0,
+                  axis_d = VX,
+                  axis_w = None,
+                  axis_h = VZ,
+                  pos_d = 0,
+                  pos_w = 0,
+                  pos_h = 1,
+                  pos = V0,
+                  name = ''):
+
+        default_name = 'nema' + str(nema_size) + '_motor'
+        self.set_name (name, default_name, change = 0)
+        # First the shape is created
+        ShpNemaMotor.__init__(self,
+                    nema_size = nema_size,
+                    base_l = base_l,
+                    shaft_l = shaft_l,
+                    shaft_r = shaft_r,
+                    circle_r = circle_r,
+                    circle_h = circle_h,
+                    chmf_r = chmf_r, 
+                    rear_shaft_l = rear_shaft_l,
+                    bolt_depth = bolt_depth,
+                    bolt_out = bolt_out,
+                    cut_extra = cut_extra,
+                    axis_d = axis_d,
+                    axis_w = axis_w,
+                    axis_h = axis_h,
+                    pos_d = pos_d,
+                    pos_w = pos_w,
+                    pos_h = pos_h,
+                    pos = pos)
+
+        # Second, the part is created
+        fc_clss.SinglePart.__init__(self)
+
+        # Save the arguments that have not been created yet
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): 
+                setattr(self, i, values[i])
+
+        self.model_type = 1 # Dimensional model
 
 
 # ---------- class LinBearing ----------------------------------------
@@ -3089,6 +3446,7 @@ class ShpGtPulley (shp_clss.Obj3D):
             logger.debug("Flange height is not null, but diameter is null")
             logger.debug("Flange diameter will be the same as the base")
             flange_d = base_d
+            self.flange_d = flange_flange_d
             
 
         # save the arguments as attributes:

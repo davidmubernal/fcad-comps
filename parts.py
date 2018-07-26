@@ -4653,26 +4653,26 @@ class PartNemaMotorHolder(fc_clss.SinglePart, ShpNemaMotorHolder):
             if not hasattr(self,i): 
                 setattr(self, i, values[i])
 
-doc = FreeCAD.newDocument()
-part_nemahold = PartNemaMotorHolder ( 
-                  nema_size = 23,
-                  wall_thick = 4.,
-                  motorside_thick = 4.,
-                  reinf_thick = 4.,
-                  motor_min_h =10.,
-                  motor_max_h =20.,
-                  rail = 1, # if there is a rail or not at the profile side
-                  motor_xtr_space = 2., # counting on one side
-                  bolt_wall_d = 4., # Metric of the wall bolts
-                  #bolt_wall_sep = 30., # optional
-                  chmf_r = 1.,
-                  axis_h = VZ,
-                  axis_d = VX,
-                  axis_w = None,
-                  pos_h = 1,  # 1: inner wall of the motor side
-                  pos_d = 3,  # 3: motor axis
-                  pos_w = 0,  # 0: center of symmetry
-                  pos = V0)
+#doc = FreeCAD.newDocument()
+#part_nemahold = PartNemaMotorHolder ( 
+#                  nema_size = 23,
+#                  wall_thick = 4.,
+#                  motorside_thick = 4.,
+#                  reinf_thick = 4.,
+#                  motor_min_h =10.,
+#                  motor_max_h =20.,
+#                  rail = 1, # if there is a rail or not at the profile side
+#                  motor_xtr_space = 2., # counting on one side
+#                  bolt_wall_d = 4., # Metric of the wall bolts
+#                  #bolt_wall_sep = 30., # optional
+#                  chmf_r = 1.,
+#                  axis_h = VZ,
+#                  axis_d = VX,
+#                  axis_w = None,
+#                  pos_h = 1,  # 1: inner wall of the motor side
+#                  pos_d = 3,  # 3: motor axis
+#                  pos_w = 0,  # 0: center of symmetry
+#                  pos = V0)
 
 
 class Plate3CageCubes (object):
