@@ -120,7 +120,7 @@ class BearWashSet (fc_clss.PartsSet):
 
     idler pulley without the washer for the bolt because it is between a holder,
     The holder is in dots, not in the group
-    pos_o is at the bottom: see o in the drawing
+    pos_o is at the center of symmetry: see o in the drawing
 
                  axis_h
                    :            pos_h
@@ -129,13 +129,13 @@ class BearWashSet (fc_clss.PartsSet):
       ..........:.....:........
                                :         Holder for the pulley group
       ....._________________...:
-          |_________________|            large washer
-              |_________|                regular washer
-              |         |
-              |         |         0      bearing
-              |_________|         1
-           ___|_________|___      2      regular washer
-      ....|________o________|..   3      large washer
+          |_________________|     3      large washer
+              |_________|         2      regular washer
+              |         |         1
+              |    o    |         0      bearing
+              |_________|        -1
+           ___|_________|___     -2      regular washer
+      ....|_________________|..  -3      large washer
                                :
       .........................:         Holder for the pulley group
                 :.....:                  nut
@@ -205,15 +205,15 @@ class BearWashSet (fc_clss.PartsSet):
             self.d0_cen = 1
             self.w0_cen = 1
 
-            # the origin (pos_o) is at the base
+            # the origin (pos_o) is at the center of symmetry
             # vectors from o (orig) along axis_h, to the pos_h points
             # h_o is a dictionary created in Obj3D.__init__
-            self.h_o[0] = self.vec_h(  self.bear_h/2.
-                                     + self.rwash_h
-                                     + self.lwash_h)
-            self.h_o[1] = self.vec_h(self.rwash_h + self.lwash_h)
-            self.h_o[2] = self.vec_h(self.lwash_h)
-            self.h_o[3] = V0
+            self.h_o[0] = V0
+            self.h_o[1] = self.vec_h(-self.bear_h/2.)
+            self.h_o[2] = self.vec_h(-self.bear_h/2. - self.rwash_h)
+            self.h_o[3] = self.vec_h(- self.bear_h/2.
+                                     - self.rwash_h
+                                     - self.lwash_h)
 
             self.d_o[0] = V0
             if self.axis_d is not None:
@@ -235,43 +235,46 @@ class BearWashSet (fc_clss.PartsSet):
             # pos_o
             self.set_pos_o()
 
-            # creation of the bottom large washer
-            lwash_b = fc_clss.Din9021Washer(metric= self.lwash_m,
-                                    axis_h = self.axis_h,
-                                    pos_h = 1,
-                                    pos = self.pos_o,
-                                    name = 'idlpull_lwash_bt')
-            self.append_part(lwash_b)
+            # creation of the bearing
+            bearing = fc_clss.BearingOutl(bearing_nb = self.bear_type,
+                                  axis_h = self.axis_h,
+                                  pos_h = 0,
+                                  axis_d = self.axis_d,
+                                  axis_w = self.axis_w,
+                                  pos = self.pos_o,
+                                  #pos = rwash_b.get_pos_h(1),
+                                  name = 'idlpull_bearing')
+            self.append_part(bearing)
             # creation of the bottom regular washer
             rwash_b = fc_clss.Din125Washer(metric= metric,
                                    axis_h = self.axis_h,
                                    pos_h = 1,
-                                   pos = lwash_b.get_pos_h(1),
+                                   pos = bearing.get_pos_h(-1),
                                    name = 'idlpull_rwash_bt')
             self.append_part(rwash_b)
-            # creation of the bearing
-            bearing = fc_clss.BearingOutl(bearing_nb = self.bear_type,
-                                  axis_h = self.axis_h,
-                                  pos_h = 1,
-                                  axis_d = self.axis_d,
-                                  axis_w = self.axis_w,
-                                  pos = rwash_b.get_pos_h(1),
-                                  name = 'idlpull_bearing')
-            self.append_part(bearing)
+            # creation of the bottom large washer
+            lwash_b = fc_clss.Din9021Washer(metric= self.lwash_m,
+                                    axis_h = self.axis_h,
+                                    pos_h = 1,
+                                    pos = rwash_b.get_pos_h(-1),
+                                    name = 'idlpull_lwash_bt')
+            self.append_part(lwash_b)
             # creation of the top regular washer
             rwash_t = fc_clss.Din125Washer(metric= metric,
                                    axis_h = self.axis_h,
-                                   pos_h = 1,
+                                   pos_h = -1,
                                    pos = bearing.get_pos_h(1),
                                    name = 'idlpull_rwash_tp')
             self.append_part(rwash_t)
             # creation of the top large washer
             lwash_t = fc_clss.Din9021Washer(metric= self.lwash_m,
                                     axis_h = self.axis_h,
-                                    pos_h = 1,
+                                    pos_h = -1,
                                     pos = rwash_t.get_pos_h(1),
-                                    name = 'idlpull_lwash_bt')
+                                    name = 'idlpull_lwash_tp')
             self.append_part(lwash_t)
+
+
             if group == 1:
                 self.make_group ()
 

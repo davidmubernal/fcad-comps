@@ -1751,7 +1751,7 @@ class ShpNemaMotor (shp_clss.Obj3D):
     def __init__ (self,
                   nema_size = 17,
                   base_l = 32.,
-                  shaft_l = 20.,
+                  shaft_l = 24.,
                   shaft_r = 0,
                   circle_r = 11.,
                   circle_h = 2.,

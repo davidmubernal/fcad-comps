@@ -169,9 +169,9 @@ class Obj3D (object):
             
         """
 
-        vec_from_pos_o =  (  self.d_o[self.pos_d]
-                           + self.w_o[self.pos_w]
-                           + self.h_o[self.pos_h])
+        vec_from_pos_o =  (  self.get_o_to_d(self.pos_d)
+                           + self.get_o_to_w(self.pos_w)
+                           + self.get_o_to_h(self.pos_h))
         vec_to_pos_o =  vec_from_pos_o.negative()
         self.pos_o = self.pos + vec_to_pos_o
         if adjust == 1:
