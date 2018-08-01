@@ -439,6 +439,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
                   pos_w = 0,
                   pos_h = 1,
                   pos = V0,
+                  group = 1,
                   name = ''):
 
         default_name = 'nema' + str(nema_size) + '_pulley_set'
@@ -515,7 +516,9 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
 
         if pulley_pos_h < 0: #top of the pulley aligned with top of the shaft
             # shaft_l includes the length of the circle
-            pulley_pos_h = shaft_l - self.circle_h - gt_pulley.tot_h
+            pulley_pos_h = shaft_l - gt_pulley.tot_h
+            if pulley_pos_h < 0:
+                pulley_pos_h = 0
             self.pulley_pos_h = pulley_pos_h
         elif pulley_pos_h + gt_pulley.base_h > shaft_l:
             logger.warning("pulley seems to be out of the shaft")
@@ -579,6 +582,8 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         self.set_part_place(gt_pulley, self.get_o_to_h(6))
 
         self.place_fcos()
+        if group == 1:
+            self.make_group()
 
     def get_nema_motor(self):
         """ gets the nema motor"""
@@ -604,7 +609,7 @@ motor_pulley = NemaMotorPulleySet(pulley_pos_h = 10,
                                   axis_h = VX,
                                   pos_d = 2,
                                   pos_w = 0,
-                                  pos_h = 0,
+                                  pos_h = 4,
                                   pos = V0,
                                   )
 
