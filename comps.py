@@ -3338,15 +3338,16 @@ class ShpGtPulley (shp_clss.Obj3D):
         4: at the end (top) of the toothed part
         5: at the end (top) of the pulley
     pos_d : int
-        location of pos along the axis_d (0,1,2,3,4,5)
+        location of pos along the axis_d (0,1,2,3,4,5,6)
         0: at the center of symmetry
-        1: at the inner radius
-        2: at the external radius
-        3: at the pitch radius (outside the toothed part)
-        4: at the end of the base (not the toothed part)
-        5: at the end of the flange (V0 is no flange)
+        1: at the shaft radius
+        2: at the inner radius
+        3: at the external radius
+        4: at the pitch radius (outside the toothed part)
+        5: at the end of the base (not the toothed part)
+        6: at the end of the flange (V0 is no flange)
     pos_w : int
-        location of pos along the axis_w (0,1,2,3,4,5)
+        location of pos along the axis_w (0,1,2,3,4,5,6)
         same as pos_d
     pos : FreeCAD.Vector
         position of the piece
@@ -3411,7 +3412,7 @@ class ShpGtPulley (shp_clss.Obj3D):
          |_____:o:_____|......0   
          :      :   :
          :      :   :
-                0...12345.......axis_d, axis_w
+                01..23456.......axis_d, axis_w
 
          pos_o (origin) is at pos_h=0, pos_d=0, pos_w=0 (marked with o)
 
@@ -3501,19 +3502,21 @@ class ShpGtPulley (shp_clss.Obj3D):
         # these are negative because actually the pos_d indicates a negative
         # position along axis_d (this happens when it is symmetrical)
         self.d_o[0] = V0
-        self.d_o[1] = self.vec_d(-self.tooth_in_r)
-        self.d_o[2] = self.vec_d(-self.tooth_out_r)
-        self.d_o[3] = self.vec_d(-self.pitch_r)
-        self.d_o[4] = self.vec_d(-self.base_r)
-        self.d_o[5] = self.vec_d(-self.flange_r)
+        self.d_o[1] = self.vec_d(-self.shaft_r)
+        self.d_o[2] = self.vec_d(-self.tooth_in_r)
+        self.d_o[3] = self.vec_d(-self.tooth_out_r)
+        self.d_o[4] = self.vec_d(-self.pitch_r)
+        self.d_o[5] = self.vec_d(-self.base_r)
+        self.d_o[6] = self.vec_d(-self.flange_r)
 
         # position along axis_w
         self.w_o[0] = V0
-        self.w_o[1] = self.vec_w(-self.tooth_in_r)
-        self.w_o[2] = self.vec_w(-self.tooth_out_r)
-        self.w_o[3] = self.vec_w(-self.pitch_r)
-        self.w_o[4] = self.vec_d(-self.base_r)
-        self.w_o[5] = self.vec_d(-self.flange_r)
+        self.w_o[1] = self.vec_w(-self.shaft_r)
+        self.w_o[2] = self.vec_w(-self.tooth_in_r)
+        self.w_o[3] = self.vec_w(-self.tooth_out_r)
+        self.w_o[4] = self.vec_w(-self.pitch_r)
+        self.w_o[5] = self.vec_w(-self.base_r)
+        self.w_o[6] = self.vec_w(-self.flange_r)
 
         # calculates the position of the origin, and keeps it in attribute pos_o
         self.set_pos_o()

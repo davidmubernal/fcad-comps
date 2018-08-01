@@ -311,7 +311,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
          :      :   :
                 0...56789.......axis_d, axis_w
                     |
-                    12345 (for the pulley)
+                01  23456 (for the pulley)
 
               axis_h
                   :
@@ -334,6 +334,15 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
                  : :               :+ rear_shaft_l (optional)
                  : :               :
                  :01...2..3..4.....:...........axis_d (same as axis_w)
+                   |   |  |  |
+                   |   |  |  v
+                   |   |  | end of the motor
+                   |   |  v
+                   |   | bolt holes
+                   |   V
+                   |  radius of the circle (cylinder)
+                   v
+                   radius of the shaft
 
 
 
@@ -364,6 +373,22 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         position in mm of the pulley along the shaft
         0:  it is at the base of the shaft
         -1: the top of the pulley will be aligned with the end of the shaft
+
+    pos_d: int
+        location of pos along the axis_d  see drawing
+           Locations coinciding with the motor
+        0: at the axis of the shaft
+        1: at the radius of the shaft
+        2: at the end of the circle(cylinder) at the base of the shaft
+        3: at the bolts
+        4: at the end of the piece
+           Locations of the pulley
+        5: at the inner radius
+        7: at the external radius
+        7: at the pitch radius (outside the toothed part)
+        8: at the end of the base (not the toothed part)
+        9: at the end of the flange (V0 is no flange)
+       
     """
 
     def __init__ (self,
@@ -398,7 +423,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
                   pos = V0,
                   name = ''):
 
-        default_name = 'nemamotor_pulley_set'
+        default_name = 'nema' + str(nema_size) '_pulley_set'
         self.set_name (name, default_name, change=0)
 
         if (axis_w is None) or (axis_w == V0):
@@ -411,7 +436,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
         for i in args:
-            if not hasattr(self,i): # so we keep the attributes by CylHole
+            if not hasattr(self,i):
                 setattr(self, i, values[i])
 
         # pos_w = 0 and pos_d are at the center, pos_h
@@ -486,22 +511,22 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         self.d_o[2] = nema_motor.d_o[2]
         self.d_o[3] = nema_motor.d_o[3]
         self.d_o[4] = nema_motor.d_o[4]
-        self.d_o[5] = gt_pulley.d_o[1]
-        self.d_o[6] = gt_pulley.d_o[2]
-        self.d_o[7] = gt_pulley.d_o[3]
-        self.d_o[8] = gt_pulley.d_o[4]
-        self.d_o[9] = gt_pulley.d_o[5]
+        self.d_o[5] = gt_pulley.d_o[2]
+        self.d_o[6] = gt_pulley.d_o[3]
+        self.d_o[7] = gt_pulley.d_o[4]
+        self.d_o[8] = gt_pulley.d_o[5]
+        self.d_o[9] = gt_pulley.d_o[6]
 
         self.w_o[0] = nema_motor.w_o[0] # V0
         self.w_o[1] = nema_motor.w_o[1]
         self.w_o[2] = nema_motor.w_o[2]
         self.w_o[3] = nema_motor.w_o[3]
         self.w_o[4] = nema_motor.w_o[4]
-        self.w_o[5] = gt_pulley.w_o[1]
-        self.w_o[6] = gt_pulley.w_o[2]
-        self.w_o[7] = gt_pulley.w_o[3]
-        self.w_o[8] = gt_pulley.w_o[4]
-        self.w_o[9] = gt_pulley.w_o[5]
+        self.w_o[5] = gt_pulley.w_o[2]
+        self.w_o[6] = gt_pulley.w_o[3]
+        self.w_o[7] = gt_pulley.w_o[4]
+        self.w_o[8] = gt_pulley.w_o[5]
+        self.w_o[9] = gt_pulley.w_o[6]
 
         self.h_o[0] = nema_motor.h_o[0]
         self.h_o[1] = nema_motor.h_o[1] # V0
@@ -563,3 +588,267 @@ motor_pulley = NemaMotorPulleySet(pulley_pos_h = 10,
                                   pos = V0,
                                   )
 
+
+
+class NemaMotorPulleyHolderSet (fc_clss.PartsSet):
+    """ Set composed of a Nema Motor with a pulley and the holder of the motor
+
+    Number positions of the pulley will be after the positions of the motor
+
+
+            axis_h
+                :
+                :
+         _______:_______ .....13 <-> 5
+        |______:_:______|.....12 <-> 4
+            |  : :  |
+            |  : :  |........11 <-> 3
+            |  : :  |
+         ___|__:_:__|___ .....10 <-> 2
+        |______:_:______|.....  <-> 1 (not used)
+         |     : :     | 
+         |     : :     | 
+         |     : :     | 
+         |_____:o:_____|......9 <-> 0 (for the pulley)
+         :      :   :
+         :      :   :
+                0...567.......axis_d, axis_w (pos_d for motor_pulley)
+                    |
+                    234   (correspondence with the pulley)
+                    2: inner radius
+                    3: external radius
+                    4: pitch radius
+                    5, 6: base and flange not defined here
+
+              axis_h
+                  :
+                  :
+                  8 ............................
+                 | |                           :
+                 | |                           + shaft_l
+              ___|7|___.............           :
+        _____|____3____|_____......:..circle_h.: (same as 3 in the holder)
+       | ::               :: |     :  
+       |                     |     :
+       |                     |     :
+       |                     |     + base_l
+       |                     |     :
+       |                     |     :
+       |                     |     :
+       |__________6__________|.....:
+                 : :               :
+                 : :               :
+                 : :               :+ rear_shaft_l (optional)
+                 : :               :
+                 :5...............:...........axis_d (same as axis_w)
+
+
+
+                axis_w
+                  :
+                  :
+        __________:__________.....
+       /                     \....: chmf_r
+       |  O               O  |
+       |          _          |
+       |        .   .        |
+       |      (  ( )  )      |........axis_d
+       |        .   .        |
+       |          -          |
+       |  O               O  |
+       \_____________________/
+       :                     :
+       :.....................:
+                  +
+               motor_w (same as d): Nema size in inches /10
+
+
+              axis_d
+                 :
+         ________5_________  9: belt pitch radius
+        ||                || 8: belt outer radius
+        || O     4_     O || 7: belt inner radius
+        ||    /      \    || 6: shaft_radius
+        ||   |   3    |   ||
+        ||    \      /    || 10: shaft radius 
+        || O     2_     O || 11: belt inner radius, 12:belt outer r; 13: pitch r
+        ||_______1________|| .....
+        ||_______o____::__|| ..... wall_thick.....> axis_w
+                 0    1 2  3 (axis_w)
+                  4567
+                  ||||
+                  |||7: belt pitch radius
+                  |||
+                  ||6 : belt outer radius
+                  ||
+                  |5  : belt inner radius
+                  |
+                  4: shaft radius
+                  (along axis_w is symmetrical: negative number will get
+                   the other side)
+
+
+               axis_h (for the holder is pointing to the opposite direction)
+                 :
+                 :
+                 :
+         ________4_________ ....................................> axis_w
+        |  ::  :    :  ::  |                                  :
+        |__::__:_3__:__::__|....................              :
+        ||                ||....+ motor_min_h  :              :
+        ||  ||   2    ||  ||                   :              +tot_h
+        ||  ||        ||  ||                   + motor_max_h  :
+        ||  ||        ||  ||                   :              :
+        ||  ||   1    ||  ||...................:              :
+        ||_______0________||..................................:
+        :   :          :   :
+        :   :          :   :
+        :   :          :   :
+        :   :          :   :
+        :   :..........:   :
+        :   bolt_wall_sep  :
+        :                  :
+        :                  :
+        :.....tot_w........:
+
+    """
+
+
+   def __init__ (self,
+                  # motor parameters
+                  nema_size = 17,
+                  motor_base_l = 32.,
+                  motor_shaft_l = 24.,
+                  motor_shaft_r = 0,
+                  motor_circle_r = 11.,
+                  motor_circle_h = 2.,
+                  motor_chmf_r = 1, 
+                  motor_rear_shaft_l=0,
+                  motor_bolt_depth = 3.,
+                  # pulley parameters
+                  pulley_pitch = 2.,
+                  pulley_n_teeth = 20,
+                  pulley_toothed_h = 7.5,
+                  pulley_top_flange_h = 1.,
+                  pulley_bot_flange_h = 0,
+                  pulley_tot_h = 16.,
+                  pulley_flange_d = 15.,
+                  pulley_base_d = 15.,
+                  pulley_tol = 0,
+                  pulley_pos_h = -1,
+                  # holder parameters
+                  hold_wall_thick = 4.,
+                  hold_motorside_thick = 4.,
+                  hold_reinf_thick = 4.,
+                  hold_rail_min_h =10.,
+                  hold_rail_max_h =20.,
+                  hold_rail = 1, # if there is a rail or not at the profile side
+                  hold_motor_xtr_space = 2., # counting on one side
+                  hold_bolt_wall_d = 4., # Metric of the wall bolts
+                  hold_bolt_wall_sep = 0, # optional
+                  hold_chmf_r = 1.,
+                  # general parameters
+                  axis_d = VX,
+                  axis_w = None,
+                  axis_h = VZ,
+                  pos_d = 0,
+                  pos_w = 0,
+                  pos_h = 1,
+                  pos = V0,
+                  name = ''):
+
+
+        default_name = 'nema' + str(nema_size) '_pulley_set'
+        self.set_name (name, default_name, change=0)
+
+        if (axis_w is None) or (axis_w == V0):
+            axis_w = axis_h.cross(axis_d)
+
+        fc_clss.PartsSet.__init__(self, axis_d = axis_d,
+                                  axis_w = axis_w, axis_h = axis_h)
+
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        # pos_w = 0 is at the center
+        self.d0_cen = 1 #symmetric
+        self.w0_cen = 0
+        self.h0_cen = 0
+
+        # creation of the motor with pulley
+        nema_motor_pulley = NemaMotorPulleySet (
+                  # motor parameters
+                  nema_size = nema_size,
+                  base_l = motor_base_l,
+                  shaft_l = motor_shaft_l,
+                  shaft_r = motor_shaft_r,
+                  circle_r = motor_circle_r,
+                  circle_h = motor_circle_h,
+                  chmf_r = motor_chmf_r, 
+                  rear_shaft_l = motor_rear_shaft_l,
+                  bolt_depth = motor_bolt_depth,
+                  # pulley parameters
+                  pulley_pitch = pulley_pitch,
+                  pulley_n_teeth = pulley_n_teeth,
+                  pulley_toothed_h = pulley_toothed_h,
+                  pulley_top_flange_h = pulley_top_flange_h,
+                  pulley_bot_flange_h = pulley_bot_flange_h,
+                  pulley_tot_h = pulley_tot_h,
+                  pulley_flange_d = pulley_flange_d,
+                  pulley_base_d = pulley_base_d,
+                  pulley_tol = pulley_tol,
+                  pulley_pos_h = pulley_pos_h,
+                  # general parameters
+                  axis_d = axis_d,
+                  axis_w = axis_w,
+                  axis_h = axis_h,
+                  pos_d = 0,
+                  pos_w = 0,
+                  pos_h = 3, # at the point of union with the holder
+                  pos = pos)
+
+        self.append_part(nema_motor_pulley)
+        nema_motor_pulley.parent = self
+
+        nema_holder = parts.PartNemaMotorHolder(
+                  nema_size = nema_size,
+                  wall_thick = hold_wall_thick,
+                  motorside_thick = hold_motorside_thick,
+                  reinf_thick = hold_reinf_thick,
+                  motor_min_h = hold_rail_min_h,
+                  motor_max_h = hold_rail_max_h,
+                  rail = hold_rail, 
+                  motor_xtr_space = hold_motor_xtr_space,
+                  bolt_wall_d = hold_bolt_wall_d,
+                  bolt_wall_sep = hold_bolt_wall_sep,
+                  chmf_r = hold_chmf_r,
+                  axis_h = axis_h.negative(), #pointing down
+                  axis_d = axis_d,
+                  axis_w = axis_w,
+                  pos_h = 1, # at the point of union with the motor
+                  pos_d = 0,
+                  pos_w = 0,
+                  pos = pos)
+
+        self.append_part(nema_holder)
+        nema_holder.parent = self
+
+        self.d_o[0] = nema_holder.d_o[0] # end that is attatched to the profile
+        self.d_o[1] = nema_holder.d_o[1] # inside the wall that is attached
+        self.d_o[2] = nema_holder.d_o[2] # bolt holes closed to the wall
+        self.d_o[3] = nema_holder.d_o[3] # at the motor axis
+        self.d_o[4] = nema_holder.d_o[4] # bolt holes away from the wall
+        self.d_o[5] = nema_holder.d_o[5] # the other end, opposite to the wall
+        # not sure which order to take
+        # taking first away from the wall
+        #             axis -v                 belt inner radius
+        self.d_o[6] = nema_holder.d_o[3] + nema_motor_pulley.d_o[5]
+        #             axis -v                 belt external radius
+        self.d_o[7] = nema_holder.d_o[3] + nema_motor_pulley.d_o[6]
+        #             axis -v                 belt pitch radius
+        self.d_o[8] = nema_holder.d_o[3] + nema_motor_pulley.d_o[7]
