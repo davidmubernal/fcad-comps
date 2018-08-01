@@ -441,7 +441,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
                   pos = V0,
                   name = ''):
 
-        default_name = 'nema' + str(nema_size) '_pulley_set'
+        default_name = 'nema' + str(nema_size) + '_pulley_set'
         self.set_name (name, default_name, change=0)
 
         if (axis_w is None) or (axis_w == V0):
@@ -549,17 +549,19 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         self.h_o[0] = nema_motor.h_o[0] # V0 (origin) base of the shaft
         self.h_o[1] = nema_motor.h_o[1] # end of the circle
         self.h_o[2] = nema_motor.h_o[2] # end of the shaft
-        self.h_o[3] = nema_motor.h_o[3] # end of the bolt holes
+        self.h_o[3] = nema_motor.h_o[3] # bottom end of the bolt holes
         self.h_o[4] = nema_motor.h_o[4] # bottom of the base 
         self.h_o[5] = nema_motor.h_o[5] # rear shaft
         # position of the base of the shaft (including the circle)
-        # + nema_motor.h_o[0] = V0
+        # + nema_motor.h_o[0] = V0 (not needed)
         # relative position of the base of the pulley: V0 (not needed)
         # + gt_pulley.h_o[0] = V0 -> base of the pulley
         # distance from the base of the shaft (circle included) to the base
-        # of the pulley
-        # + self.vec_h(self.pulley_pos_h): dis
-        self.h_o[6]  = nema_motor.h_o[0] + self.vec_h(self.pulley_pos_h)
+        # of the pulley:
+        # + self.vec_h(self.pulley_pos_h):
+        #self.h_o[6]  = (   nema_motor.h_o[0] + gt_pulley.h_o[0]
+        #                 + self.vec_h(self.pulley_pos_h))
+        self.h_o[6]  = self.vec_h(self.pulley_pos_h)
         self.h_o[7]  = self.h_o[6] + gt_pulley.h_o[1]
         self.h_o[8]  = self.h_o[6] + gt_pulley.h_o[2]
         self.h_o[9]  = self.h_o[6] + gt_pulley.h_o[3]
@@ -732,7 +734,7 @@ class NemaMotorPulleyHolderSet (fc_clss.PartsSet):
     """
 
 
-   def __init__ (self,
+    def __init__ (self,
                   # motor parameters
                   nema_size = 17,
                   motor_base_l = 32.,
@@ -776,7 +778,7 @@ class NemaMotorPulleyHolderSet (fc_clss.PartsSet):
                   name = ''):
 
 
-        default_name = 'nema' + str(nema_size) '_pulley_set'
+        default_name = 'nema_' + str(nema_size) + 'holer_motor_pulley_set'
         self.set_name (name, default_name, change=0)
 
         if (axis_w is None) or (axis_w == V0):
