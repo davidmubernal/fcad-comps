@@ -316,24 +316,24 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
               axis_h
                   :
                   :
-                  5 ............................
+                  2 ............................
                  | |                           :
                  | |                           + shaft_l
-              ___|4|___.............           :
-        _____|____3____|_____......:..circle_h.:
-       | ::       2       :: |     :  
+              ___|1|___.............           :
+        _____|____0____|_____......:..circle_h.:
+       | ::       3       :: |     :  
        |                     |     :
        |                     |     :
        |                     |     + base_l
        |                     |     :
        |                     |     :
        |                     |     :
-       |__________1__________|.....:
+       |__________4__________|.....:
                  : :               :
                  : :               :
                  : :               :+ rear_shaft_l (optional)
-                 : :               :
-                 :01...2..3..4.....:...........axis_d (same as axis_w)
+                 :5:               :
+                  01...2..3..4.....:...........axis_d (same as axis_w)
                    |   |  |  |
                    |   |  |  v
                    |   |  | end of the motor
@@ -388,6 +388,24 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         7: at the pitch radius (outside the toothed part)
         8: at the end of the base (not the toothed part)
         9: at the end of the flange (V0 is no flange)
+
+    pos_h : int
+        location of pos along the axis_h, see drawing
+        0: at the base of the shaft (not including the circle at the base
+           of the shaft)
+        1: at the end of the circle at the base of the shaft
+        2: at the end of the shaft
+        3: at the end of the bolt holes
+        4: at the bottom base
+        5: at the end of the rear shaft, if no rear shaft, it will be
+           the same as pos_h = 4
+        6: at the base of the pulley
+        7: at the base of the bottom flange of the pulley
+        8: at the base of the toothed part of the pulley
+        9: at the center of the toothed part of the pulley
+        10: at the end (top) of the toothed part of the pulley
+        11: at the end (top) of the pulley of the pulley
+
        
     """
 
@@ -464,7 +482,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
                               axis_h = self.axis_h,
                               pos_d = 0,
                               pos_w = 0,
-                              pos_h = 1,
+                              pos_h = 0,
                               pos = pos)
 
         self.append_part(nema_motor)
@@ -528,20 +546,20 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         self.w_o[8] = gt_pulley.w_o[5]
         self.w_o[9] = gt_pulley.w_o[6]
 
-        self.h_o[0] = nema_motor.h_o[0]
-        self.h_o[1] = nema_motor.h_o[1] # V0
-        self.h_o[2] = nema_motor.h_o[2] # bottom of the bolt holes
-        self.h_o[3] = nema_motor.h_o[3] # base of the circle
-        self.h_o[4] = nema_motor.h_o[4] # base of the shaft
-        self.h_o[5] = nema_motor.h_o[5]
+        self.h_o[0] = nema_motor.h_o[0] # V0 (origin) base of the shaft
+        self.h_o[1] = nema_motor.h_o[1] # end of the circle
+        self.h_o[2] = nema_motor.h_o[2] # end of the shaft
+        self.h_o[3] = nema_motor.h_o[3] # end of the bolt holes
+        self.h_o[4] = nema_motor.h_o[4] # bottom of the base 
+        self.h_o[5] = nema_motor.h_o[5] # rear shaft
         # position of the base of the shaft (including the circle)
-        # + nema_motor.h_o[4]
+        # + nema_motor.h_o[0] = V0
         # relative position of the base of the pulley: V0 (not needed)
         # + gt_pulley.h_o[0] = V0 -> base of the pulley
         # distance from the base of the shaft (circle included) to the base
         # of the pulley
         # + self.vec_h(self.pulley_pos_h): dis
-        self.h_o[6]  = nema_motor.h_o[4] + self.vec_h(self.pulley_pos_h)
+        self.h_o[6]  = nema_motor.h_o[0] + self.vec_h(self.pulley_pos_h)
         self.h_o[7]  = self.h_o[6] + gt_pulley.h_o[1]
         self.h_o[8]  = self.h_o[6] + gt_pulley.h_o[2]
         self.h_o[9]  = self.h_o[6] + gt_pulley.h_o[3]
@@ -692,15 +710,15 @@ class NemaMotorPulleyHolderSet (fc_clss.PartsSet):
                  :
                  :
                  :
-         ________4_________ ....................................> axis_w
+         ________0_________ ....................................> axis_w
         |  ::  :    :  ::  |                                  :
-        |__::__:_3__:__::__|....................              :
+        |__::__:_1__:__::__|....................              :
         ||                ||....+ motor_min_h  :              :
         ||  ||   2    ||  ||                   :              +tot_h
         ||  ||        ||  ||                   + motor_max_h  :
         ||  ||        ||  ||                   :              :
-        ||  ||   1    ||  ||...................:              :
-        ||_______0________||..................................:
+        ||  ||   3    ||  ||...................:              :
+        ||_______4________||..................................:
         :   :          :   :
         :   :          :   :
         :   :          :   :
@@ -846,9 +864,38 @@ class NemaMotorPulleyHolderSet (fc_clss.PartsSet):
         self.d_o[5] = nema_holder.d_o[5] # the other end, opposite to the wall
         # not sure which order to take
         # taking first away from the wall
+        #             axis -v                 shaft radius
+        self.d_o[6] = nema_holder.d_o[3] + nema_motor_pulley.d_o[1]
         #             axis -v                 belt inner radius
-        self.d_o[6] = nema_holder.d_o[3] + nema_motor_pulley.d_o[5]
+        self.d_o[7] = nema_holder.d_o[3] + nema_motor_pulley.d_o[5]
         #             axis -v                 belt external radius
-        self.d_o[7] = nema_holder.d_o[3] + nema_motor_pulley.d_o[6]
+        self.d_o[8] = nema_holder.d_o[3] + nema_motor_pulley.d_o[6]
         #             axis -v                 belt pitch radius
-        self.d_o[8] = nema_holder.d_o[3] + nema_motor_pulley.d_o[7]
+        self.d_o[9] = nema_holder.d_o[3] + nema_motor_pulley.d_o[7]
+
+        # then, taking those closer to the the wall
+        #             axis -v                 shaft radius
+        self.d_o[10] = nema_holder.d_o[3] + nema_motor_pulley.d_o[-1]
+        #             axis -v                 belt inner radius
+        self.d_o[11] = nema_holder.d_o[3] + nema_motor_pulley.d_o[-5]
+        #             axis -v                 belt external radius
+        self.d_o[12] = nema_holder.d_o[3] + nema_motor_pulley.d_o[-6]
+        #             axis -v                 belt pitch radius
+        self.d_o[13] = nema_holder.d_o[3] + nema_motor_pulley.d_o[-7]
+
+        # symmetric
+        self.w_o[0] = nema_holder.w_o[0] # motor axis
+        self.w_o[1] = nema_holder.w_o[1] # rail (or wall bolt holes)
+        self.w_o[2] = nema_holder.w_o[2] # bolt holes for the motor
+        self.w_o[3] = nema_holder.w_o[3] # end of the piece
+        self.w_o[4] = nema_motor_pulley.w_o[4] # shaft radius
+        self.w_o[5] = nema_motor_pulley.w_o[5] # belt inner radius
+        self.w_o[6] = nema_motor_pulley.w_o[6] # belt outer radius
+        self.w_o[7] = nema_motor_pulley.w_o[7] # belt pitch radius
+
+        self.h_o[0] = nema_holder.h_o[0] # 
+        self.h_o[1] = nema_holder.h_o[1] # rail (or wall bolt holes)
+        self.h_o[2] = nema_holder.h_o[2] # bolt holes for the motor
+
+        
+

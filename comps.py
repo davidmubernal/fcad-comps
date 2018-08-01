@@ -1643,25 +1643,25 @@ class ShpNemaMotor (shp_clss.Obj3D):
                axis_h
                   :
                   :
-                  5 ............................
+                  2 ............................
                  | |                           :
                  | |                           + shaft_l
-              ___|4|___.............           :
-        _____|____3____|_____......:..circle_h.:
-       | ::       2       :: |     : .. h=2 bolt_depth
+              ___|1|___.............           :
+        _____|____0____|_____......:..circle_h.:
+       | ::       3       :: |     : .. h=3 bolt_depth
        |                     |     :
        |                     |     :
        |                     |     + base_l
        |                     |     :
        |                     |     :
        |                     |     :
-       |__________1__________|.....:
+       |__________4__________|.....:
                  : :               :
                  : :               :
                  : :               :+ rear_shaft_l (optional)
                  : :               :
                  :01...2..3..4.....:...........axis_d (same as axis_w)
-
+           axis_h:5 
 
 
                 axis_w
@@ -1683,7 +1683,7 @@ class ShpNemaMotor (shp_clss.Obj3D):
                motor_w (same as d): Nema size in inches /10
 
 
-    pos_o (origin) is at pos_h=1, pos_d=pos_w=0
+    pos_o (origin) is at pos_h=0, pos_d=pos_w=0
 
     Parameters:
     -----------
@@ -1733,14 +1733,14 @@ class ShpNemaMotor (shp_clss.Obj3D):
         same as pos_d
     pos_h : int
         location of pos along the axis_h (0,1,2,3,4,5), see drawing
-        0: at the end of the rear shaft, if no rear shaft, it will be
-           the same as pos_h = 1
-        1: at the end of the bolt holes
-        2: at the base
-        3: at the other end of the base (not including the circle at the base
+        0: at the base of the shaft (not including the circle at the base
            of the shaft)
-        4: at the end of the circle at the base of the shaft
-        5: at the end of the shaft
+        1: at the end of the circle at the base of the shaft
+        2: at the end of the shaft
+        3: at the end of the bolt holes
+        4: at the bottom base
+        5: at the end of the rear shaft, if no rear shaft, it will be
+           the same as pos_h = 4
     pos : FreeCAD.Vector
         Position of the motor, at the point defined by pos_d, pos_w, pos_h
 
@@ -1806,12 +1806,12 @@ class ShpNemaMotor (shp_clss.Obj3D):
         self.w0_cen = 1 # symmetrical
 
         # vectors from the origin to the points along axis_h:
-        self.h_o[0] = self.vec_h(-self.rear_shaft_l)
-        self.h_o[1] = V0
-        self.h_o[2] = self.vec_h(self.base_l-bolt_depth)
-        self.h_o[3] = self.vec_h(self.base_l)
-        self.h_o[4] = self.vec_h(self.base_l + self.circle_h)
-        self.h_o[5] = self.vec_h(self.base_l + self.shaft_l)
+        self.h_o[0] = V0 # base of the shaft: origin
+        self.h_o[1] = self.vec_h(self.circle_h)
+        self.h_o[2] = self.vec_h(self.shaft_l) #includes circle_h
+        self.h_o[3] = self.vec_h(-bolt_depth)
+        self.h_o[4] = self.vec_h(-self.base_l)
+        self.h_o[5] = self.vec_h(-self.base_l -self.rear_shaft_l)
 
         # vectors from the origin to the points along axis_d:
         # these are negative because actually the pos_d indicates a negative
@@ -1845,7 +1845,7 @@ class ShpNemaMotor (shp_clss.Obj3D):
                                      fc_axis_d = self.axis_d,
                                      fc_axis_h = self.axis_h,
                                      cw = 1, cd = 1, ch = 0,
-                                     pos = self.pos_o)
+                                     pos = self.get_pos_h(4))
 
         shp_base = fcfun.shp_filletchamfer_dir (shp_base, self.axis_h,
                                                 fillet = 0, radius = chmf_r)
@@ -1858,8 +1858,8 @@ class ShpNemaMotor (shp_clss.Obj3D):
         for pt_d in (-3,3):
             for pt_w in (-3,3):
                 if cut_extra == 0: # there will be holes for the bolts
-                    # pos_h=2 is at the end of the hole for the bolts
-                    bolt_pos = self.get_pos_dwh(pt_d,pt_w,2)
+                    # pos_h=3 is at the end of the hole for the bolts
+                    bolt_pos = self.get_pos_dwh(pt_d,pt_w,3)
                     shp_hole = fcfun.shp_cylcenxtr (r = self.nemabolt_r,
                                                     h = bolt_depth,
                                                     normal = self.axis_h,
@@ -1869,8 +1869,8 @@ class ShpNemaMotor (shp_clss.Obj3D):
                                                     pos = bolt_pos)
                     holes_list.append(shp_hole)
                 else: # the bolts will protude to make holes in the shape to cut
-                    # pos_h=3 is at the end of the base
-                    bolt_pos = self.get_pos_dwh(pt_d,pt_w,3)
+                    # pos_h=0 is at the the base of the shaft
+                    bolt_pos = self.get_pos_dwh(pt_d,pt_w,0)
                     shp_hole = fcfun.shp_cylcenxtr (r = self.nemabolt_r,
                                                     h = bolt_out,
                                                     normal = self.axis_h,
@@ -1896,7 +1896,7 @@ class ShpNemaMotor (shp_clss.Obj3D):
                                              ch = 0, # not centered
                                              xtr_top = 0, # no extra at top
                                              xtr_bot = 1, # extra to fuse
-                                             pos = self.get_pos_h(3))
+                                             pos = self.pos_o)
             fuse_list.append(shp_circle)
 
         # ------- Shaft
@@ -1908,7 +1908,7 @@ class ShpNemaMotor (shp_clss.Obj3D):
                                         xtr_bot = 1, # extra to fuse
                                         # shaft length stats from the base
                                         # not from the circle
-                                        pos = self.get_pos_h(3))
+                                        pos = self.pos_o)
         fuse_list.append(shp_shaft)
 
         if rear_shaft_l > 0:
@@ -1918,7 +1918,7 @@ class ShpNemaMotor (shp_clss.Obj3D):
                                         ch = 0, # not centered
                                         xtr_top = 1, # to fuse
                                         xtr_bot = 0, # no extra at bottom
-                                        pos = self.get_pos_h(0))
+                                        pos = self.get_pos_h(5))
 
             fuse_list.append(shp_rearshaft)
         
@@ -1958,7 +1958,7 @@ class PartNemaMotor (fc_clss.SinglePart, ShpNemaMotor):
                   axis_h = VZ,
                   pos_d = 0,
                   pos_w = 0,
-                  pos_h = 1,
+                  pos_h = 0,
                   pos = V0,
                   name = ''):
 
