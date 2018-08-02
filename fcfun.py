@@ -1052,6 +1052,110 @@ def shp_face_lgrail (rail_w, rail_h, axis_l = 'x', axis_b = '-z'):
     return (shp_face_rail)
 
 
+def shp_lgrail_wire_dir (rail_w,  rail_h,
+                         axis_w = VX,  axis_h = VY,
+                         pos_w = 0,   pos_h = 0,
+                         pos = V0):
+    """
+    creates a wire of a linear guide rail, the dent is just
+    rough, to be able to see that it is a profile
+
+    Parameters:
+    -----------
+    rail_w : float
+        width of the rail
+    rail_h : float
+        height of the rail
+    axis_w : FreeCAD.Vector
+        the axis where the width of the rail is
+    axis_h : FreeCAD.Vector
+        the axis where the height of the rail is
+    pos_w : int
+        location of pos along axis_w
+        0 : center of symmetry
+        1 : end of the rail
+    pos_h : int
+        location of pos along axis_h
+        0 : bottom
+        1 : middle point (this is kind of non-sense)
+        2 : top point
+    pos: FreeCAD.Vector
+        Position, at the point defined by pos_w and pos_h
+
+                      axis_h
+                        :
+             ne ________2________ e
+               |                 |
+             nd|                 | d
+                \nc           c /   A little dent to see that it is a rail
+             nb /       1       \ b
+               |                 |
+               |                 |
+               |                 |
+             na|________o________|a ...... axis_w
+                        0        1
+
+
+                               rail_h/8
+                        :      : :
+             ne ________2______:_:....
+               |                 |   :+ rail_h/4
+             nd|                 |.................
+                \nc           c / ....  rail_h/8   + rail_h/4
+             nb /       1       \ ....  rail_h/8...:
+               |                 |    :
+               |                 |    + rail_h/2
+               |                 |    :
+             na|________o________|a ..:............ axis_w
+                        0        1
+
+
+
+    pos_o (origin) is at pos_w = 0, pos_h = 0
+
+    """
+
+    # normalize the axis
+    axis_w = DraftVecUtils.scaleTo(axis_w,1)
+    axis_h = DraftVecUtils.scaleTo(axis_h,1)
+
+    # distances from the origin (pos_o) to pos_h along axis_h
+    h_o = {}
+    h_o[0] = V0
+    h_o[1] = DraftVecUtils.scale(axis_h,rail_h/2.)
+    h_o[2] = DraftVecUtils.scale(axis_h,rail_h)
+
+    # distances from the origin (pos_o) to pos_w along axis_w
+    # this is symmetric
+    w_o = {}
+    w_o[0] = V0
+    w_o[1] = DraftVecUtils.scale(axis_w,rail_w/2.)
+    # usually not necessary, just change the direction of axis_w:
+    w_o[-1] = DraftVecUtils.scale(axis_w,-rail_w/2.) #not necessary, just change
+
+    # origin reference position:
+    pos_o = pos + h_o[pos_h].negative() + w_o[pos_w].negative()
+
+    pt_a  = pos_o  + w_o[1]
+    pt_na = pos_o  + w_o[-1]
+    pt_b  = pt_a   + h_o[1]
+    pt_nb = pt_na  + h_o[1]
+    pt_c  = (pt_b  + DraftVecUtils.scale(axis_h,  rail_h/8.)
+                   + DraftVecUtils.scale(axis_w, -rail_h/8.))
+    pt_nc = (pt_nb + DraftVecUtils.scale(axis_h,  rail_h/8.)
+                   + DraftVecUtils.scale(axis_w,  rail_h/8.))
+    pt_d  = pt_b   + DraftVecUtils.scale(axis_h,  rail_h/4.)
+    pt_nd = pt_nb  + DraftVecUtils.scale(axis_h,  rail_h/4.)
+    pt_e  =  pt_a  + h_o[2]
+    pt_ne =  pt_na + h_o[2]
+
+    shp_wire_rail = Part.makePolygon([pt_a, pt_b, pt_c, pt_d, pt_e,
+                                      pt_ne, pt_nd, pt_nc, pt_nb, pt_na,
+                                      pt_a])
+
+    return shp_wire_rail
+    
+
 # ------------------------ def shp_face_rail 
 # adds a shape of the profile (face) of a rail
 # Arguments:
