@@ -2954,6 +2954,261 @@ def f_linguiderail_bh (rail_l, d_rail, axis_l, axis_b, boltend_sep = 0,
 #                         bolthole_nuth = 2 * kcomp.M3_NUT_L,
 #                         name = 'linguiderail' )
 
+
+
+
+
+
+
+
+
+
+# ---------------------- ShpLinGuideRail -------------------------------
+
+class ShpLinGuideRail (shp_clss.Obj3D):
+    """ Creates a shape of a linear guide rail
+    The linear guide rail has a dent, but it is just to show the shape, 
+    the dimensions are not exact
+
+                      axis_h
+                        :
+                        :
+                        :
+                        :bolth_d
+                    ....:.+...
+                   :    :    :
+                ___:____3____:___...................
+               |   :         :   |    :bolth_h     :
+               |   :....2....:   |....:            :
+                \     :   :     /   A little dent to see that it is a rail
+                /     : 1 :     \ .....            :
+               |      :   :      |     :           :+ rail_h
+               |      :   :      |     + rail_h/2. :
+               |      :   :      |     :           :
+               |______:_o_:______|.....:...........:...... axis_w
+               :      : 0 : 1    2
+               :      :   :      :
+               :      :...:      :
+               :      bolt_d     :
+               :                 :
+               :.................:
+                        +
+                     rail_w
+
+
+                     bolt_wsep: if 0, only one hole (common)
+                     ...+...
+                    :       :
+               _________o_________.....................
+               |:               :|    :                :
+               |:               :|    :+ boltend_sep   :
+               |:  ( )  1  ( )  :|----                 :
+               |:               :|    :                :
+               |:               :|    :+ bolt_lsep     :
+               |:               :|    :                :
+               |:               :|    :                :+ rail_d
+               |:      ( )      :|----                 :
+               |:       2       :|     only one bolt (either case, not like this
+               |:               :|                     :
+               |:               :|                     :
+               |:               :|                     :
+               |:      (3)      :|                     :
+               |:               :|                     :
+               |:               :|                     :
+               |:_______4_______:|.....................:...axis_w
+                        :
+                        :
+                        :
+                        :
+                        v
+                      axis_d
+
+
+    Parameters:
+    -----------
+    rail_d : float
+        length (depth) of the rail
+    rail_w : float
+        width of the rail
+    rail_h : float
+        height of the rail
+    bolt_lsep : float
+        separation between bolts on the depth (length) dimension
+    bolt_wsep : float
+        separation between bolts on the width dimension,
+        0: there is only one bolt
+    bolt_d : float
+        diameter of the hole for the bolt
+    bolth_d : float
+        diameter of the hole for the head of the bolt
+    bolth_h : float
+        heigth of the hole for the head of the bolt
+    boltend_sep : float
+        separation on one end, from the bolt to the end
+        0: evenly distributed
+    axis_d : FreeCAD.Vector
+        the axis along the depth (lenght) of the rail 
+    axis_w : FreeCAD.Vector
+        the axis along the width of the rail
+    axis_h : FreeCAD.Vector
+        the axis along the height of the rail, pointing up
+    pos_d : int
+        location of pos along axis_d (see drawing)
+        0: at the beginning of the rail
+        1: at the first bolt hole
+        2: at the middle of the rail (not necessary at a bolt hole)
+        3: at the last bolt hole
+        4: at the end of the rail
+    pos_w : int
+        location of pos along axis_w (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center of symmetry
+        1: at the bolt holes (only make sense if there are 2 bolt holes)
+           otherwise it will be like pos_w = 0
+        2: at the end of the rail along axis_w
+    pos_h : int
+        location of pos along axis_h (see drawing)
+        0: at the bottom
+        1: at the middle (it is not a specific place)
+        1: at the bolt head
+        3: at the top end
+    pos : FreeCAD.Vector
+        Position at the point defined by pos_d, pos_w, pos_h
+
+
+    """
+
+    def __init__ (self, rail_d, rail_w, rail_h,
+                  bolt_lsep, bolt_wsep, bolt_d,
+                  bolth_d, bolth_h, boltend_sep = 0,
+                  axis_d = VX, axis_w = V0, axis_h = VZ,
+                  pos_d = 0, pos_w = 0, pos_h = 0,
+                  pos = V0):
+
+
+        if (axis_w is None) or (axis_w == V0):
+            axis_w = axis_h.cross(axis_d)
+
+        shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        self.d0_cen = 0
+        self.w0_cen = 1 # symmetric
+        self.h0_cen = 0
+
+        # calculation of the number of bolt holes along axis_d
+        if boltend_sep != 0:
+            nbolt_l = (rail_d - boltend_sep) // bolt_lsep #integer division
+            rail_rem = rail_d - boltend_sep - nbolt_l * bolt_lsep 
+            if rail_rem > bolth_d:
+                # one bolt more
+                nbolt_l = nbolt_l + 1
+            self.boltend_sep = boltend_sep
+        else: # leave even distance
+            # number of bolt lines, on the depth (length) axis
+            nbolt_l = rail_d // bolt_lsep # integer division
+            #dont use % in case is not int
+            rail_rem = rail_d - nbolt_l * bolt_lsep 
+            if rail_rem > 2* bolth_d :
+                # one bolt more
+                nbolt_l = nbolt_l + 1
+                # separation between the bolt and the end
+                self.boltend_sep = rail_rem / 2.
+            else:
+                self.boltend_sep = (bolt_lsep + rail_rem) / 2.
+        self.nbolt_l = int(nbolt_l)
+
+        # vectors from the origin to the points along axis_d:
+        self.d_o[0] = V0 # origin
+        self.d_o[1] = self.vec_d(self.boltend_sep)
+        self.d_o[2] = self.vec_d(rail_d/2.)
+        self.d_o[3] = self.vec_d((self.nbolt_l-1)*bolt_lsep + self.boltend_sep)
+        self.d_o[4] = self.vec_d(rail_d)
+
+        # vectors from the origin to the points along axis_w:
+        self.w_o[0] = V0 # base: origin
+        self.w_o[1] = self.vec_w(bolt_wsep/2.) #if 0: same as w_o[0]
+        self.w_o[2] = self.vec_w(rail_w/2.)
+
+        # vectors from the origin to the points along axis_h:
+        self.h_o[0] = V0 # base: origin
+        self.h_o[1] = self.vec_h(rail_h/2.)
+        self.h_o[2] = self.vec_h(rail_h - bolth_h)
+        self.h_o[3] = self.vec_h(rail_h)
+
+
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        wire_rail = fcfun.wire_lgrail( rail_w = rail_w,
+                                       rail_h = rail_h,
+                                       axis_w = self.axis_w,
+                                       axis_h = self.axis_h,
+                                       pos_w = 0, pos_h = 0,
+                                       pos = self.pos_o)
+
+        # make a face of the wire 
+        shp_face_rail = Part.Face(wire_rail)
+        shp_plainrail = shp_face_rail.extrude(self.vec_d(rail_d))
+
+        holes_list = []
+        # bolt holes
+        bolthole_pos = self.get_pos_dwh(1,0,3)
+        for i in range (0,self.nbolt_l):
+            if bolt_wsep == 0: # just one bolt
+                shp_bolt = fcfun.shp_bolt_dir (r_shank = bolt_d/2.,
+                                           l_bolt = rail_h,
+                                           r_head = bolth_d/2.,
+                                           l_head = bolth_h,
+                                           xtr_head = 1, xtr_shank = 1,
+                                           support = 0,
+                                           fc_normal = self.axis_h.negative(),
+                                           pos_n = 0, pos = bolthole_pos)
+                holes_list.append(shp_bolt)
+            else:
+                for i in (-1,1):
+                    bolthole_pos_i = bolthole_pos + self.get_pos_w(i)
+                    shp_bolt = fcfun.shp_bolt_dir (r_shank = bolt_d/2.,
+                                           l_bolt = rail_h,
+                                           r_head = bolth_d/2.,
+                                           l_head = bolth_h,
+                                           xtr_head = 1, xtr_shank = 1,
+                                           support = 0,
+                                           fc_normal = self.axis_h.negative(),
+                                           pos_n = 0, pos = bolthole_pos_i)
+                    holes_list.append(shp_bolt)
+            bolthole_pos = bolthole_pos + self.vec_d(bolt_lsep)
+
+        shp_holes = fcfun.fuseshplist(holes_list)
+        shp_rail = shp_plainrail.cut(shp_holes)
+        shp_rail = shp_rail.removeSplitter()
+
+        self.shp = shp_rail
+        Part.show(shp_rail)
+        
+
+shp_lgrail = ShpLinGuideRail( rail_d = 79., rail_w=40., rail_h=20.,
+                  bolt_lsep=20., bolt_wsep=15, bolt_d=3.,
+                  bolth_d=5., bolth_h=2., boltend_sep = 10,
+                  axis_d = VX, axis_w = V0, axis_h = VZ,
+                  pos_d = 0, pos_w = 0, pos_h = 0,
+                  pos = V0)
+
+
+
+
+
+
+
+
+
+
 # ---------------------- LinGuideBlock -------------------------------
 # Creates the block of the linear guide
 # Arguments:

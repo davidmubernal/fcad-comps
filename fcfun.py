@@ -1052,10 +1052,10 @@ def shp_face_lgrail (rail_w, rail_h, axis_l = 'x', axis_b = '-z'):
     return (shp_face_rail)
 
 
-def shp_lgrail_wire_dir (rail_w,  rail_h,
-                         axis_w = VX,  axis_h = VY,
-                         pos_w = 0,   pos_h = 0,
-                         pos = V0):
+def wire_lgrail (rail_w,  rail_h,
+                 axis_w = VX,  axis_h = VY,
+                 pos_w = 0,   pos_h = 0,
+                 pos = V0):
     """
     creates a wire of a linear guide rail, the dent is just
     rough, to be able to see that it is a profile
@@ -1149,11 +1149,11 @@ def shp_lgrail_wire_dir (rail_w,  rail_h,
     pt_e  =  pt_a  + h_o[2]
     pt_ne =  pt_na + h_o[2]
 
-    shp_wire_rail = Part.makePolygon([pt_a, pt_b, pt_c, pt_d, pt_e,
+    wire_rail = Part.makePolygon([pt_a, pt_b, pt_c, pt_d, pt_e,
                                       pt_ne, pt_nd, pt_nc, pt_nb, pt_na,
                                       pt_a])
 
-    return shp_wire_rail
+    return wire_rail
     
 
 # ------------------------ def shp_face_rail 
