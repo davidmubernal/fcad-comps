@@ -1013,13 +1013,17 @@ ALU_PROF = {
 SEBWM16_R = { 'rw'     : 42., 'rh': 9.5,
               'boltlsep': 40., 'boltwsep' : 23.,
               'boltd'   : 4.5, 'bolthd'   : 8. , 'bolthh': 4.5,
-              'boltend_sep' : 15.   }
+              'boltend_sep' : 15.,
+              'name' : 'Misumi_SEBWM16'
+            }
 
 # ------------------ NB SEBS15A
 SEB15A_R = { 'rw'     : 15., 'rh': 9.5,
               'boltlsep': 40., 'boltwsep' : 0,
               'boltd'   : 3.5, 'bolthd'   : 6. , 'bolthh': 4.5,
-              'boltend_sep' : 15.   }
+              'boltend_sep' : 15.,
+              'name' : 'NB_SEB15A'
+           }
 
 # ------------------ Misumi SEB8
 SEB8_R = { 'rw': 7.,  # W1
@@ -1029,7 +1033,8 @@ SEB8_R = { 'rw': 7.,  # W1
            'boltd'    : 2.4, # d1
            'bolthd'   : 4.2, # d2
            'bolthh'   : 2.3, # h
-           'boltend_sep': 5. #G
+           'boltend_sep': 5., #G
+           'name' : 'Misumi_SEB8'
          }
 
 # ------------------ Misumi SEB10
@@ -1040,7 +1045,8 @@ SEB10_R = {'rw': 5.,  # W1
            'boltd'    : 3.5, # d1
            'bolthd'   : 6.0, # d2
            'bolthh'   : 3.5, # h
-           'boltend_sep': 7.5 #G
+           'boltend_sep': 7.5, #G
+           'name'     : 'Misumi_SEB10'
          }
 
 
@@ -1067,7 +1073,8 @@ SEBWM16_B = { 'bl'  : 55.,
               'boltlsep' : 20.,  # Bolt separation on the length dimension
               'boltwsep' : 65.,  # Bolt separation on the width dimension
               'boltd'  : 5.,  # Bolt diameter M5
-              'boltl'  : 0  # Thru-hole
+              'boltl'  : 0,  # Thru-hole
+              'name' : 'Misumi_SEBWM16'
             }
 
 # ------------------ NB SEBS15A
@@ -1080,7 +1087,8 @@ SEB15A_B = {  'bl'  : 42.,
               'boltlsep' : 20.,  # Bolt separation on the length dimension
               'boltwsep' : 25.,  # Bolt separation on the width dimension
               'boltd'  : 3.,  # Bolt diameter M3
-              'boltl'  : 4.  # 
+              'boltl'  : 4.,  # 
+              'name' : 'NB_SEB15A'
             }
 
 # ------------------ Misumi SEB8 
@@ -1093,7 +1101,8 @@ SEB8_B = { 'bl'  : 23.6,    # L1
            'boltlsep' : 8.,  # C: Bolt separation on the length dimension
            'boltwsep' : 12.,  # B: Bolt separation on the width dimension
            'boltd'  : 2.,  # S: Bolt diameter M2
-           'boltl'  : 2.5  # l 
+           'boltl'  : 2.5,  # l 
+           'name' : 'Misumi_SEB8'
             }
 
 # ------------------ Misumi SEB10 
@@ -1106,7 +1115,8 @@ SEB10_B = { 'bl'  : 30.,  # L1
             'boltlsep' : 10.,  # C: Bolt separation on the length dimension
             'boltwsep' : 15.,  # B: Bolt separation on the width dimension
             'boltd'  : 3.,  # S: Bolt diameter M2
-            'boltl'  : 3.   # l 
+            'boltl'  : 3.,   # l 
+            'name' : 'Misumi_SEB10'
             }
 
 

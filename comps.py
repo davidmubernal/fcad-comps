@@ -3075,7 +3075,6 @@ class ShpLinGuideRail (shp_clss.Obj3D):
     pos : FreeCAD.Vector
         Position at the point defined by pos_d, pos_w, pos_h
 
-
     """
 
     def __init__ (self, rail_d, rail_w, rail_h,
@@ -3193,19 +3192,121 @@ class ShpLinGuideRail (shp_clss.Obj3D):
         Part.show(shp_rail)
         
 
-shp_lgrail = ShpLinGuideRail( rail_d = 79., rail_w=40., rail_h=20.,
-                  bolt_lsep=20., bolt_wsep=15, bolt_d=3.,
-                  bolth_d=5., bolth_h=2., boltend_sep = 10,
+#shp_lgrail = ShpLinGuideRail( rail_d = 79., rail_w=40., rail_h=20.,
+#                  bolt_lsep=20., bolt_wsep=15, bolt_d=3.,
+#                  bolth_d=5., bolth_h=2., boltend_sep = 10,
+#                  axis_d = VX, axis_w = V0, axis_h = VZ,
+#                  pos_d = 0, pos_w = 0, pos_h = 0,
+#                  pos = V0)
+
+
+class PartLinGuideRail (fc_clss.SinglePart, ShpLinGuideRail):
+    """ Integration of a ShpLinGuideRail object into a PartLinGuideRail
+     object, so it is a FreeCAD object that can be visualized in FreeCAD
+    Instead of using all the arguments of ShpLinGuideRail, it will use
+    a dictionary
+
+    Parameters:
+    -----------
+    rail_d : float
+        length (depth) of the rail
+    rail_dict : dictionary
+        dictionary with all the information about the rail
+        in kcomp.py there are some dictionaries of linear guide rails that
+        can be used
+    boltend_sep : float
+        separation on one end, from the bolt to the end
+        it can be given by the dictionary as a default value
+        >0: the value that will be take
+        0: evenly distributed
+        <0: value from the dictionary
+    axis_d : FreeCAD.Vector
+        the axis along the depth (lenght) of the rail 
+    axis_w : FreeCAD.Vector
+        the axis along the width of the rail
+    axis_h : FreeCAD.Vector
+        the axis along the height of the rail, pointing up
+    pos_d : int
+        location of pos along axis_d (see drawing of ShpLinGuideRail)
+        0: at the beginning of the rail
+        1: at the first bolt hole
+        2: at the middle of the rail (not necessary at a bolt hole)
+        3: at the last bolt hole
+        4: at the end of the rail
+    pos_w : int
+        location of pos along axis_w (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center of symmetry
+        1: at the bolt holes (only make sense if there are 2 bolt holes)
+           otherwise it will be like pos_w = 0
+        2: at the end of the rail along axis_w
+    pos_h : int
+        location of pos along axis_h (see drawing of ShpLinGuideRail)
+        0: at the bottom
+        1: at the middle (it is not a specific place)
+        1: at the bolt head
+        3: at the top end
+    pos : FreeCAD.Vector
+        Position at the point defined by pos_d, pos_w, pos_h
+    """
+
+    def __init__ (self, rail_d,
+                  rail_dict,
+                  boltend_sep = 0,
                   axis_d = VX, axis_w = V0, axis_h = VZ,
                   pos_d = 0, pos_w = 0, pos_h = 0,
-                  pos = V0)
+                  pos = V0,
+                  model_type = 1, # dimensional model,
+                  name = ''):
+
+        default_name = rail_dict['name']
+        self.set_name (name, default_name, change=0)
+
+        if boltend_sep == 0:
+            boltends = 0
+        elif boltend_sep < 0:
+            boltends = rail_dict['boltend_sep']
+        else:
+            boltends = boltend_sep
+
+        # creation of the shape
+        ShpLinGuideRail.__init__(self,
+                                 rail_d     = rail_d,
+                                 rail_w     = rail_dict['rw'],
+                                 rail_h     = rail_dict['rh'],
+                                 bolt_lsep  = rail_dict['boltlsep'],
+                                 bolt_wsep  = rail_dict['boltwsep'],
+                                 bolt_d     = rail_dict['boltd'],
+                                 bolth_d    = rail_dict['bolthd'],
+                                 bolth_h    = rail_dict['bolthh'],
+                                 boltend_sep = boltends,
+                                 axis_d     = axis_d,
+                                 axis_w     = axis_w,
+                                 axis_h     = axis_h,
+                                 pos_d      = pos_d,
+                                 pos_w      = pos_w,
+                                 pos_h      = pos_h,
+                                 pos        = pos)
+
+        # creation of the part
+        fc_clss.SinglePart.__init__(self)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): 
+                setattr(self, i, values[i])
 
 
-
-
-
-
-
+doc = FreeCAD.newDocument()
+partLinGuideRail = PartLinGuideRail (
+                                     rail_d = 100.,
+                                     rail_dict = kcomp.SEBWM16_R,
+                                     boltend_sep = 0,
+                                     axis_d = VX, axis_w = V0, axis_h = VZ,
+                                     pos_d = 0, pos_w = 0, pos_h = 0,
+                                     pos = V0)
 
 
 
@@ -3525,6 +3626,99 @@ class LinGuide(object):
 #                    axis_b='x',
 #                    boltend_sep = 8., bl_pos=0.5, name='lg_nx')
 
+
+class ShpLinGuideBlock (shp_clss.Obj3D):
+    """ Creates a shape of a linear guide rail
+    The linear guide rail has a dent, but it is just to show the shape, 
+    the dimensions are not exact
+
+
+             
+                        
+                        axis_d (direction of the rail)
+                          :
+                          :
+                 _________:_________ ....................
+              __|___________________|__  ...            :
+             |                         |    :           :
+             | 0 --- bolt_wsep ----  0 |    :           :
+             | :                       |    :           :
+             | :                       |    :           :
+             | :                       |.......................> axis_w
+             | + bolt_dsep             |    :           :
+             | :                       |    + block_sd  :
+             | 0                     0 |    :           :+ block_d
+             |_________________________|....:           :
+             :  |___________________|   ................:
+             :  :                  :  :
+             :  :.... block_ws ....:  :
+             :                        :
+             :....... block_w ........:
+
+    Parameters:
+    -----------
+    block_d: float
+        Total length (depth) of the block
+    block_ds: float
+        Small length (depth) of the block. Usually there is a plastic end,
+        for lubricant or whatever
+    block_w: float
+        Total Width of the block
+    block_ws: float
+        Small width of the block (the plastic end)
+    block_h: float
+        Height of the block
+    linguide_h: float
+        Height of the linear guide. Total, Rail + Block
+    bolt_dsep: float
+        separation of the bolts, on the depth (length) direction
+    bolt_wsep: float
+        separation of the bolts, on the width direction
+    bolt_d: float
+        diameter of the hole of the bolt
+    bolt_l: float
+        length of the hole. if 0, it is a thru-hole
+
+    h_lgrail: float
+        handler of the linear guide rail
+    block_pos_l: float
+        position of the block relative to the rail. From 0 to 1
+
+
+    axis_d : FreeCAD.Vector
+        the axis along the depth (lenght) of the block (and rail) 
+    axis_w : FreeCAD.Vector
+        the axis along the width of the block
+    axis_h : FreeCAD.Vector
+        the axis along the height of the block, pointing up
+    pos_d : int
+        location of pos along axis_d (see drawing)
+        0: at the beginning of the rail
+        1: at the first bolt hole
+        2: at the middle of the rail (not necessary at a bolt hole)
+        3: at the last bolt hole
+        4: at the end of the rail
+    pos_w : int
+        location of pos along axis_w (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center of symmetry
+        1: at the bolt holes (only make sense if there are 2 bolt holes)
+           otherwise it will be like pos_w = 0
+        2: at the end of the rail along axis_w
+    pos_h : int
+        location of pos along axis_h (see drawing)
+        0: at the bottom
+        1: at the middle (it is not a specific place)
+        1: at the bolt head
+        3: at the top end
+    pos : FreeCAD.Vector
+        Position at the point defined by pos_d, pos_w, pos_h
+
+
+
+
+
+    """
 
 class ShpGtPulley (shp_clss.Obj3D):
     """ Creates a GT pulley, no exact dimensions, just for the model
