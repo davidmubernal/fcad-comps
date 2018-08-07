@@ -3687,6 +3687,14 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
         Small width of the block (the plastic end)
     block_h: float
         Height of the block
+    bolt_dsep: float
+        separation of the bolts, on the depth (length) direction
+    bolt_wsep: float
+        separation of the bolts, on the width direction
+    bolt_d: float
+        diameter of the hole of the bolt
+    bolt_l: float
+        length of the hole. if 0, it is a thru-hole
     linguide_h: float
         Height of the linear guide. Total, Rail + Block
         if 0: there will be internal hole for the rail
@@ -3696,15 +3704,6 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
     rail_w: float
         width of the rail
         if 0: there will be internal hole for the rail
-    bolt_dsep: float
-        separation of the bolts, on the depth (length) direction
-    bolt_wsep: float
-        separation of the bolts, on the width direction
-    bolt_d: float
-        diameter of the hole of the bolt
-    bolt_l: float
-        length of the hole. if 0, it is a thru-hole
-
     axis_d : FreeCAD.Vector
         the axis along the depth (lenght) of the block (and rail) 
     axis_w : FreeCAD.Vector
@@ -3763,14 +3762,14 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
                   block_ws,
                   block_h,
 
-                  linguide_h,
-                  rail_h,
-                  rail_w,
-
                   bolt_dsep,
                   bolt_wsep,
                   bolt_d,
                   bolt_l,
+
+                  linguide_h=0,
+                  rail_h=0,
+                  rail_w=0,
 
                   axis_d = VX,
                   axis_w = VY,
@@ -3876,7 +3875,7 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
                                               vec_extr_axis = self.axis_d,
                                               centered = 1)
 
-            Part.show(shp_rail)
+            #Part.show(shp_rail)
             holes_list.append(shp_rail)
 
         # bolt holes:
@@ -3894,7 +3893,7 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
 
         shp_holes = fcfun.fuseshplist(holes_list)
         shp_block = shp_block.cut(shp_holes)
-        shp_block.removeSplitter()
+        shp_block = shp_block.removeSplitter()
 
         self.shp = shp_block
         Part.show(shp_block)
@@ -3907,9 +3906,9 @@ shp_linguide_block = ShpLinGuideBlock (
                   block_ws = kcomp.SEB10_B['bws'],
                   block_h = kcomp.SEB10_B['bh'],
 
-                  linguide_h = kcomp.SEB10_B['lh'],
-                  rail_h = kcomp.SEB10_R['rh'],
-                  rail_w = kcomp.SEB10_R['rw'],
+                  #linguide_h = kcomp.SEB10_B['lh'],
+                  #rail_h = kcomp.SEB10_R['rh'],
+                  #rail_w = kcomp.SEB10_R['rw'],
 
                   bolt_dsep = kcomp.SEB10_B['boltlsep'],
                   bolt_wsep = kcomp.SEB10_B['boltwsep'],
@@ -3923,6 +3922,124 @@ shp_linguide_block = ShpLinGuideBlock (
                   pos_w = 0,
                   pos_h = 0,
                   pos = V0)
+
+
+class PartLinGuideBlock (fc_clss.SinglePart, ShpLinGuideBlock):
+    """ Integration of a ShpLinGuideBlock object into a PartLinGuideBlock
+     object, so it is a FreeCAD object that can be visualized in FreeCAD
+    Instead of using all the arguments of ShpLinGuideBlock, it will use
+    a dictionary
+
+    Parameters:
+    -----------
+    block_dict : dictionary
+        dictionary with the information about the block
+    rail_dict : dictionary
+        dictionary with the information about the rail,
+        it is not necessary, but if not provided, the block will not have
+        the rail hole
+    axis_d : FreeCAD.Vector
+        the axis along the depth (lenght) of the block (and rail) 
+    axis_w : FreeCAD.Vector
+        the axis along the width of the block
+    axis_h : FreeCAD.Vector
+        the axis along the height of the block, pointing up
+    pos_d : int
+        location of pos along axis_d (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center (symmetric)
+        1: at the bolt hole
+        2: at the end of the smaller part of the block
+        3: at the end of the end of the block
+    pos_w : int
+        location of pos along axis_w (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center of symmetry
+        1: at the inner hole of the rail
+        2: at the bolt holes (it can be after the smaller part of the block)
+        3: at the end of the smaller part of the block
+        4: at the end of the end of the block
+    pos_h : int
+        location of pos along axis_h (see drawing)
+        0: at the bottom (could make more sense to have 0 at the top instead
+        1: at the top of the rail hole
+        2: at the bottom of the bolt holes, if thruholes, same as 0
+        3: at the top end
+        4: at the bottom of the rail (not the block), if the rail has been
+           defined
+    pos : FreeCAD.Vector
+        Position at the point defined by pos_d, pos_w, pos_h
+
+    """
+
+
+    def __init__ (self, block_dict, rail_dict,
+                  axis_d = VX, axis_w = V0, axis_h = VZ,
+                  pos_d = 0, pos_w = 0, pos_h = 0,
+                  pos = V0,
+                  model_type = 1, # dimensional model
+                  name = ''):
+
+
+        default_name = block_dict['name'] + '_block'
+        self.set_name (name, default_name, change=0)
+
+        if rail_dict is None:
+            self.rail_h = 0
+            self.rail_w = 0
+        else:
+            self.rail_h = rail_dict['rh']
+            self.rail_w = rail_dict['rw']
+
+
+        # creation of the shape
+        ShpLinGuideBlock.__init__( self,
+                  block_d  = block_dict['bl'],
+                  block_ds = block_dict['bls'],
+                  block_w  = block_dict['bw'],
+                  block_ws = block_dict['bws'],
+                  block_h  = block_dict['bh'],
+
+                  linguide_h = block_dict['lh'],
+                  rail_h = self.rail_h,
+                  rail_w = self.rail_w,
+
+                  bolt_dsep = block_dict['boltlsep'],
+                  bolt_wsep = block_dict['boltwsep'],
+                  bolt_d    = block_dict['boltd'],
+                  bolt_l    = block_dict['boltl'],
+
+                  axis_d = axis_d,
+                  axis_w = axis_w,
+                  axis_h = axis_h,
+                  pos_d = pos_d,
+                  pos_w = pos_w,
+                  pos_h = pos_h,
+                  pos = pos)
+
+
+        # creation of the part
+        fc_clss.SinglePart.__init__(self)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): 
+                setattr(self, i, values[i])
+
+
+doc = FreeCAD.newDocument()
+partLinGuideBlock = PartLinGuideBlock (
+                                     block_dict = kcomp.SEBWM16_B,
+                                     rail_dict  = kcomp.SEBWM16_R,
+                                     axis_d = VX, axis_w = V0, axis_h = VZ,
+                                     pos_d = 0, pos_w = 0, pos_h = 0,
+                                     pos = V0)
+
+
+
+
 
 
 
