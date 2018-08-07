@@ -3189,7 +3189,7 @@ class ShpLinGuideRail (shp_clss.Obj3D):
         shp_rail = shp_rail.removeSplitter()
 
         self.shp = shp_rail
-        Part.show(shp_rail)
+        #Part.show(shp_rail)
         
 
 #shp_lgrail = ShpLinGuideRail( rail_d = 79., rail_w=40., rail_h=20.,
@@ -3299,14 +3299,14 @@ class PartLinGuideRail (fc_clss.SinglePart, ShpLinGuideRail):
                 setattr(self, i, values[i])
 
 
-doc = FreeCAD.newDocument()
-partLinGuideRail = PartLinGuideRail (
-                                     rail_d = 100.,
-                                     rail_dict = kcomp.SEBWM16_R,
-                                     boltend_sep = 0,
-                                     axis_d = VX, axis_w = V0, axis_h = VZ,
-                                     pos_d = 0, pos_w = 0, pos_h = 0,
-                                     pos = V0)
+#doc = FreeCAD.newDocument()
+#partLinGuideRail = PartLinGuideRail (
+#                                     rail_d = 100.,
+#                                     rail_dict = kcomp.SEBWM16_R,
+#                                     boltend_sep = 0,
+#                                     axis_d = VX, axis_w = V0, axis_h = VZ,
+#                                     pos_d = 0, pos_w = 0, pos_h = 0,
+#                                     pos = V0)
 
 
 
@@ -3336,7 +3336,7 @@ partLinGuideRail = PartLinGuideRail (
 #             |                        |    |          |
 #             | 0 --- bolt_wsep ---  0 |    |          |
 #             | :                      |    |          |
-#             | :                      |    + block_sl + block_l
+#             | :                      |    + block_ls + block_l
 #             | + bolt_lsep            |    |          |
 #             | :                      |    |          |
 #             | 0                    0 |    |          |
@@ -3629,31 +3629,50 @@ class LinGuide(object):
 
 class ShpLinGuideBlock (shp_clss.Obj3D):
     """ Creates a shape of a linear guide rail
-    The linear guide rail has a dent, but it is just to show the shape, 
-    the dimensions are not exact
+    Creates a hole for the rail, no exact shape
 
-
+                       axis_h
+                          :
+                          :
+              ____________3_____________.........................         
+             |::|         2          |::|...bolt_l   :          :
+             |  |     ____1____      |  |            :          :+linguide_h
+             |  |    |    :    |     |  |            :+ block_h :
+             |  |     \   :   /      |  |            :          :
+             |__|_____/   o   \______|__|............:..........:..> axis_w
+               :     :         :      :                         :
+               :     :         :      :                         :
+               :     :....4....:      :.........................:
+               :          +           :
+               :       rail_w         :
+               :                      :
+               :......................:
+                          +
+                      bolt_wsep
              
                         
                         axis_d (direction of the rail)
                           :
                           :
-                 _________:_________ ....................
-              __|___________________|__  ...            :
-             |                         |    :           :
-             | 0 --- bolt_wsep ----  0 |    :           :
-             | :                       |    :           :
-             | :                       |    :           :
-             | :                       |.......................> axis_w
-             | + bolt_dsep             |    :           :
-             | :                       |    + block_sd  :
-             | 0                     0 |    :           :+ block_d
-             |_________________________|....:           :
-             :  |___________________|   ................:
+                 _________3_________ ....................
+              __|____:____2____:____|__  ...            :
+             |       :         :       |    :           :
+             | 0     :    1    :     0 |    :           :
+             | :     :         :       |    :           :
+             | :     :         :       |    :           :
+             | :     :    o    1    32 4.......................> axis_w
+             | + bolt_dsep     :       |    :           :
+             | :     :         :       |    + block_ds  :
+             | 0     :         :     0 |    :           :+ block_d
+             |_______:_________:_______|....:           :
+             :  |____:_________:____|   ................:
              :  :                  :  :
              :  :.... block_ws ....:  :
              :                        :
              :....... block_w ........:
+
+
+    Origin at pos_o: pos_d = pos_w = pos_h = 0
 
     Parameters:
     -----------
@@ -3670,6 +3689,13 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
         Height of the block
     linguide_h: float
         Height of the linear guide. Total, Rail + Block
+        if 0: there will be internal hole for the rail
+    rail_h: float
+        Height of the rail
+        if 0: there will be internal hole for the rail
+    rail_w: float
+        width of the rail
+        if 0: there will be internal hole for the rail
     bolt_dsep: float
         separation of the bolts, on the depth (length) direction
     bolt_wsep: float
@@ -3679,12 +3705,6 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
     bolt_l: float
         length of the hole. if 0, it is a thru-hole
 
-    h_lgrail: float
-        handler of the linear guide rail
-    block_pos_l: float
-        position of the block relative to the rail. From 0 to 1
-
-
     axis_d : FreeCAD.Vector
         the axis along the depth (lenght) of the block (and rail) 
     axis_w : FreeCAD.Vector
@@ -3692,33 +3712,221 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
     axis_h : FreeCAD.Vector
         the axis along the height of the block, pointing up
     pos_d : int
-        location of pos along axis_d (see drawing)
-        0: at the beginning of the rail
-        1: at the first bolt hole
-        2: at the middle of the rail (not necessary at a bolt hole)
-        3: at the last bolt hole
-        4: at the end of the rail
+        location of pos along axis_d (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center (symmetric)
+        1: at the bolt hole
+        2: at the end of the smaller part of the block
+        3: at the end of the end of the block
     pos_w : int
         location of pos along axis_w (see drawing). Symmetric, negative indexes
         means the other side
         0: at the center of symmetry
-        1: at the bolt holes (only make sense if there are 2 bolt holes)
-           otherwise it will be like pos_w = 0
-        2: at the end of the rail along axis_w
+        1: at the inner hole of the rail
+        2: at the bolt holes (it can be after the smaller part of the block)
+        3: at the end of the smaller part of the block
+        4: at the end of the end of the block
     pos_h : int
         location of pos along axis_h (see drawing)
-        0: at the bottom
-        1: at the middle (it is not a specific place)
-        1: at the bolt head
+        0: at the bottom (could make more sense to have 0 at the top instead
+        1: at the top of the rail hole
+        2: at the bottom of the bolt holes, if thruholes, same as 0
         3: at the top end
+        4: at the bottom of the rail (not the block), if the rail has been
+           defined
     pos : FreeCAD.Vector
         Position at the point defined by pos_d, pos_w, pos_h
 
 
+                      axis_h
+                          :
+                          :
+              ____________3_____________.........................         
+             |::|         2          |::|                       :
+             |  |     ____1____      |  |................       :+linguide_h
+             |  |    |    :    |     |  |  :            :       :
+             |  |     \   :   /      |  |  :rail_ins_h  :       :
+             |__|_____/   o   \______|__|..:            :       :
+               :     :         :      :                 :rail_h :
+               :     :         :      :                 :       :
+               :     :....4....:      :.................:.......:
+               :          +           :
+               :       rail_w         :
 
-
-
+            rail_ins_h = block_h - (linguide_h - rail_h)
     """
+
+    def __init__( self,
+                  block_d,
+                  block_ds,
+                  block_w,
+                  block_ws,
+                  block_h,
+
+                  linguide_h,
+                  rail_h,
+                  rail_w,
+
+                  bolt_dsep,
+                  bolt_wsep,
+                  bolt_d,
+                  bolt_l,
+
+                  axis_d = VX,
+                  axis_w = VY,
+                  axis_h = VZ,
+                  pos_d = 0,
+                  pos_w = 0,
+                  pos_h = 0,
+                  pos = V0):
+
+        if (axis_w is None) or (axis_w == V0):
+            axis_w = axis_h.cross(axis_d)
+
+        shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        self.d0_cen = 1 # symmetric
+        self.w0_cen = 1 # symmetric
+        self.h0_cen = 0
+
+        if bolt_l == 0: # thruhole
+            self.bolt_l = block_h
+            self.thruhole = 1
+        else:
+            self.thruhole = 0
+
+        if rail_h == 0 or linguide_h == 0:
+            self.rail_h = 0
+            self.linguide_h = 0
+            self.rail_ins_h = 0
+            self.rail_bot_h = 0
+        else:
+            self.rail_ins_h = block_h - (linguide_h - rail_h)
+            self.rail_bot_h = rail_h - self.rail_ins_h
+
+
+        # vectors from the origin to the points along axis_d:
+        self.d_o[0] = V0 # Origin (center symmetric)
+        self.d_o[1] = self.vec_d(self.bolt_dsep/2.)
+        self.d_o[2] = self.vec_d(self.block_ds/2.)
+        self.d_o[3] = self.vec_d(self.block_d/2.)
+ 
+        # vectors from the origin to the points along axis_w:
+        self.w_o[0] = V0 # Origin (center symmetric)
+        self.w_o[1] = self.vec_w(self.rail_w/2.)
+        self.w_o[2] = self.vec_w(self.bolt_wsep/2.)
+        self.w_o[3] = self.vec_w(self.block_ws/2.)
+        self.w_o[4] = self.vec_w(self.block_w/2.)
+ 
+        # vectors from the origin to the points along axis_h:
+        # could make more sense to have the origin at the top
+        self.h_o[0] = V0 # Origin at the bottom
+        self.h_o[1] = self.vec_h(self.rail_ins_h)
+        self.h_o[2] = self.vec_h(self.block_h - self.bolt_l)
+        self.h_o[3] = self.vec_h(self.block_h)
+        self.h_o[4] = self.vec_h(-self.rail_bot_h)
+ 
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        # the main block
+        shp_mblock = fcfun.shp_box_dir (box_w = self.block_w,
+                                        box_d = self.block_ds,
+                                        box_h = self.block_h,
+                                        fc_axis_w = self.axis_w,
+                                        fc_axis_d = self.axis_d,
+                                        fc_axis_h = self.axis_h,
+                                        cw = 1, cd = 1, ch = 0,
+                                        pos = self.pos_o)
+
+        # the extra block
+        shp_exblock = fcfun.shp_box_dir (box_w = self.block_ws,
+                                        box_d = self.block_d,
+                                        box_h = self.block_h,
+                                        fc_axis_w = self.axis_w,
+                                        fc_axis_d = self.axis_d,
+                                        fc_axis_h = self.axis_h,
+                                        cw = 1, cd = 1, ch = 0,
+                                        pos = self.pos_o)
+
+        # fusion of these blocks
+        shp_block = shp_mblock.fuse(shp_exblock)
+
+        holes_list = []
+
+        # rail hole:
+        if self.rail_h > 0 and rail_w > 0:
+            wire_rail = fcfun.wire_lgrail( rail_w = rail_w,
+                                           rail_h = self.rail_h,
+                                           axis_w = self.axis_w,
+                                           axis_h = self.axis_h,
+                                           pos_w = 0, pos_h = 0,
+                                           pos = self.get_pos_h(4))
+
+            face_rail = Part.Face(wire_rail)
+            shp_rail = fcfun.shp_extrud_face (face = face_rail,
+                                              length = self.block_d + 2,
+                                              vec_extr_axis = self.axis_d,
+                                              centered = 1)
+
+            Part.show(shp_rail)
+            holes_list.append(shp_rail)
+
+        # bolt holes:
+        for d_i in (-1, 1): # positions of the holes along axis_d
+            for w_i in (-2, 2): # positions of the holes along axis_w
+                shp_bolt = fcfun.shp_cylcenxtr (
+                                        r = bolt_d/2.,
+                                        h = self.bolt_l,
+                                        normal = axis_h,
+                                        ch = 0,
+                                        xtr_top = 1,
+                                        xtr_bot = self.thruhole,
+                                        pos = self.get_pos_dwh(d_i, w_i, 2))
+                holes_list.append(shp_bolt)
+
+        shp_holes = fcfun.fuseshplist(holes_list)
+        shp_block = shp_block.cut(shp_holes)
+        shp_block.removeSplitter()
+
+        self.shp = shp_block
+        Part.show(shp_block)
+
+
+shp_linguide_block = ShpLinGuideBlock (
+                  block_d = kcomp.SEB10_B['bl'],
+                  block_ds = kcomp.SEB10_B['bls'],
+                  block_w = kcomp.SEB10_B['bw'],
+                  block_ws = kcomp.SEB10_B['bws'],
+                  block_h = kcomp.SEB10_B['bh'],
+
+                  linguide_h = kcomp.SEB10_B['lh'],
+                  rail_h = kcomp.SEB10_R['rh'],
+                  rail_w = kcomp.SEB10_R['rw'],
+
+                  bolt_dsep = kcomp.SEB10_B['boltlsep'],
+                  bolt_wsep = kcomp.SEB10_B['boltwsep'],
+                  bolt_d = kcomp.SEB10_B['boltd'],
+                  bolt_l = kcomp.SEB10_B['boltl'],
+
+                  axis_d = VX,
+                  axis_w = VY,
+                  axis_h = VZ,
+                  pos_d = 0,
+                  pos_w = 0,
+                  pos_h = 0,
+                  pos = V0)
+
+
+
+
 
 class ShpGtPulley (shp_clss.Obj3D):
     """ Creates a GT pulley, no exact dimensions, just for the model
