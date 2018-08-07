@@ -1129,6 +1129,9 @@ SEB15A = { 'rail'  : SEB15A_R,
 SEB8 = { 'rail'  : SEB8_R,
          'block' : SEB8_B}
 
+SEB10 = { 'rail'  : SEB10_R,
+          'block' : SEB10_B}
+
 # mechanical end stop dimensions
 #
 #                   /

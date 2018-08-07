@@ -3131,9 +3131,10 @@ class ShpLinGuideRail (shp_clss.Obj3D):
         self.d_o[4] = self.vec_d(rail_d)
 
         # vectors from the origin to the points along axis_w:
+        # symmetric: negative
         self.w_o[0] = V0 # base: origin
-        self.w_o[1] = self.vec_w(bolt_wsep/2.) #if 0: same as w_o[0]
-        self.w_o[2] = self.vec_w(rail_w/2.)
+        self.w_o[1] = self.vec_w(-bolt_wsep/2.) #if 0: same as w_o[0]
+        self.w_o[2] = self.vec_w(-rail_w/2.)
 
         # vectors from the origin to the points along axis_h:
         self.h_o[0] = V0 # base: origin
@@ -3813,16 +3814,16 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
 
         # vectors from the origin to the points along axis_d:
         self.d_o[0] = V0 # Origin (center symmetric)
-        self.d_o[1] = self.vec_d(self.bolt_dsep/2.)
-        self.d_o[2] = self.vec_d(self.block_ds/2.)
-        self.d_o[3] = self.vec_d(self.block_d/2.)
+        self.d_o[1] = self.vec_d(-self.bolt_dsep/2.)
+        self.d_o[2] = self.vec_d(-self.block_ds/2.)
+        self.d_o[3] = self.vec_d(-self.block_d/2.)
  
         # vectors from the origin to the points along axis_w:
         self.w_o[0] = V0 # Origin (center symmetric)
-        self.w_o[1] = self.vec_w(self.rail_w/2.)
-        self.w_o[2] = self.vec_w(self.bolt_wsep/2.)
-        self.w_o[3] = self.vec_w(self.block_ws/2.)
-        self.w_o[4] = self.vec_w(self.block_w/2.)
+        self.w_o[1] = self.vec_w(-self.rail_w/2.)
+        self.w_o[2] = self.vec_w(-self.bolt_wsep/2.)
+        self.w_o[3] = self.vec_w(-self.block_ws/2.)
+        self.w_o[4] = self.vec_w(-self.block_w/2.)
  
         # vectors from the origin to the points along axis_h:
         # could make more sense to have the origin at the top
@@ -3896,32 +3897,32 @@ class ShpLinGuideBlock (shp_clss.Obj3D):
         shp_block = shp_block.removeSplitter()
 
         self.shp = shp_block
-        Part.show(shp_block)
+        #Part.show(shp_block)
 
 
-shp_linguide_block = ShpLinGuideBlock (
-                  block_d = kcomp.SEB10_B['bl'],
-                  block_ds = kcomp.SEB10_B['bls'],
-                  block_w = kcomp.SEB10_B['bw'],
-                  block_ws = kcomp.SEB10_B['bws'],
-                  block_h = kcomp.SEB10_B['bh'],
-
-                  #linguide_h = kcomp.SEB10_B['lh'],
-                  #rail_h = kcomp.SEB10_R['rh'],
-                  #rail_w = kcomp.SEB10_R['rw'],
-
-                  bolt_dsep = kcomp.SEB10_B['boltlsep'],
-                  bolt_wsep = kcomp.SEB10_B['boltwsep'],
-                  bolt_d = kcomp.SEB10_B['boltd'],
-                  bolt_l = kcomp.SEB10_B['boltl'],
-
-                  axis_d = VX,
-                  axis_w = VY,
-                  axis_h = VZ,
-                  pos_d = 0,
-                  pos_w = 0,
-                  pos_h = 0,
-                  pos = V0)
+#shp_linguide_block = ShpLinGuideBlock (
+#                  block_d = kcomp.SEB10_B['bl'],
+#                  block_ds = kcomp.SEB10_B['bls'],
+#                  block_w = kcomp.SEB10_B['bw'],
+#                  block_ws = kcomp.SEB10_B['bws'],
+#                  block_h = kcomp.SEB10_B['bh'],
+#
+#                  #linguide_h = kcomp.SEB10_B['lh'],
+#                  #rail_h = kcomp.SEB10_R['rh'],
+#                  #rail_w = kcomp.SEB10_R['rw'],
+#
+#                  bolt_dsep = kcomp.SEB10_B['boltlsep'],
+#                  bolt_wsep = kcomp.SEB10_B['boltwsep'],
+#                  bolt_d = kcomp.SEB10_B['boltd'],
+#                  bolt_l = kcomp.SEB10_B['boltl'],
+#
+#                  axis_d = VX,
+#                  axis_w = VY,
+#                  axis_h = VZ,
+#                  pos_d = 0,
+#                  pos_w = 0,
+#                  pos_h = 0,
+#                  pos = V0)
 
 
 class PartLinGuideBlock (fc_clss.SinglePart, ShpLinGuideBlock):
@@ -4033,8 +4034,8 @@ doc = FreeCAD.newDocument()
 partLinGuideBlock = PartLinGuideBlock (
                                      block_dict = kcomp.SEBWM16_B,
                                      rail_dict  = kcomp.SEBWM16_R,
-                                     axis_d = VX, axis_w = V0, axis_h = VZ,
-                                     pos_d = 0, pos_w = 0, pos_h = 0,
+                                     axis_d = VX, axis_w = VY, axis_h = VZ,
+                                     pos_d = 0, pos_w = -2, pos_h = 0,
                                      pos = V0)
 
 
