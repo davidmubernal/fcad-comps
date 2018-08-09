@@ -1325,6 +1325,327 @@ def getaluprof_dir ( aludict, length,
 #                 cx=True, cy=True, cz=True)
 #
 
+
+
+
+
+
+
+
+
+
+
+
+
+# ----------- class ShpAluProf ---------------------------------------------
+
+
+class ShpAluProf (shp_clss.Obj3D):
+
+    """
+    Creates a shape of a generic aluminum profile in any direction
+
+         :----- width ----:
+         :       slot     :
+         :      :--:      :
+         :______:  :______:
+         |    __|  |__    |
+         | |\ \      / /| |
+         |_| \ \____/ / |_| ...........
+             |        | ......        insquare
+             |  (  )  | ......indiam  :
+          _  |  ____  | ..............:
+         | | / /    \ \ | |
+         | |/ /_    _\ \| | .... 
+         |______|  |______| ....thick
+   
+    Parameters:
+    -----------
+    width: float
+        Width of the profile, it is squared
+    depth: float
+        (depth) length of the bar, the extrusion 
+    thick: float
+        thickness of the side
+    slot: float
+        width of the rail slot
+    insquare: float
+        width of the inner square
+    indiam: float
+        diameter of the inner hole. If 0, there is no hole
+    xtr_d: float
+        if >0 it will be that extra depth (length) on the direction of axis_d
+    xtr_nd: float
+        if >0 it will be that extra depth (length) on the opositve direction of
+        axis_d
+       can be V0 if pos_h = 0
+    axis_d : FreeCAD.Vector
+        axis along the length (depth) direction
+    axis_w : FreeCAD.Vector
+        axis along the width direction
+    axis_h = axis on the other width direction (perpendicular)
+        axis along the width direction
+    pos_d: int
+        location of pos along axis_d (see drawing)
+        0: start point, counting xtr_nd,
+           if xtr_nd == 0 -> pos_d 0 and 1 will be the same
+        1: start point, not counting xtr_nd
+        2: middle point not conunting xtr_nd and xtr_d
+        3: middle point conunting xtr_nd and xtr_d
+        4: end point, not counting xtr_d
+        5: end point considering xtr_d
+    pos_w: int
+        location of pos along axis_w (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center of symmetry
+        1: at the inner square
+        2: at the interior side of the outer part of the rail (thickness of the4           side
+        3: at the end of the profile along axis_w 
+    pos_h: int
+        Same as pos_w 
+    pos : FreeCAD.Vector
+        position of point defined by pos_d, pos_w, pos_h
+   
+    Attributes:
+    -----------
+    pos_o: FreeCAD.Vector
+        origin, at pos_d=pos_w=pos_h = 0
+        Shown in the drawing with a o
+
+
+            axis_h
+            :               xtr_nd       depth       xtr_d
+            :                   .+..........+.........+..
+            :                   :  :                :   :
+         _  :  _                :__:________________:___:
+        |_|_:_|_|               |_______________________|
+          | o.|........ axis_w  o                       |....... axis_d
+         _|___|_                |_______________________| 
+        |_|   |_|               |_______________________|
+            0 123               0  1        23      4   5 
+              |||               :  :        ::      :   end
+              || end            :  :        ::     end not counting xtr_d
+              ||                :  :        : 
+              ||                :  :        : middle point considering total
+              | thickness       :  :        :  length (xtr_nd + depth + xtr_d)
+              |                 :  :        :
+               inner square     :  :         middle poit considering depth only
+                                :  :
+                                :   start point, not counting xtr_nd
+                                :
+                                 start point, counting xtr_nd
+
+
+         :______:  :______:
+         |    __|  |__    |
+         | |\ \      / /| |
+         |_| \ \____/ / |_| ...........
+             |        | ......        insquare
+             |  (  )  | ......indiam  :
+          _  |  ____  | ..............:
+         | | / /    \ \ | |
+         | |/ /_    _\ \| | .... 
+         |______|  |______| ....thick
+                  0   1 2 3   pos_w = pos_h
+   
+   
+    """
+
+    def __init__ (self, width, depth, thick, slot,
+                  insquare, indiam,
+                  xtr_d=0, xtr_nd=0,
+                  axis_d = VX, axis_w = VY, axis_h = V0,
+                  pos_d = 0, pos_w = 0, pos_h = 0,
+                  pos = V0):
+
+
+        # either axis_w or axis_h can be V0, but not both
+        if (axis_w is None) or (axis_w == V0):
+            if (axis_h is None) or (axis_h == V0):
+                logger.error('Either axis_w or axis_h must be defined')
+                logger.warning('getting a random perpendicular verctor')
+                axis_w = fcfun.get_fc_perpend1(axis_d)
+            else:
+                axis_w = axis_h.cross(axis_d)
+
+        if (axis_h is None) or (axis_h == V0):
+            axis_h = axis_d.cross(axis_w)
+
+        shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        self.d0_cen = 0
+        self.w0_cen = 1 # symmetric
+        self.h0_cen = 1 # symmetric
+
+        # total length (depth)
+        self.tot_d = xtr_nd + depth + xtr_d
+
+        # vectors from the origin to the points along axis_d:
+        self.d_o[0] = V0 # origin
+        self.d_o[1] = self.vec_d(xtr_nd) #if xtr_nd= 0: same as d_o[0]
+        # middle point, not considering xtr_nd and xtr_d
+        self.d_o[2] = self.vec_d(xtr_nd + depth/2.)
+        # middle point considering xtr_nd and xtr_d
+        self.d_o[3] = self.vec_d(self.tot_d /2.)
+        self.d_o[4] = self.vec_d(xtr_nd + depth)
+        self.d_o[5] = self.vec_d(self.tot_d)
+
+        # vectors from the origin to the points along axis_w:
+        # symmetric: negative
+        self.w_o[0] = V0 # center: origin
+        self.w_o[1] = self.vec_w(-insquare/2.)
+        self.w_o[2] = self.vec_w(-(width/2. - thick))
+        self.w_o[3] = self.vec_w(-width/2.)
+
+        # vectors from the origin to the points along axis_h:
+        # symmetric: negative
+        self.h_o[0] = V0 # center: origin
+        self.h_o[1] = self.vec_h(-insquare/2.)
+        self.h_o[2] = self.vec_h(-(width/2. - thick))
+        self.h_o[3] = self.vec_h(-width/2.)
+
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        shp_alu_wire = fcfun.shp_aluwire_dir (width, thick, slot, insquare,
+                                              fc_axis_x = self.axis_w,
+                                              fc_axis_y = self.axis_h,
+                                              ref_x = 1, # pos_o is centered
+                                              ref_y = 1, # pos_o is centered
+                                              pos = self.pos_o)
+
+
+        # make a face of the wire
+        shp_alu_face = Part.Face (shp_alu_wire)
+        # inner hole
+        if indiam > 0 :
+            hole =  Part.makeCircle (indiam/2.,   # Radius
+                                     self.pos_o,  # Position
+                                     self.axis_d)  # direction
+            wire_hole = Part.Wire(hole)
+            face_hole = Part.Face(wire_hole)
+            shp_alu_face = shp_alu_face.cut(face_hole)
+
+        # extrude it
+        dir_extrud = DraftVecUtils.scaleTo(self.axis_d, self.tot_d)
+        shp_aluprof = shp_alu_face.extrude(dir_extrud)
+
+        self.shp = shp_aluprof
+
+class PartAluProf (fc_clss.SinglePart, ShpAluProf):
+    """ Integration of a ShpAluProf object into a PartAluProf
+    object, so it is a FreeCAD object that can be visualized in FreeCAD
+    Instead of using all the arguments of ShpAluProf, it will use
+    a dictionary
+
+    depth : float
+        (depth) length of the bar, the extrusion 
+    aluprof_dict : dictionary
+        dictionary with all the information about the profile
+        in kcomp.py there are some dictionaries that can be used, they are
+        not exact
+    -- same as ShpAluProf:
+    xtr_d: float
+        if >0 it will be that extra depth (length) on the direction of axis_d
+    xtr_nd: float
+        if >0 it will be that extra depth (length) on the opositve direction of
+        axis_d
+       can be V0 if pos_h = 0
+    axis_d : FreeCAD.Vector
+        axis along the length (depth) direction
+    axis_w : FreeCAD.Vector
+        axis along the width direction
+    axis_h = axis on the other width direction (perpendicular)
+        axis along the width direction
+    pos_d: int
+        location of pos along axis_d (see drawing)
+        0: start point, counting xtr_nd,
+           if xtr_nd == 0 -> pos_d 0 and 1 will be the same
+        1: start point, not counting xtr_nd
+        2: middle point not conunting xtr_nd and xtr_d
+        3: middle point conunting xtr_nd and xtr_d
+        4: end point, not counting xtr_d
+        5: end point considering xtr_d
+    pos_w: int
+        location of pos along axis_w (see drawing). Symmetric, negative indexes
+        means the other side
+        0: at the center of symmetry
+        1: at the inner square
+        2: at the interior side of the outer part of the rail (thickness of the4           side
+        3: at the end of the profile along axis_w 
+    pos_h: int
+        Same as pos_w 
+    pos : FreeCAD.Vector
+        position of point defined by pos_d, pos_w, pos_h
+    model_type : int
+        kind of model
+        1: dimensional model: it can be printed to assemble a model,but the part
+           will not work as defined. For example, if printed this aluminum
+           profile will not work as defined, and also, it is not exact
+    name : string
+        name of the object
+
+    """
+
+
+    def __init__( self, depth,
+                  aluprof_dict,
+                  xtr_d=0, xtr_nd=0,
+                  axis_d = VX, axis_w = VY, axis_h = V0,
+                  pos_d = 0, pos_w = 0, pos_h = 0,
+                  pos = V0,
+                  model_type = 1, # dimensional model
+                  name = ''):
+
+        default_name = ( 'aluprof_w' + str(int(aluprof_dict['w']))
+                         + 'l_' + str(int(xtr_nd + depth + xtr_d)))
+        self.set_name (name, default_name, change=0)
+
+        ShpAluProf.__init__(self,
+                            width  = aluprof_dict['w'],
+                            depth  = depth,
+                            thick  = aluprof_dict['t'],
+                            slot   = aluprof_dict['slot'],
+                            insquare = aluprof_dict['insq'],
+                            indiam   = aluprof_dict['indiam'],
+                            xtr_d    = xtr_d,
+                            xtr_nd   = xtr_nd,
+                            axis_d   = axis_d,
+                            axis_w   = axis_w,
+                            axis_h   = axis_h,
+                            pos_d    = pos_d, pos_w = pos_w, pos_h = pos_h,
+                            pos      = pos) 
+
+        # creation of the part
+        fc_clss.SinglePart.__init__(self)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): 
+                setattr(self, i, values[i])
+
+
+        self.set_line_width(1.)
+        self.set_line_color((.5, .5, .5))
+
+
+AluProf = PartAluProf(depth = 100,
+                      aluprof_dict = kcomp.ALU_MOTEDIS_30B8,
+                      xtr_d=10, xtr_nd=20,
+                      axis_d = VX, axis_w = VY, axis_h = V0,
+                      pos_d = 3, pos_w = 1, pos_h = -2,
+                      pos = V0)
+
+
             
 # ----------- NEMA MOTOR
 # Creates NEMA motor including its hole to cut the piece where is going
@@ -4030,13 +4351,13 @@ class PartLinGuideBlock (fc_clss.SinglePart, ShpLinGuideBlock):
                 setattr(self, i, values[i])
 
 
-doc = FreeCAD.newDocument()
-partLinGuideBlock = PartLinGuideBlock (
-                                     block_dict = kcomp.SEBWM16_B,
-                                     rail_dict  = kcomp.SEBWM16_R,
-                                     axis_d = VX, axis_w = VY, axis_h = VZ,
-                                     pos_d = 0, pos_w = -2, pos_h = 0,
-                                     pos = V0)
+#doc = FreeCAD.newDocument()
+#partLinGuideBlock = PartLinGuideBlock (
+#                                     block_dict = kcomp.SEBWM16_B,
+#                                     rail_dict  = kcomp.SEBWM16_R,
+#                                     axis_d = VX, axis_w = VY, axis_h = VZ,
+#                                     pos_d = 0, pos_w = -2, pos_h = 0,
+#                                     pos = V0)
 
 
 

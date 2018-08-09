@@ -127,7 +127,6 @@ class SinglePart (object):
 
     def set_color (self, color = (1.,1.,1.)):
         """ Sets a new color for the piece
-        pieces
 
         Parameters:
         -----------
@@ -138,6 +137,34 @@ class SinglePart (object):
         # just in case the value is 0 or 1, and it is an int
         self.color = (float(color[0]),float(color[1]), float(color[2]))
         self.fco.ViewObject.ShapeColor = self.color
+
+    def set_line_color (self, color = (1.,1.,1.)):
+        """ Sets a new color for the vertex lines of the piece
+
+        Parameters:
+        -----------
+        color : tuple of 3 floats from 0. to 1.
+            RGB colors
+
+        """
+        # just in case the value is 0 or 1, and it is an int
+        self.line_color = (float(color[0]),float(color[1]), float(color[2]))
+        self.fco.ViewObject.LineColor = self.line_color
+
+
+    def set_line_width (self, width = 1.):
+        """ Sets the line width of the vertexes
+
+        Parameters:
+        -----------
+        width : float from 0. to 1.
+
+        """
+        # just in case the value is 0 or 1, and it is an int
+        self.line_width = float(width)
+        self.fco.ViewObject.LineWidth = self.line_width
+
+
 
     def set_name (self, name = '', default_name = '', change = 0):
         """ Sets the name attribute to the value of parameter name
