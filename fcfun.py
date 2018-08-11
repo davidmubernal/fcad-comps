@@ -250,6 +250,147 @@ def get_fc_perpend1(fcv):
 
     return fcp
 
+def get_tangent_point (ext_pt,
+                       center_pt,
+                       rad,
+                       axis_n,
+                       axis_p = None):
+    """ If axis_p is not given:
+        - returns a list with the 2 points that each point forms a line tangent
+          to the circle. The 2 lines are defined by one of each point and the 
+          external point.
+        If axis_p is given:
+        - Only returns a point (FreeCAD.Vector) with the tangent point defined
+          by the direction of axis_p
+        If there is an error it will return 0
+
+    (difficult to draw in using ASCII text)
+
+          external point
+           :     tangent point 1
+           *---  _
+            \  /   \
+             \(     ) circle
+       tangent \ _ /
+        point 2
+
+    Parameters:
+    -----------
+    ext_pt : FreeCAD.Vector
+        external point
+    center_pt : FreeCAD.Vector
+        center of the circle
+    rad : float
+        radius of the circle
+    axis_n : FreeCAD.Vector
+        direction of the normal of the circle
+    axis_p : FreeCAD.Vector
+        direction of the tangent point, if not given, it will return both
+        points
+
+
+    The 3 points: center(C), ext_pt(E) and tangent_pt(T) form a
+    rectangle triangle
+
+                        axis_p
+                           :
+                           :
+                           :
+                           T   
+                           *
+                          90     rad
+
+             alpha           beta
+         *-----------------------*   ---- axis_c (axis going thru centers)
+        E                  :      C
+         :                 :     :
+         :.................:     :
+         :       +               :
+         :   axis_c_ET_d         :
+         :                       :
+         :.......................:
+                     +
+              EC_d (hypotenuse)
+   
+    """
+    # normalize axis_n vector (just in case)
+    axis_n = DraftVecUtils.scaleTo(axis_n,1)
+
+    E_pt = ext_pt
+    C_pt = center_pt
+
+    # vector from the external point to the center:
+    EC = C_pt - E_pt
+    # normalized vector:
+    axis_c = DraftVecUtils.scaleTo(EC,1)
+
+    if axis_p is None:
+        #calculation of axis_p vector, and its negative
+        axis_p = axis_n.cross(axis_c)
+        axis_pn = axis_p.negative()
+    else :
+        axis_p = DraftVecUtils.scaleTo(axis_p, 1)
+        axis_pn = V0
+        if not fc_isparal (axis_p, axis_n.cross(axis_c)):
+            logger.error('axis_p is not perpendicular to axis_n & the centers')
+            logger.warning('taking a perpendicular value for axis_p')
+            axis_p = axis_n.cross(axis_c)
+
+    if fc_isperp(axis_c, axis_n) == 0:
+        logger.error('axis_n is not perpendicular to the line formed by the')
+        logger.error('external point and the circle center')
+        return 0
+   
+    # length (hypotenuse: distance from the circle center to the external point)
+    EC_d = EC.Length
+    if rad >= EC_d :
+        logger.error('The external point has to be out of the circle')
+        return 0
+
+    # calculation of the length of the other cathetus (ET)
+    ET_d = math.sqrt(EC_d*EC_d - rad*rad)
+    # calculation of the sine and cosine of alpha angle
+    cos_alpha = ET_d / EC_d
+    sin_alpha = rad / EC_d
+    # projection distance of the cathetus onto (axis_c: EC):
+    axis_c_ET_d = ET_d * cos_alpha
+    # projection vector
+    axis_c_ET = DraftVecUtils.scale(axis_c, axis_c_ET_d)
+
+    # projection distance of the cathetus onto (axis_p):
+    axis_p_ET_d = ET_d * sin_alpha
+    # projection vectors
+    axis_p_ET  = DraftVecUtils.scale(axis_p , axis_p_ET_d)
+    axis_pn_ET = DraftVecUtils.scale(axis_pn, axis_p_ET_d)
+
+    T_1 = E_pt + axis_c_ET + axis_p_ET
+    if axis_pn == V0:
+        return T_1
+    else:
+        tg_list = []
+        tg_list.append(T_1)
+        T_2 = E_pt + axis_c_ET + axis_pn_ET
+        tg_list.append(T_2)
+        return tg_list
+
+
+T = get_tangent_point (ext_pt = V0,
+                       center_pt = FreeCAD.Vector(5,0,0),
+                       rad = 2,
+                       axis_n = VZ)
+                       #axis_p = VY)
+cir = Part.makeCircle(2,FreeCAD.Vector(5,0,0))
+Part.show(cir)
+line_E_T1 = Part.LineSegment(V0, T[0]).toShape()
+Part.show(line_E_T1)
+line_E_T2 = Part.LineSegment(V0, T[1]).toShape()
+Part.show(line_E_T2)
+
+
+
+    
+
+
 
 
 def add_fcobj(shp, name, doc = None):
@@ -2567,7 +2708,7 @@ def shp_belt_wire_dir (center_sep, rad1, rad2, fc_axis_l = VX,
                        pos=V0):
 
     """
-    Makes a shape of a wire with to circles and exterior tangent lines
+    Makes a shape of a wire with 2 circles and exterior tangent lines
     check: https://en.wikipedia.org/wiki/Tangent_lines_to_circles
     It is not easy to draw it well
     rad1 and rad2 can be exchanged, rad1 doesnt have to be larger
@@ -3578,6 +3719,379 @@ def shp_cableturn (d, w, thick_d, corner_r,
 #                        pos_d = 0,
 #                        pos_w = 0,
 #                        pos=V0)
+
+
+
+
+
+
+
+
+
+
+
+# ------------------- def wire_beltclamp
+
+def wire_beltclamp (d, w, corner_r,
+                        conn_d, conn_sep,
+                        xtr_conn_d = 0,
+                        closed = 0,
+                        axis_d = VY,
+                        axis_w = VX,
+                        pos_d = 0,
+                        pos_w = 0,
+                        pos=V0):
+
+    """
+    Creates a wire following 2 pulleys and ending in a belt clamp
+    But it is a wire in FreeCAD, has no volumen
+
+      axis_w
+        :
+        :
+     pulley1                   pulley2
+          
+        -----------------------------------
+      (   )                             (   )--------> axis_d
+        ---------===  ( )  ( )  ===--------
+               clamp1          clamp2
+
+      1 0        2 3   45  67   8 9      10 11   pos_d
+        :          :            :         :
+        :          :            :         :
+        :          :............:         :
+        :                +                :
+        :             clamp_sep           :
+        :                                 :
+        :.................................:
+                       +
+                     pull_sep_d
+
+      pos_w points:
+
+      axis_w
+        :                                    pull2
+        :      clamp1                 clamp2
+       2_                                     3-
+                                             ( 1 )   - - pull_sep_w (positive)
+     (  0  )   - - - - - - - - - - - - - - -  5-     - -
+              6 ___ ...................___.............:+ clamp_pull1_w (neg)
+       4-     7       < )        ( >                   :+ clamp_w
+              8 ___ ...................___.............:
+
+
+
+      axis_w
+        :                                    pull2
+        :      clamp1                 clamp2
+        _                                      -
+                                             (   )   - - pull_sep_w (positive)
+     (     )   - - - - - - - - - - - - - - -   -     - -
+                ___ ...................___.............:+ clamp_pull1_w (neg)
+        -             < )        ( >                   :+ clamp_w
+                ___ ...................___.............:
+        :      :   :   ::         :   :   :       :
+        :      :   :   :cyl_r     :   :   :       :
+        :      :   :...:          :...:   :.......:
+        :      :   :  +            +  :   :   +
+        :      :   :  clamp_cyl_sep   :   :   +
+        :      :   :                  :   :  clamp_pull2_d
+        :      :   :                  :...:
+        :      :   :                  :  +
+        :      :   :..................: clamp_d
+        :      :   :        +
+        :      :   :       clamp_sep
+        :      :...:   
+        :      : +
+        :      : clamp_d
+        :      :
+        :......:
+           +
+         clamp_pull1_d
+         
+
+    Parameters:
+    -----------
+    pull1_d : float
+        diameter of pulley 1
+    pull2_d : float
+        diameter of pulley 2
+    pull_sep_d : float
+        separation between the 2 pulleys centers along axis_d
+        if positive, pulley 2 is further away in the direction of axis_d
+        if negative, pulley 2 is further away opposite to the direction of
+           axis_d
+    pull_sep_w : float
+        separation between the 2 pulleys centers along axis_w
+        if positive, pulley 2 is further away in the direction of axis_w
+        if negative, pulley 2 is further away opposite to the direction of
+           axis_w
+    clamp_pull1_d : float
+        separation between the clamp (side closer to the center) and the center
+        of the pulley1
+    clamp_pull1_w : float
+        separation between the center of the clamp and the center of the
+        pulley1
+        if positive, the clamp is further away in the direction of axis_w
+        if negative, the clamp is further away opposite to the direction of
+           axis_w
+    clamp_d : float
+        length of the clamp (same for each clamp)
+    clamp_w : float
+        width of inner space (same for each clamp)
+    clamp_sep : float
+        separation between clamps, the closest ends
+    clamp_cyl_sep : float
+        separation between clamp and the center of the cylinder (or the center)
+        of the larger cylinder (when is a belt shape)
+    cyl_r : float
+        Radius of the cylinder for the belt, if it is not a cylinder but a
+        shape of 2 cylinders: < ) , then the raidius of the larger one
+
+    axis_d :  FreeCAD.Vector
+        Coordinate System Vector along the depth
+    axis_w :  FreeCAD.Vector
+        Coordinate System Vector along the width
+    pos_d : int
+        location of pos along the axis_d, see drawing
+        0: center of the pulley 1
+        1: end of pulley 1
+        2: end of clamp 1, closest end to pulley 1
+        3: other end of clamp 1, closest to cylinder
+        4: center of cylinder (or shape < ) 1
+        5: external radius of cylinder 1
+        6: external radius of cylinder 2
+        7: center of cylinder (or shape ( > 2
+        8: end of clamp 2, closest to cylinder
+        9: other end of clamp 2, closest end to pulley 2
+        10: center of pulley 2
+        11: end of pulley 2
+    pos_w : int
+        location of pos along the axis_w, see drawing
+        0: center of pulley 1
+        1: center of pulley 2
+        2: end (radius) of pulley 1 along axis_w
+        3: end (radius) of pulley 2 along axis_w
+        4: other end (radius) of pulley 1 opposite to axis_w
+        5: other end (radius) of pulley 2 opposite to axis_w
+        6: clamp space, closest to the pulley
+        7: center of clamp space
+        8: clamp space, far away from the pulley
+    pos: FreeCAD vector of the position of the reference
+
+
+    returns the shape of the wire
+    """
+    """
+
+    # normalize the axis
+    axis_d = DraftVecUtils.scaleTo(axis_d,1)
+    axis_w = DraftVecUtils.scaleTo(axis_w,1)
+
+    d_o = {}
+    # distances from the pos_o to pos_d 
+    d_o[0] = V0
+    d_o[1] = DraftVecUtils.scale(axis_d, -conn_d)
+    d_o[2] = DraftVecUtils.scale(axis_d, d/2.)
+    d_o[3] = DraftVecUtils.scale(axis_d, d)
+
+    xtr_conn_d_vec = DraftVecUtils.scale(axis_d, -xtr_conn_d)
+
+    w_o = {}
+    # distances from the pos_o to pos_w 
+    w_o[0] = V0
+    w_o[1] = DraftVecUtils.scale(axis_w, -w/2.)
+
+    # reference position
+    pos_o = pos + d_o[pos_d].negative() + w_o[pos_w].negative()
+
+    if (2 * corner_r + conn_sep >= w ) or (2 * corner_r >= d):
+        corner_r = min(d/2.1,(w-conn_sep)/4.1)
+        logger.warning('radius too large, taking:' + str(corner_r))
+
+    
+
+    #           w_t
+    #       ____________  ..... ..                   3
+    #      /B          C\      :..corner_r
+    #      |            |      :
+    #      |            |      :
+    # w_l  |            | w_r  + d                   2
+    #      |            |      :
+    #      |            |      :
+    #      | A         D|      :
+    #       \___   ____/ ......:                     1
+    #           \ /            :
+    #           | |            + conn_d
+    #           | |            : 
+    #           \_/............:...........axis_w    0
+    #
+    # Define the 4 corners 0, 1, 2, 3, that are at the center of the radius
+    # of the corners
+
+    # vector with length of the radius along axis_w 
+    d_rad =  DraftVecUtils.scale(axis_d, corner_r)
+    d_rad_n = d_rad.negative()
+    w_rad =  DraftVecUtils.scale(axis_w, corner_r)
+    w_rad_n = w_rad.negative()
+    # vector with half the length of the separation of connectors along axis_w 
+    w_hsep =  DraftVecUtils.scale(axis_w, conn_sep/2.)
+    w_hsep_n = w_hsep.negative()
+
+    pt_A = pos_o + d_o[1] + w_o[1] + d_rad + w_rad
+    pt_B = pos_o + d_o[3] + w_o[1] + d_rad_n + w_rad
+    pt_C = pos_o + d_o[3] + w_o[1].negative() + d_rad_n + w_rad_n
+    pt_D = pos_o + d_o[1] + w_o[1].negative() + d_rad + w_rad_n
+
+    if corner_r > 0 :
+        corner_r45 = corner_r/math.sqrt(2)
+        d_rad45 =  DraftVecUtils.scale(axis_d, corner_r45)
+        d_rad45_n = d_rad45.negative()
+        w_rad45 =  DraftVecUtils.scale(axis_w, corner_r45)
+        w_rad45_n = w_rad45.negative()
+
+        pt_A1 = pt_A + d_rad_n
+        pt_A2 = pt_A + d_rad45_n + w_rad45_n
+        pt_A3 = pt_A + w_rad_n
+        corner_A = Part.Arc(pt_A1, pt_A2, pt_A3).toShape()
+
+        pt_B1 = pt_B + w_rad_n
+        pt_B2 = pt_B + d_rad45 + w_rad45_n
+        pt_B3 = pt_B + d_rad
+        corner_B = Part.Arc(pt_B1, pt_B2, pt_B3).toShape()
+
+        pt_C1 = pt_C + d_rad
+        pt_C2 = pt_C + d_rad45 + w_rad45
+        pt_C3 = pt_C + w_rad
+        corner_C = Part.Arc(pt_C1, pt_C2, pt_C3).toShape()
+
+        pt_D1 = pt_D + w_rad
+        pt_D2 = pt_D + d_rad45_n + w_rad45
+        pt_D3 = pt_D + d_rad_n
+        corner_D = Part.Arc(pt_D1, pt_D2, pt_D3).toShape()
+
+        # In Freecad 0.17 Line is an infinite Line, change to LineSegment
+        line_AB = Part.LineSegment(pt_A3, pt_B1).toShape()
+        line_BC = Part.LineSegment(pt_B3, pt_C1).toShape()
+        line_CD = Part.LineSegment(pt_C3, pt_D1).toShape()
+
+        top_wire = Part.Wire([corner_A, line_AB,
+                              corner_B, line_BC,
+                              corner_C, line_CD,
+                              corner_D])
+        top_wire_firstpt = pt_A1
+        top_wire_lastpt = pt_D3
+        if conn_d == 0:
+            # the turn ends here:
+            if closed == 1:
+                line_bot = Part.LineSegment(pt_D3, pt_A1).toShape()
+                cable_wire = Part.Wire([line_bot,top_wire,])
+            else:
+                #
+                #      | A         D|
+                #       \___E   F___/
+                #      
+                pt_E =  pos_o + w_hsep_n
+                pt_F =  pos_o + w_hsep
+                line_EA = Part.LineSegment(pt_E, pt_A1).toShape()
+                line_DF = Part.LineSegment(pt_D3, pt_F).toShape()
+                cable_wire = Part.Wire([line_EA,top_wire, line_DF])
+        else :
+            if conn_d < corner_r :
+                conn_d = corner_r * 1.1
+                logger.warning('radius larger than connector length')
+                logger.warning('making it: ' + str(conn_d))
+                logger.warning('Distances mabe be WRONG')
+            # Points E1, E2, E3, F1, F2, F3:
+            pt_E = pos_o + w_hsep_n + d_rad_n + w_rad_n # radius center
+            pt_F = pos_o + w_hsep + d_rad_n + w_rad # radius center
+            # E3 is the closest to A
+            pt_E3 = pt_E + d_rad
+            pt_E2 = pt_E + d_rad45 + w_rad45
+            pt_E1 = pt_E + w_rad
+
+            # F1 is the closest to D
+            pt_F3 = pt_F + w_rad_n
+            pt_F2 = pt_F + d_rad45 + w_rad45_n
+            pt_F1 = pt_F + d_rad
+            
+            corner_E = Part.Arc(pt_E1, pt_E2, pt_E3).toShape()
+            corner_F = Part.Arc(pt_F1, pt_F2, pt_F3).toShape()
+            line_EA = Part.LineSegment(pt_E3, pt_A1).toShape()
+            line_DF = Part.LineSegment(pt_D3, pt_F1).toShape()
+
+            pt_G =  pos_o + w_hsep_n + d_o[0] + xtr_conn_d_vec
+            pt_H =  pos_o + w_hsep + d_o[0] + xtr_conn_d_vec
+            line_GE = Part.LineSegment(pt_G, pt_E1).toShape()
+            line_FH = Part.LineSegment(pt_F3, pt_H).toShape()
+
+
+            cable_wire = Part.Wire([line_GE, corner_E, line_EA,top_wire,
+                                    line_DF, corner_F, line_FH])
+            if closed == 1:
+                line_HG = Part.LineSegment(pt_H, pt_G).toShape()
+                cable_wire = Part.Wire([cable_wire, line_HG])
+        
+        
+    else : # no corners
+        line_AB = Part.LineSegment(pt_A, pt_B).toShape()
+        line_BC = Part.LineSegment(pt_B, pt_C).toShape()
+        line_CD = Part.LineSegment(pt_C, pt_D).toShape()
+        top_wire = Part.Wire([line_AB, line_BC,line_CD])
+        top_wire_firstpt = pt_A
+        top_wire_lastpt = pt_D
+        # points E - F
+        #      |            |
+        #      |____E   F___|
+        #      
+        if conn_d == 0:
+            # the turn ends here:
+            if closed == 1:
+                line_bot = Part.LineSegment(pt_D, pt_A).toShape()
+                cable_wire = Part.Wire([line_bot,top_wire,])
+            else :
+                pt_E =  pos_o + w_hsep_n
+                pt_F =  pos_o + w_hsep
+                line_EA = Part.LineSegment(pt_E, pt_A).toShape()
+                line_DF = Part.LineSegment(pt_D, pt_F).toShape()
+                cable_wire = Part.Wire([line_EA,top_wire, line_DF])
+        else:
+            pt_E =  pos_o + w_hsep_n
+            pt_F =  pos_o + w_hsep
+            line_EA = Part.LineSegment(pt_E, pt_A).toShape()
+            line_DF = Part.LineSegment(pt_D, pt_F).toShape()
+            # points E - F
+            #      |            |
+            #      |____E   F___|
+            #           |   |
+            #           |   |
+            #           G   H
+            pt_G =  pt_E + d_o[0] + xtr_conn_d_vec
+            pt_H =  pt_F + d_o[0] + xtr_conn_d_vec
+            line_GE = Part.LineSegment(pt_G, pt_E).toShape()
+            line_FH = Part.LineSegment(pt_F, pt_H).toShape()
+            cable_wire = Part.Wire([line_GE, line_EA,top_wire,
+                                    line_DF, line_FH])
+            if closed == 1 :
+                line_HG = Part.LineSegment(pt_H, pt_G).toShape()
+                cable_wire = Part.Wire([cable_wire, line_HG])
+
+
+    #Part.show(cable_wire)
+    return (cable_wire)
+
+
+
+    """
+
+
+
+
+
+
+
+
+
 
 
 
