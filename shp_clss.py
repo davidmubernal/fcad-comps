@@ -770,3 +770,298 @@ class ShpCylHole (Obj3D):
 #                       #pos = FreeCAD.Vector(1,2,3))
 #Part.show(cyl.shp)
 
+
+
+
+
+
+# ------------------- def wire_beltclamp
+# Not sure if a wire should be an Obj3D class
+
+class WireBeltClamp (Obj3D):
+
+    """
+    Creates a wire following 2 pulleys and ending in a belt clamp
+    But it is a wire in FreeCAD, has no volumen
+
+      axis_w
+        :
+        :
+     pulley1                   pulley2
+          
+        -----------------------------------
+      (   )                             (   )--------> axis_d
+        ---------===  ( )  ( )  ===--------
+               clamp1          clamp2
+
+      1 0        2 3   45  67   8 9      10 11   pos_d
+        :          :            :         :
+        :          :            :         :
+        :          :............:         :
+        :                +                :
+        :             clamp_sep           :
+        :                                 :
+        :.................................:
+                       +
+                     pull_sep_d
+
+      pos_w points:
+
+      axis_w
+        :                                    pull2
+        :      clamp1                 clamp2
+       2_                                     3-
+                                             ( 1 )   - - pull_sep_w (positive)
+     (  0  )   - - - - - - - - - - - - - - -  5-     - -
+              6 ___ ...................___.............:+ clamp_pull1_w (neg)
+       4-     7       < )        ( >                   :+ clamp_w
+              8 ___ ...................___.............:
+
+
+
+      axis_w
+        :                                      pull2
+        :      clamp1                 clamp2
+        _                                         -
+                                                (   )   - - pull_sep_w(positive)
+     (     )   - - - - - - - - - - - - - - - - -  -     - -
+                ___ ...................___.............:+ clamp_pull1_w (neg)
+        -             < )        ( >                   :+ clamp_w
+                ___ ...................___.............:
+        :      :   :   ::         :   :   :       :
+        :      :   :   :cyl_r     :   :   :       :
+        :      :   :...:          :...:   :.......:
+        :      :   :  +            +  :   :   +
+        :      :   :  clamp_cyl_sep   :   :   +
+        :      :   :                  :   :  clamp_pull2_d
+        :      :   :                  :...:
+        :      :   :                  :  +
+        :      :   :..................: clamp_d
+        :      :   :        +
+        :      :   :       clamp_sep
+        :      :...:   
+        :      : +
+        :      : clamp_d
+        :      :
+        :......:
+           +
+         clamp_pull1_d
+         
+
+    Parameters:
+    -----------
+    pull1_dm: float
+        diameter of pulley 1
+    pull2_dm: float
+        diameter of pulley 2
+    pull_sep_d : float
+        separation between the 2 pulleys centers along axis_d
+    pull_sep_w : float
+        separation between the 2 pulleys centers along axis_w
+        if positive, pulley 2 is further away in the direction of axis_w
+        if negative, pulley 2 is further away opposite to the direction of
+           axis_w
+    clamp_pull1_d : float
+        separation between the clamp (side closer to the center) and the center
+        of the pulley1 along axis d
+    clamp_pull1_w : float
+        separation between the center of the clamp and the center of the
+        pulley1 along axis w
+    clamp_pull2_d : float
+        separation between the clamp (side closer to the center) and the center
+        of the pulley1 along axis d
+        clamp_pull2_w can be calculated because the clamps are aligned along
+        axis_d, so it will be clamp_pull1_d + pull_sep_w
+    clamp_d : float
+        length of the clamp (same for each clamp)
+    clamp_w : float
+        width of inner space (same for each clamp)
+    clamp_cyl_sep : float
+        separation between clamp and the center of the cylinder (or the center)
+        of the larger cylinder (when is a belt shape)
+    cyl_r : float
+        Radius of the cylinder for the belt, if it is not a cylinder but a
+        shape of 2 cylinders: < ) , then the raidius of the larger one
+
+    axis_d :  FreeCAD.Vector
+        Coordinate System Vector along the depth
+    axis_w :  FreeCAD.Vector
+        Coordinate System Vector along the width
+    pos_d : int
+        location of pos along the axis_d, see drawing
+        0: center of the pulley 1
+        1: end of pulley 1
+        2: end of clamp 1, closest end to pulley 1
+        3: other end of clamp 1, closest to cylinder
+        4: center of cylinder (or shape < ) 1
+        5: external radius of cylinder 1
+        6: external radius of cylinder 2
+        7: center of cylinder (or shape ( > 2
+        8: end of clamp 2, closest to cylinder
+        9: other end of clamp 2, closest end to pulley 2
+        10: center of pulley 2
+        11: end of pulley 2
+    pos_w : int
+        location of pos along the axis_w, see drawing
+        0: center of pulley 1
+        1: center of pulley 2
+        2: end (radius) of pulley 1 along axis_w
+        3: end (radius) of pulley 2 along axis_w
+        4: other end (radius) of pulley 1 opposite to axis_w
+        5: other end (radius) of pulley 2 opposite to axis_w
+        6: clamp space, closest to the pulley
+        7: center of clamp space
+        8: clamp space, far away from the pulley
+    pos: FreeCAD vector of the position of the reference
+
+    Attributes:
+    -----------
+    clamp_sep : float
+        separation between clamps, the closest ends
+
+
+    """
+
+    def __init__(self,
+                 pull1_dm,
+                 pull2_dm,
+                 pull_sep_d,
+                 pull_sep_w,
+                 clamp_pull1_d,
+                 clamp_pull1_w,
+                 clamp_pull2_d,
+                 clamp_d,
+                 clamp_w,
+                 clamp_cyl_sep,
+                 cyl_r,
+                 axis_d = VY,
+                 axis_w = VX,
+                 pos_d = 0,
+                 pos_w = 0,
+                 pos=V0):
+
+        axis_h = axis_d.cross(axis_w)
+        Obj3D.__init__(self, axis_d = axis_d, axis_w = axis_w, axis_h = None)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        self.pull1_r = pull1_dm/2.
+        self.pull2_r = pull2_dm/2.
+
+        self.clamp_sep = (pull_sep_d - ( clamp_pull1_d + 2*clamp_d +
+                                        clamp_pull2_d))
+
+        self.d0_cen = 0 # non symmetrical
+        self.w0_cen = 0
+        self.h0_cen = 0
+
+
+        # vectors from the origin to the points along axis_d:
+        self.d_o[0] = V0
+        self.d_o[1] = self.vec_d(-self.pull1_r)
+        self.d_o[2] = self.vec_d(clamp_pull1_d)
+        self.d_o[3] = self.vec_d(clamp_pull1_d + clamp_d)
+        self.d_o[4] = self.vec_d(clamp_pull1_d + clamp_d + clamp_cyl_sep)
+                    # get_o_to_d (could be used)
+        self.d_o[5] = self.d_o[4] + self.vec_d(cyl_r)
+
+        self.d_o[8] = self.d_o[3] + self.vec_d(self.clamp_sep)
+        self.d_o[7] = self.d_o[8] + self.vec_d(-clamp_cyl_sep)
+        self.d_o[6] = self.d_o[7] + self.vec_d(-cyl_r)
+
+        self.d_o[9]  = self.d_o[8]  + self.vec_d(clamp_d)
+        self.d_o[10] = self.d_o[9]  + self.vec_d(clamp_pull2_d)
+        self.d_o[11] = self.d_o[10] + self.vec_d(self.pull2_r)
+
+        # vectors from the origin to the points along axis_w:
+        self.w_o[0] = V0
+        self.w_o[1] = self.vec_w(pull_sep_w)
+        self.w_o[2] = self.vec_w(self.pull1_r)
+        self.w_o[3] = self.vec_w(pull_sep_w + self.pull2_r)
+        self.w_o[4] = self.vec_w(-self.pull1_r)
+        self.w_o[5] = self.vec_w(pull_sep_w - self.pull2_r)
+        self.w_o[6] = self.vec_w(-clamp_pull1_w)
+        self.w_o[7] = self.vec_w(-(clamp_pull1_w + clamp_w/2.))
+        self.w_o[8] = self.vec_w(-(clamp_pull1_w + clamp_w))
+
+        # there is no axis_h, there for, always 0
+        self.h_o[0] = V0
+
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        #axis_w
+        #  :                                    pull2
+        #  :
+        #  2_                                   I3-
+        #   H                                   ( 1 )   
+        #(  0  )                                 5J 
+        # G      6 ___     C        N     ___
+        #  4-    7 A B   < )        ( >   P Q
+        #        8 F_E     D        M     L_K
+        #          ---                    --- 
+        #        clamp1                  clamp2
+
+        # at clamp 1, touching the clamp (w=6)
+        A_pt = self.get_pos_dwh(2,6,0)
+        B_pt = self.get_pos_dwh(3,6,0)
+        E_pt = self.get_pos_dwh(3,8,0)
+        F_pt = self.get_pos_dwh(2,8,0)
+        line_AB = Part.LineSegment(A_pt, B_pt).toShape()
+        line_EF = Part.LineSegment(E_pt, F_pt).toShape()
+        # from B tangent point to the cylinder
+        cyl1_center_pt = self.get_pos_dwh(4,7,0)
+        C_pt = fcfun.get_tangent_point(ext_pt=B_pt,
+                                       center_pt= cyl1_center_pt,
+                                       rad = cyl_r,
+                                       axis_n = axis_h,
+                                       axis_p = self.axis_w)
+        print C_pt
+        line_BC = Part.LineSegment(B_pt, C_pt).toShape()
+
+        D_pt = fcfun.get_tangent_point(ext_pt=E_pt,
+                                       center_pt= cyl1_center_pt,
+                                       rad = cyl_r,
+                                       axis_n = axis_h,
+                                       axis_p = self.axis_w.negative())
+        line_DE = Part.LineSegment(D_pt, E_pt).toShape()
+
+        arc_CD = Part.Arc(C_pt, self.get_pos_dwh(5,7,0),D_pt).toShape()
+        
+        belt_wire = Part.Wire([line_AB, line_BC, arc_CD,
+                          line_DE, line_EF])
+
+
+
+        Part.show(belt_wire)
+        return (belt_wire)
+
+
+belt_wire = WireBeltClamp(
+                 pull1_dm = 5,
+                 pull2_dm = 5,
+                 pull_sep_d = 80,
+                 pull_sep_w = 0,
+                 clamp_pull1_d = 15,
+                 clamp_pull1_w = 5,
+                 clamp_pull2_d = 15,
+                 clamp_d = 5,
+                 clamp_w = 4,
+                 clamp_cyl_sep = 8,
+                 cyl_r = 3,
+                 axis_d = VY,
+                 axis_w = VX,
+                 pos_d = 0,
+                 pos_w = 0,
+                 pos=V0)
+
+
+
+
+
+
