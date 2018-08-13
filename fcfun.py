@@ -254,7 +254,7 @@ def get_tangent_point (ext_pt,
                        center_pt,
                        rad,
                        axis_n,
-                       axis_p = None):
+                       axis_side = None):
     """ If axis_p is not given:
         - returns a list with the 2 points that each point forms a line tangent
           to the circle. The 2 lines are defined by one of each point and the 
@@ -284,23 +284,25 @@ def get_tangent_point (ext_pt,
         radius of the circle
     axis_n : FreeCAD.Vector
         direction of the normal of the circle
-    axis_p : FreeCAD.Vector
-        direction of the tangent point, if not given, it will return both
-        points
-
+    axis_side : FreeCAD.Vector
+        direction to the side of the tangent point, if not given,
+        it will return both points
+        The 2 tangent points will be at each side of axis_c. The smaller than
+        90 degree angle between axis_side and the 2 possible axis_p
+        
 
     The 3 points: center(C), ext_pt(E) and tangent_pt(T) form a
     rectangle triangle
 
                         axis_p
-                           :
-                           :
-                           :
-                           T   
-                           *
-                          90     rad
-
-             alpha           beta
+                           :    axis_side
+                           :      /
+                           : >90 /
+                           T    /
+                        .  *.  /
+                   .      90 .  rad
+               .               .
+           . alpha         beta .
          *-----------------------*   ---- axis_c (axis going thru centers)
         E                  :      C
          :                 :     :
@@ -311,6 +313,14 @@ def get_tangent_point (ext_pt,
          :.......................:
                      +
               EC_d (hypotenuse)
+
+    Interesting variables:
+    -----------
+    axis_p : FreeCAD.Vecrtor
+        vector of the circle plane, perpendicular to axis_d. It can have
+        to possible directions. If paremeter axis_side is defined, it will
+        have the direction that has less than 90 degress related to axis_side
+      
    
     """
     # normalize axis_n vector (just in case)
@@ -324,22 +334,21 @@ def get_tangent_point (ext_pt,
     # normalized vector:
     axis_c = DraftVecUtils.scaleTo(EC,1)
 
-    if axis_p is None:
-        #calculation of axis_p vector, and its negative
-        axis_p = axis_n.cross(axis_c)
-        axis_pn = axis_p.negative()
-    else :
-        axis_p = DraftVecUtils.scaleTo(axis_p, 1)
-        axis_pn = V0
-        if not fc_isparal (axis_p, axis_n.cross(axis_c)):
-            logger.error('axis_p is not perpendicular to axis_n & the centers')
-            logger.warning('taking a perpendicular value for axis_p')
-            axis_p = axis_n.cross(axis_c)
-
     if fc_isperp(axis_c, axis_n) == 0:
         logger.error('axis_n is not perpendicular to the line formed by the')
         logger.error('external point and the circle center')
         return 0
+
+    #calculation of axis_p vector, and its negative
+    axis_p = axis_n.cross(axis_c)
+    axis_pn = axis_p.negative()
+    if axis_side is not None:
+        axis_side = DraftVecUtils.scaleTo(axis_side, 1)
+        if axis_side.dot(axis_p) < 0 :
+            # axis_p in the other direction
+            axis_p = axis_pn
+        axis_pn = V0 # not using the negative direction, just one point
+
    
     # length (hypotenuse: distance from the circle center to the external point)
     EC_d = EC.Length
@@ -359,9 +368,8 @@ def get_tangent_point (ext_pt,
 
     # projection distance of the cathetus onto (axis_p):
     axis_p_ET_d = ET_d * sin_alpha
-    # projection vectors
+    # projection vector along axis_p
     axis_p_ET  = DraftVecUtils.scale(axis_p , axis_p_ET_d)
-    axis_pn_ET = DraftVecUtils.scale(axis_pn, axis_p_ET_d)
 
     T_1 = E_pt + axis_c_ET + axis_p_ET
     if axis_pn == V0:
@@ -369,6 +377,8 @@ def get_tangent_point (ext_pt,
     else:
         tg_list = []
         tg_list.append(T_1)
+        # projection vector along axis_pn
+        axis_pn_ET = DraftVecUtils.scale(axis_pn, axis_p_ET_d)
         T_2 = E_pt + axis_c_ET + axis_pn_ET
         tg_list.append(T_2)
         return tg_list

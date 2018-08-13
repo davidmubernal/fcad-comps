@@ -1020,7 +1020,7 @@ class WireBeltClamp (Obj3D):
                                        center_pt= cyl1_center_pt,
                                        rad = cyl_r,
                                        axis_n = axis_h,
-                                       axis_p = self.axis_w)
+                                       axis_side = self.axis_w)
         print C_pt
         line_BC = Part.LineSegment(B_pt, C_pt).toShape()
 
@@ -1028,7 +1028,7 @@ class WireBeltClamp (Obj3D):
                                        center_pt= cyl1_center_pt,
                                        rad = cyl_r,
                                        axis_n = axis_h,
-                                       axis_p = self.axis_w.negative())
+                                       axis_side = self.axis_w.negative())
         line_DE = Part.LineSegment(D_pt, E_pt).toShape()
 
         arc_CD = Part.Arc(C_pt, self.get_pos_dwh(5,7,0),D_pt).toShape()
@@ -1039,7 +1039,7 @@ class WireBeltClamp (Obj3D):
 
 
         Part.show(belt_wire)
-        return (belt_wire)
+        self.wire = belt_wire
 
 
 belt_wire = WireBeltClamp(
