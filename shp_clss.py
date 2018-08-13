@@ -1016,7 +1016,7 @@ class WireBeltClamp (Obj3D):
         line_EF = Part.LineSegment(E_pt, F_pt).toShape()
         # from B tangent point to the cylinder
         cyl1_center_pt = self.get_pos_dwh(4,7,0)
-        C_pt = fcfun.get_tangent_point(ext_pt=B_pt,
+        C_pt = fcfun.get_tangent_circle_pt(ext_pt=B_pt,
                                        center_pt= cyl1_center_pt,
                                        rad = cyl_r,
                                        axis_n = axis_h,
@@ -1024,7 +1024,7 @@ class WireBeltClamp (Obj3D):
         print C_pt
         line_BC = Part.LineSegment(B_pt, C_pt).toShape()
 
-        D_pt = fcfun.get_tangent_point(ext_pt=E_pt,
+        D_pt = fcfun.get_tangent_circle_pt(ext_pt=E_pt,
                                        center_pt= cyl1_center_pt,
                                        rad = cyl_r,
                                        axis_n = axis_h,

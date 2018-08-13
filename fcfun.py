@@ -250,18 +250,18 @@ def get_fc_perpend1(fcv):
 
     return fcp
 
-def get_tangent_point (ext_pt,
-                       center_pt,
-                       rad,
-                       axis_n,
-                       axis_side = None):
-    """ If axis_p is not given:
+def get_tangent_circle_pt (ext_pt,
+                           center_pt,
+                           rad,
+                           axis_n,
+                           axis_side = None):
+    """ If axis_side is not given:
         - returns a list with the 2 points that each point forms a line tangent
           to the circle. The 2 lines are defined by one of each point and the 
           external point.
-        If axis_p is given:
+        If axis_side is given:
         - Only returns a point (FreeCAD.Vector) with the tangent point defined
-          by the direction of axis_p
+          by the direction of axis_side
         If there is an error it will return 0
 
     (difficult to draw in using ASCII text)
@@ -297,7 +297,7 @@ def get_tangent_point (ext_pt,
                         axis_p
                            :    axis_side
                            :      /
-                           : >90 /
+                           : <90 /
                            T    /
                         .  *.  /
                    .      90 .  rad
@@ -384,17 +384,225 @@ def get_tangent_point (ext_pt,
         return tg_list
 
 
-T = get_tangent_point (ext_pt = V0,
-                       center_pt = FreeCAD.Vector(5,0,0),
-                       rad = 2,
-                       axis_n = VZ)
-                       #axis_p = VY)
-cir = Part.makeCircle(2,FreeCAD.Vector(5,0,0))
-Part.show(cir)
-line_E_T1 = Part.LineSegment(V0, T[0]).toShape()
-Part.show(line_E_T1)
-line_E_T2 = Part.LineSegment(V0, T[1]).toShape()
-Part.show(line_E_T2)
+#T = get_tangent_point (ext_pt = V0,
+#                       center_pt = FreeCAD.Vector(5,0,0),
+#                       rad = 2,
+#                       axis_n = VZ)
+#                       #axis_p = VY)
+#cir = Part.makeCircle(2,FreeCAD.Vector(5,0,0))
+#Part.show(cir)
+#line_E_T1 = Part.LineSegment(V0, T[0]).toShape()
+#Part.show(line_E_T1)
+#line_E_T2 = Part.LineSegment(V0, T[1]).toShape()
+#Part.show(line_E_T2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+def get_tangent_2circles (center1_pt,
+                          center2_pt,
+                          rad1,
+                          rad2,
+                          axis_n,
+                          axis_side = None):
+    """ Returns a list of lists (matrix) with the 2 tangent points for each
+        of the 2 tangent lines
+        If axis_side is given:
+        - Returns a list of lists (matrix)
+          Element [0][0] is the point tangent to circle 1 at side axis_side
+          Element [0][1] is the point tangent to circle 2 at side axis_side
+          Element [1][0] is the point tangent to circle 1 at opposite side of
+                         direction of axis_side
+          Element [1][1] is the point tangent to circle 2 at opposite side of
+                         direction of axis_side
+        If axis_side is not given, the order of the list of the lines is
+                          arbitrary
+        If there is an error it will return 0
+
+    (difficult to draw in using ASCII text)
+
+
+                        axis_p
+                           :
+                        T2 :         axis_side
+                        .  * r1        /  ------------
+                   .         .        /              :
+              .         .     .      /               :
+      T1  .        .           . r2-r1 (r_diff)      + r2*sin(beta)
+         *     .                .                    :
+       r1  . alpha          beta                     :
+          *----------------------*   ---- axis_c (axis going thru centers)
+        C1                 :      C2
+         ::                :     :
+         ::                :.....:
+         ::                  +   :
+         ::          r2*cos(beta):
+         ::                      :
+         ::......................:
+         ::          +
+         ::   C1_C2_d (hypotenuse)
+         ::
+         ::
+         r1*cos(beta)
+
+          alpha = atan(r_diff/C1_C2_d)
+          beta = 90 - alpha
+
+          tangent points along axis_c and axis_p
+
+          T2_c = C2_c - r2 * cos(beta) 
+          T2_p = C2_p - r2 * sin(beta) 
+
+          T1_c = C1_c - r1 * cos(beta) 
+          T1_p = C1_p - r1 * sin(beta) 
+
+
+    Parameters:
+    -----------
+    center1_pt : FreeCAD.Vector
+        center of the circle 1
+    center2_pt : FreeCAD.Vector
+        center of the circle 2
+    rad1 : float
+        radius of the circle 1
+    rad2 : float
+        radius of the circle 2
+    axis_n : FreeCAD.Vector
+        direction of the normal of the circle
+    axis_side : FreeCAD.Vector
+        direction to the side of the tangent line, if not given,
+        it will return the 2 points of both lines
+        The 2 tangent lines will be at each side of axis_c. The smaller than
+        90 degree angle between axis_side and the 2 possible axis_p
+        
+    Interesting variables:
+    -----------
+    axis_p : FreeCAD.Vecrtor
+        vector of the circle plane, perpendicular to axis_d. It can have
+        to possible directions. If paremeter axis_side is defined, it will
+        have the direction that has less than 90 degress related to axis_side
+      
+   
+    """
+    # normalize axis_n vector (just in case)
+    axis_n = DraftVecUtils.scaleTo(axis_n,1)
+
+    # choosing r1 the smaller radius, and r2 the larger
+    if rad1 < rad2:
+        C1_pt = center1_pt
+        C2_pt = center2_pt
+        r1 = rad1
+        r2 = rad2
+    else: #changing circle names
+        C1_pt = center2_pt
+        C2_pt = center1_pt
+        r1 = rad2
+        r2 = rad1
+    r_diff = r2 - r1
+
+    # vector from center1 to center2:
+    C1_C2 = C2_pt - C1_pt
+    # normalized vector:
+    axis_c = DraftVecUtils.scaleTo(C1_C2,1)
+
+    if fc_isperp(axis_c, axis_n) == 0:
+        logger.error('axis_n is not perpendicular to the line formed by the')
+        logger.error('external point and the circle center')
+        return 0
+
+    #calculation of axis_p vector, and its negative
+    axis_p = axis_n.cross(axis_c)
+    axis_pn = axis_p.negative()
+    if axis_side is not None:
+        if axis_side.dot(axis_p) < 0 :
+            # axis_p in the other direction
+            axis_p = axis_pn
+            axis_pn = axis_p.negative()
+    # if axis_side is not defined, the order is random
+
+   
+    # length (hypotenuse: distance from the circle center to the external point)
+    C1_C2_d = C1_C2.Length
+    if r_diff >= C1_C2_d :
+        logger.error('smaller circle is inside the larger')
+        return 0
+
+    # calculation of the length of the other cathetus (T1_T2)
+    T1_T2_d = math.sqrt(C1_C2_d * C1_C2_d - r_diff * r_diff)
+    # calculation of the sine and cosine of beta angle
+    cos_beta =  r_diff / C1_C2_d
+    sin_beta = T1_T2_d / C1_C2_d
+    # projection distance of the radius onto axis_d
+    axis_c_r1_d = r1 * cos_beta
+    axis_c_r2_d = r2 * cos_beta
+    # projection vector, negative, opposite direction to axis_c
+    axis_c_r1 = DraftVecUtils.scale(axis_c, -axis_c_r1_d)
+    axis_c_r2 = DraftVecUtils.scale(axis_c, -axis_c_r2_d)
+
+    # projection distance of the radius onto axis_p
+    axis_p_r1_d = r1 * sin_beta
+    axis_p_r2_d = r2 * sin_beta
+    # projection vector, negative, opposite direction to axis_c
+    axis_p_r1 = DraftVecUtils.scale(axis_p, axis_p_r1_d)
+    axis_p_r2 = DraftVecUtils.scale(axis_p, axis_p_r2_d)
+    axis_pn_r1 = DraftVecUtils.scale(axis_pn, axis_p_r1_d)
+    axis_pn_r2 = DraftVecUtils.scale(axis_pn, axis_p_r2_d)        
+
+    # tangent line on side axis_p
+    L1_T1 = C1_pt + axis_c_r1 + axis_p_r1
+    L1_T2 = C2_pt + axis_c_r2 + axis_p_r2
+    L2_T1 = C1_pt + axis_c_r1 + axis_pn_r1
+    L2_T2 = C2_pt + axis_c_r2 + axis_pn_r2
+    if rad1 < rad2:
+        L1 = [L1_T1, L1_T2]
+        L2 = [L2_T1, L2_T2]
+    else: # the order was changed
+        L1 = [L1_T2, L1_T1]
+        L2 = [L2_T2, L2_T1]
+
+    L = [L1, L2]
+    return L
+
+
+L = get_tangent_2circles (
+                          center1_pt = V0,
+                          center2_pt = FreeCAD.Vector(20,0,0),
+                          rad1 = 2,
+                          rad2 = 10,
+                          axis_n = VZ,
+                          axis_side = VY)
+
+cir1 = Part.makeCircle(2,FreeCAD.Vector(0,0,0))
+cir2 = Part.makeCircle(10,FreeCAD.Vector(20,0,0))
+Part.show(cir1)
+Part.show(cir2)
+line_1 = Part.LineSegment(L[0][0], L[0][1]).toShape()
+Part.show(line_1)
+line_2 = Part.LineSegment(L[1][0], L[1][1]).toShape()
+Part.show(line_2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
