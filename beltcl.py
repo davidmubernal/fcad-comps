@@ -15,6 +15,7 @@ import Part
 import Draft
 import DraftVecUtils
 import logging
+import inspect
 import Mesh
 import MeshPart
 
@@ -1151,8 +1152,8 @@ class ShpBeltClamped (shp_clss.WireBeltClamped):
         wire_belt_sec = Part.makePolygon([belt_sec_pt1, belt_sec_pt2,
                                           belt_sec_pt3, belt_sec_pt4,
                                           belt_sec_pt1])
-        shp_belt_sec = Part.Face(wire_belt_sec)
         shp_belt = self.belt_wire.makePipeShell([wire_belt_sec],True, False,2)
+        shp_belt = shp_belt.removeSplitter()
 
         self.shp = shp_belt
         
@@ -1193,7 +1194,98 @@ class ShpBeltClamped (shp_clss.WireBeltClamped):
 
        
 
-belt = ShpBeltClamped (
+#belt = ShpBeltClamped (
+#                 pull1_dm = 5,
+#                 pull2_dm = 6,
+#                 pull_sep_d = 80,
+#                 pull_sep_w = 0,
+#                 clamp_pull1_d = 15,
+#                 clamp_pull1_w = 5,
+#                 clamp_pull2_d = 15,
+#                 clamp_d = 5,
+#                 clamp_w = 4,
+#                 clamp_cyl_sep = 8,
+#                 cyl_r = 3,
+#                 belt_width = 6.,
+#                 belt_thick = 1.38,
+#                 axis_d = VY,
+#                 axis_w = VX,
+#                 axis_h = VZ,
+#                 pos_d = 0,
+#                 pos_w = 0,
+#                 pos_h = 0,
+#                 pos=V0)
+
+class PartBeltClamped (fc_clss.SinglePart, ShpBeltClamped):
+    """ Integration of a ShpBeltClamped object into a PartBeltClamped object
+
+    Same parameters as ShpBeltClamped plus
+
+    model_type
+    name
+    """
+
+    def __init__(self,
+                 pull1_dm,
+                 pull2_dm,
+                 pull_sep_d,
+                 pull_sep_w,
+                 clamp_pull1_d,
+                 clamp_pull1_w,
+                 clamp_pull2_d,
+                 clamp_d,
+                 clamp_w,
+                 clamp_cyl_sep,
+                 cyl_r,
+                 belt_width = 6.,
+                 belt_thick = 1.38,
+                 axis_d = VY,
+                 axis_w = VX,
+                 axis_h = VZ,
+                 pos_d = 0,
+                 pos_w = 0,
+                 pos_h = 0,
+                 pos=V0,
+                 model_type = 1, # dimensional model
+                 name = ''):
+
+        default_name = 'gt2_belt'
+        self.set_name (name, default_name, change=0)
+
+        ShpBeltClamped.__init__(self,
+                 pull1_dm = pull1_dm,
+                 pull2_dm = pull2_dm,
+                 pull_sep_d = pull_sep_d,
+                 pull_sep_w = pull_sep_w,
+                 clamp_pull1_d = clamp_pull1_d,
+                 clamp_pull1_w = clamp_pull1_w,
+                 clamp_pull2_d = clamp_pull2_d,
+                 clamp_d  = clamp_d,
+                 clamp_w  = clamp_w,
+                 clamp_cyl_sep = clamp_cyl_sep,
+                 cyl_r = cyl_r,
+                 belt_width = belt_width,
+                 belt_thick = belt_thick,
+                 axis_d = axis_d,
+                 axis_w = axis_w,
+                 axis_h = axis_h,
+                 pos_d = pos_d,
+                 pos_w = pos_w,
+                 pos_h = pos_h,
+                 pos = pos)
+
+        # creation of the part
+        fc_clss.SinglePart.__init__(self)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): 
+                setattr(self, i, values[i])
+                 
+
+belt = PartBeltClamped (
                  pull1_dm = 5,
                  pull2_dm = 6,
                  pull_sep_d = 80,
@@ -1212,6 +1304,5 @@ belt = ShpBeltClamped (
                  axis_h = VZ,
                  pos_d = 0,
                  pos_w = 0,
-                 pos_h = 0,
+                 pos_h = 1,
                  pos=V0)
-

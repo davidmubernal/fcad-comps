@@ -1106,7 +1106,7 @@ class WireBeltClamped (Obj3D):
 
 
 
-        Part.show(belt_wire)
+        #Part.show(belt_wire)
         self.belt_wire = belt_wire
 
 
