@@ -778,7 +778,7 @@ class ShpCylHole (Obj3D):
 # ------------------- def wire_beltclamp
 # Not sure if a wire should be an Obj3D class
 
-class WireBeltClamp (Obj3D):
+class WireBeltClamped (Obj3D):
 
     """
     Creates a wire following 2 pulleys and ending in a belt clamp
@@ -1107,26 +1107,26 @@ class WireBeltClamp (Obj3D):
 
 
         Part.show(belt_wire)
-        self.wire = belt_wire
+        self.belt_wire = belt_wire
 
 
-belt_wire = WireBeltClamp(
-                 pull1_dm = 5,
-                 pull2_dm = 6,
-                 pull_sep_d = 80,
-                 pull_sep_w = 0,
-                 clamp_pull1_d = 15,
-                 clamp_pull1_w = 5,
-                 clamp_pull2_d = 15,
-                 clamp_d = 5,
-                 clamp_w = 4,
-                 clamp_cyl_sep = 8,
-                 cyl_r = 3,
-                 axis_d = VY,
-                 axis_w = VX,
-                 pos_d = 0,
-                 pos_w = 0,
-                 pos=V0)
+#belt_wire = WireBeltClamped (
+#                 pull1_dm = 5,
+#                 pull2_dm = 6,
+#                 pull_sep_d = 80,
+#                 pull_sep_w = 0,
+#                 clamp_pull1_d = 15,
+#                 clamp_pull1_w = 5,
+#                 clamp_pull2_d = 15,
+#                 clamp_d = 5,
+#                 clamp_w = 4,
+#                 clamp_cyl_sep = 8,
+#                 cyl_r = 3,
+#                 axis_d = VY,
+#                 axis_w = VX,
+#                 pos_d = 0,
+#                 pos_w = 0,
+#                 pos=V0)
 
 
 
