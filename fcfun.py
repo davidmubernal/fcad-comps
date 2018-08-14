@@ -250,6 +250,8 @@ def get_fc_perpend1(fcv):
 
     return fcp
 
+# get_tangent_circle_pt
+
 def get_tangent_circle_pt (ext_pt,
                            center_pt,
                            rad,
@@ -397,16 +399,7 @@ def get_tangent_circle_pt (ext_pt,
 #Part.show(line_E_T2)
 
 
-
-
-
-
-
-
-
-
-
-
+# get_tangent_2circles
 
 def get_tangent_2circles (center1_pt,
                           center2_pt,
@@ -573,41 +566,22 @@ def get_tangent_2circles (center1_pt,
     return L
 
 
-L = get_tangent_2circles (
-                          center1_pt = V0,
-                          center2_pt = FreeCAD.Vector(20,0,0),
-                          rad1 = 2,
-                          rad2 = 10,
-                          axis_n = VZ,
-                          axis_side = VY)
+#L = get_tangent_2circles (
+#                          center1_pt = V0,
+#                          center2_pt = FreeCAD.Vector(20,0,0),
+#                          rad1 = 2,
+#                          rad2 = 10,
+#                          axis_n = VZ,
+#                          axis_side = VY)
 
-cir1 = Part.makeCircle(2,FreeCAD.Vector(0,0,0))
-cir2 = Part.makeCircle(10,FreeCAD.Vector(20,0,0))
-Part.show(cir1)
-Part.show(cir2)
-line_1 = Part.LineSegment(L[0][0], L[0][1]).toShape()
-Part.show(line_1)
-line_2 = Part.LineSegment(L[1][0], L[1][1]).toShape()
-Part.show(line_2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
+#cir1 = Part.makeCircle(2,FreeCAD.Vector(0,0,0))
+#cir2 = Part.makeCircle(10,FreeCAD.Vector(20,0,0))
+#Part.show(cir1)
+#Part.show(cir2)
+#line_1 = Part.LineSegment(L[0][0], L[0][1]).toShape()
+#Part.show(line_1)
+#line_2 = Part.LineSegment(L[1][0], L[1][1]).toShape()
+#Part.show(line_2)
 
 
 

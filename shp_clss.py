@@ -943,6 +943,8 @@ class WireBeltClamp (Obj3D):
         axis_h = axis_d.cross(axis_w)
         Obj3D.__init__(self, axis_d = axis_d, axis_w = axis_w, axis_h = None)
 
+        self.axis_wn = self.axis_w.negative()
+
         # save the arguments as attributes:
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
@@ -1012,6 +1014,12 @@ class WireBeltClamp (Obj3D):
         B_pt = self.get_pos_dwh(3,6,0)
         E_pt = self.get_pos_dwh(3,8,0)
         F_pt = self.get_pos_dwh(2,8,0)
+
+        Q_pt = self.get_pos_dwh(9,6,0)
+        P_pt = self.get_pos_dwh(8,6,0)
+        L_pt = self.get_pos_dwh(8,8,0)
+        K_pt = self.get_pos_dwh(9,8,0)
+
         line_AB = Part.LineSegment(A_pt, B_pt).toShape()
         line_EF = Part.LineSegment(E_pt, F_pt).toShape()
         # from B tangent point to the cylinder
@@ -1028,13 +1036,73 @@ class WireBeltClamp (Obj3D):
                                        center_pt= cyl1_center_pt,
                                        rad = cyl_r,
                                        axis_n = axis_h,
-                                       axis_side = self.axis_w.negative())
+                                       axis_side = self.axis_wn)
         line_DE = Part.LineSegment(D_pt, E_pt).toShape()
 
         arc_CD = Part.Arc(C_pt, self.get_pos_dwh(5,7,0),D_pt).toShape()
+
+        pull1_center_pt = self.get_pos_dwh(0,0,0)
+        G_pt = fcfun.get_tangent_circle_pt(ext_pt=F_pt,
+                                       center_pt= pull1_center_pt,
+                                       rad = self.pull1_r,
+                                       axis_n = axis_h,
+                                       axis_side = self.axis_wn)
+
+        line_FG = Part.LineSegment(F_pt, G_pt).toShape()
+
+        pull2_center_pt = self.get_pos_dwh(10,1,0)
+        HI_list = fcfun.get_tangent_2circles(
+                                       center1_pt = pull1_center_pt,
+                                       center2_pt = pull2_center_pt,
+                                       rad1 = self.pull1_r,
+                                       rad2 = self.pull2_r,
+                                       axis_n = axis_h,
+                                       axis_side = self.axis_w)
+
+        H_pt = HI_list[0][0]
+        I_pt = HI_list[0][1]
+
+        arc_GH = Part.Arc(G_pt, self.get_pos_dwh(1,0,0),H_pt).toShape()
+        line_HI = Part.LineSegment(H_pt, I_pt).toShape()
+
+
+        J_pt = fcfun.get_tangent_circle_pt(ext_pt=K_pt,
+                                       center_pt= pull2_center_pt,
+                                       rad = self.pull2_r,
+                                       axis_n = axis_h,
+                                       axis_side = self.axis_wn)
+
+        arc_IJ = Part.Arc(I_pt, self.get_pos_dwh(11,1,0),J_pt).toShape()
+
+        line_JK = Part.LineSegment(J_pt, K_pt).toShape()
+        line_KL = Part.LineSegment(K_pt, L_pt).toShape()
+
+
+        cyl2_center_pt = self.get_pos_dwh(7,7,0)
+        M_pt = fcfun.get_tangent_circle_pt(ext_pt=L_pt,
+                                       center_pt= cyl2_center_pt,
+                                       rad = cyl_r,
+                                       axis_n = axis_h,
+                                       axis_side = self.axis_wn)
+        line_LM = Part.LineSegment(L_pt, M_pt).toShape()
+
+        N_pt = fcfun.get_tangent_circle_pt(ext_pt=P_pt,
+                                       center_pt= cyl2_center_pt,
+                                       rad = cyl_r,
+                                       axis_n = axis_h,
+                                       axis_side = self.axis_w)
+
+        arc_MN = Part.Arc(M_pt, self.get_pos_dwh(6,7,0),N_pt).toShape()
+
+        line_NP = Part.LineSegment(N_pt, P_pt).toShape()
+        line_PQ = Part.LineSegment(P_pt, Q_pt).toShape()
+        
+
         
         belt_wire = Part.Wire([line_AB, line_BC, arc_CD,
-                          line_DE, line_EF])
+                          line_DE, line_EF, line_FG, arc_GH, line_HI,
+                          arc_IJ, line_JK, line_KL, line_LM, arc_MN,
+                          line_NP, line_PQ])
 
 
 
@@ -1044,7 +1112,7 @@ class WireBeltClamp (Obj3D):
 
 belt_wire = WireBeltClamp(
                  pull1_dm = 5,
-                 pull2_dm = 5,
+                 pull2_dm = 6,
                  pull_sep_d = 80,
                  pull_sep_w = 0,
                  clamp_pull1_d = 15,
