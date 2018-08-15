@@ -600,7 +600,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         """ gets the gt2 pulley"""
         part_list = self.get_parts()
         for part_i in part_list:
-            if isinstance(part_i, PartGtPulley):
+            if isinstance(part_i, comps.PartGtPulley):
                 return part_i
 
 
@@ -953,19 +953,19 @@ class NemaMotorPulleyHolderSet (fc_clss.PartsSet):
         if group == 1:
             self.make_group()
 
-        def get_nema_holder(self):
-            """ gets the nema holder"""
-            part_list = self.get_parts()
-            for part_i in part_list:
-                if isinstance(part_i, PartNemaMotorHolder):
-                    return part_i
+    def get_nema_holder(self):
+        """ gets the nema holder"""
+        part_list = self.get_parts()
+        for part_i in part_list:
+            if isinstance(part_i, PartNemaMotorHolder):
+                return part_i
 
-        def get_nema_motor_pulley(self):
-            """ gets the nema motor pulley set"""
-            part_list = self.get_parts()
-            for part_i in part_list:
-                if isinstance(part_i, PartNemaMotorPulleySet):
-                    return part_i
+    def get_nema_motor_pulley(self):
+        """ gets the nema motor pulley set"""
+        part_list = self.get_parts()
+        for part_i in part_list:
+            if isinstance(part_i, NemaMotorPulleySet):
+                return part_i
 
 
 

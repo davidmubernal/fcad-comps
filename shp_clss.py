@@ -1071,7 +1071,15 @@ class WireBeltClamped (Obj3D):
                                        rad = self.pull2_r,
                                        axis_n = axis_h,
                                        axis_side = self.axis_wn)
+        print 'arco K y pull2center'
+        print str(K_pt)
+        print str(pull2_center_pt)
+        print str(self.pull2_r)
 
+        print 'arco'
+        print str(I_pt)
+        print str(self.get_pos_dwh(11,1,0))
+        print str(J_pt)
         arc_IJ = Part.Arc(I_pt, self.get_pos_dwh(11,1,0),J_pt).toShape()
 
         line_JK = Part.LineSegment(J_pt, K_pt).toShape()
