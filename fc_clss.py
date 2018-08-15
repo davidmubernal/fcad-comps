@@ -165,6 +165,18 @@ class SinglePart (object):
         self.fco.ViewObject.LineWidth = self.line_width
 
 
+    def set_point_size (self, size = 1.):
+        """ Sets the point size
+
+        Parameters:
+        -----------
+        size : float
+            it seems it goes from 1. up to 64
+
+        """
+        self.point_size = size
+        self.fco.ViewObject.PointSize = self.point_size
+
 
     def set_name (self, name = '', default_name = '', change = 0):
         """ Sets the name attribute to the value of parameter name
