@@ -4144,9 +4144,9 @@ class NemaMotorHolder (object):
         #shp.Placement.Rotation = rotation
         #Part.show(shp)
         shp.Placement.Base = self.topwallcent_pos.negative()
-        Part.show(shp)
+        #Part.show(shp)
         shp.Placement.Rotation = rotation
-        Part.show(shp)
+        #Part.show(shp)
         
         if not name:
             name = self.name
@@ -4210,26 +4210,26 @@ class NemaMotorHolder (object):
 
 
 # a porras:
-doc = FreeCAD.newDocument()
-h_nema = NemaMotorHolder ( 
-                  nema_size = 17,
-                  wall_thick = 5.,
-                  motor_thick = 3.,
-                  reinf_thick = 4.,
-                  motor_min_h =8.,
-                  motor_max_h = 43.,
-                  rail = 1,
-                  motor_xtr_space = 2., # counting on one side
-                  bolt_wall_d = 3.,
-                  chmf_r = 1.,
-                  fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
-                  fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
-                  #fc_axis_p = VY,
-                  ref_axis = 1, 
-                  #ref_bolt = 0,
-                  pos = V0, # FreeCAD.Vector(3,2,5),
-                  wfco = 1,
-                  name = 'nema_holder_52h')
+#doc = FreeCAD.newDocument()
+#h_nema = NemaMotorHolder ( 
+#                  nema_size = 17,
+#                  wall_thick = 5.,
+#                  motor_thick = 3.,
+#                  reinf_thick = 4.,
+#                  motor_min_h =8.,
+#                  motor_max_h = 43.,
+#                  rail = 1,
+#                  motor_xtr_space = 2., # counting on one side
+#                  bolt_wall_d = 3.,
+#                  chmf_r = 1.,
+#                  fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
+#                  fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
+#                  #fc_axis_p = VY,
+#                  ref_axis = 1, 
+#                  #ref_bolt = 0,
+#                  pos = V0, # FreeCAD.Vector(3,2,5),
+#                  wfco = 1,
+#                  name = 'nema_holder_52h')
 
 
 

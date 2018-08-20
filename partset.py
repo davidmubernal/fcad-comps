@@ -609,7 +609,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
 motor_pulley = NemaMotorPulleySet(pulley_pos_h = 10,
                                   rear_shaft_l = 10,
                                   axis_d = VZ,
-                                  axis_w = None,
+                                  axis_w = VY,
                                   axis_h = VX,
                                   pos_d = 2,
                                   pos_w = 0,
