@@ -103,6 +103,12 @@ D912_2AP =  {2: 1.5,  2.5: 2.,
              3: 2.5,    4: 3.,  5: 4.,
              6: 5.,     8: 6., 10: 8.} 
 
+# max threaded part of the shank, if shank length is smaller, it will be
+# all threated
+D912_THREAD = {2: 16., 2.5: 17.,
+               3: 18.,   4: 20.,  5: 22.,
+               6: 24.,   8: 28., 10: 32.}
+
 M3_HEAD_R = D912_HEAD_D[3] / 2.0
 M3_HEAD_L = D912_HEAD_L[3]
 M3_HEAD_L_TOL = D912_HEAD_L[3] + TOL
@@ -131,6 +137,7 @@ D912_M3 = {
             'head_r_tol' :  M3_HEAD_R_TOL,
             'head_l' :  M3_HEAD_L,
             'head_l_tol' :  M3_HEAD_L_TOL,
+            'thread'     :  D912_THREAD[3],
             'ap2' :  M3_2AP, # s: 2 x apotheme of the socket
            }
 
@@ -141,6 +148,7 @@ D912_M4 = {
             'head_r_tol' :  M4_HEAD_R_TOL,
             'head_l' :  M4_HEAD_L,
             'head_l_tol' :  M4_HEAD_L_TOL,
+            'thread'     :  D912_THREAD[4],
             'ap2' :  M4_2AP, # s: 2 x apotheme of the socket
            }
 
@@ -151,6 +159,7 @@ D912_M5 = {
             'head_r_tol' :  D912_HEAD_D[5]/2. + TOL/2.,
             'head_l'     :  D912_HEAD_L[5],
             'head_l_tol' :  D912_HEAD_L[5] + TOL,
+            'thread'     :  D912_THREAD[5],
             'ap2'        :  D912_2AP[5], # s: 2 x apotheme of the socket
            }
 
@@ -161,6 +170,7 @@ D912_M6 = {
             'head_r_tol'  :  M6_HEAD_R_TOL,
             'head_l'      :  M6_HEAD_L,
             'head_l_tol'  :  M6_HEAD_L_TOL,
+            'thread'      :  D912_THREAD[6],
             'ap2'         :  M6_2AP, # s: 2 x apotheme of the socket
            }
 

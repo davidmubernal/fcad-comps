@@ -1039,25 +1039,141 @@ class Bolt (SinglePart, shp_clss.ShpBolt):
 
 
 
-metric = 3
-bolt_dict = kcomp.D912[metric]
-thread_l = 18
-shank_l = 30
-bolt = Bolt (
-                 shank_r = bolt_dict['d']/2.,
-                 shank_l = shank_l,
-                 head_r  = bolt_dict['head_r'],
-                 head_l  = bolt_dict['head_l'],
-                 #thread_l = 0,
-                 thread_l = thread_l,
-                 head_type = 1, # cylindrical. 1: hexagonal
-                 #socket_l = bolt_dict['head_l']/2., # not sure
-                 socket_l = 0,
-                 socket_2ap = bolt_dict['ap2'],
+#metric = 3
+#bolt_dict = kcomp.D912[metric]
+#thread_l = 18
+#shank_l = 30
+#bolt = Bolt (
+#                 shank_r = bolt_dict['d']/2.,
+#                 shank_l = shank_l,
+#                 head_r  = bolt_dict['head_r'],
+#                 head_l  = bolt_dict['head_l'],
+#                 #thread_l = 0,
+#                 thread_l = thread_l,
+#                 head_type = 1, # cylindrical. 1: hexagonal
+#                 #socket_l = bolt_dict['head_l']/2., # not sure
+#                 socket_l = 0,
+#                 socket_2ap = bolt_dict['ap2'],
+#                 shank_out = 0,
+#                 head_out = 1,
+#                 axis_h = VX, axis_d = VY, axis_w = VZ,
+#                 pos_h = 2, pos_d = 2, pos_w = 0,
+#                 pos = FreeCAD.Vector(0,0,0))
+
+
+class Din912Bolt (Bolt):
+    """ Din 912 bolt. hex socket bolt
+
+    Parameters:
+    -----------
+    metric : int (may be float: 2.5
+
+    shank_l : float
+        length of the bolt, not including the head
+
+    shank_out : float
+        0: default
+        distance to the end of the shank, just for positioning, it doesnt
+        change shank_l
+        I dont think it is necessary, but just in case
+    head_out : float
+        0: default
+        distance to the end of the head, just for positioning, it doesnt
+        change head_l
+        I dont think it is necessary, but just in case
+    axis_h : FreeCAD.Vector
+        vector along the axis of the bolt, pointing from the head to the shank
+    axis_d : FreeCAD.Vector
+        vector along the radius, a direction perpendicular to axis_h
+        If the head is hexagonal, the direction of one vertex
+    axis_w : FreeCAD.Vector
+        vector along the cylinder radius,
+        a direction perpendicular to axis_h and axis_d
+        it is not necessary if pos_w == 0
+        It can be None
+    pos_h : int
+        location of pos along axis_h
+        0: top of the head, considering head_out,
+        1: position of the head not considering head_out
+           if head_out = 0, it will be the same as pos_h = 0
+        2: end of the socket, if no socket, will be the same as pos_h = 0
+        3: union of the head and the shank
+        4: where the screw starts, if all the shank is screwed, it will be
+           the same as pos_h = 2
+        5: end of the shank, not considering shank_out
+        6: end of the shank, if shank_out = 0, will be the same as pos_h = 5
+        6: top of the head, considering xtr_head_l, if xtr_head_l = 0
+           will be the same as pos_h = 0
+    pos_d : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+    pos_w : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+    pos : FreeCAD.Vector
+        Position of the bolt, taking into account where the pos_h, pos_d, pos_w
+        are
+    model_type : 0 
+        not to print, just an outline
+    name : str
+        name of the bolt
+    """
+
+    def __init__(self, metric, shank_l,
                  shank_out = 0,
-                 head_out = 1,
-                 axis_h = VX, axis_d = VY, axis_w = VZ,
-                 pos_h = 2, pos_d = 2, pos_w = 0,
-                 pos = FreeCAD.Vector(0,0,0))
+                 head_out = 0,
+                 axis_h = VZ, axis_d = None, axis_w = None,
+                 pos_h = 0, pos_d = 0, pos_w = 0,
+                 pos = V0,
+                 model_type = 0,
+                 name = ''):
+
+        if metric >= 3:
+            str_metric = str(int(metric))
+        else:
+            str_metric = str(metric)
+        default_name = 'd912bolt_m' + str_metric + 'l' + str(int(shank_l))
+        self.set_name (name, default_name, change = 0)
+
+        try:
+            bolt_dict = kcomp.D912[metric]
+            self.bolt_dict = bolt_dict
+        except KeyError:
+            logger.error('bolt key not found: ' + str(metric))
+        else: # no exception
+            if bolt_dict['thread'] > shank_l:
+                thread_l = 0 # all threaded
+            else:
+                thread_l = bolt_dict['thread']
+
+            Bolt.__init__(self,
+                     shank_r = bolt_dict['d']/2.,
+                     shank_l = shank_l,
+                     head_r  = bolt_dict['head_r'],
+                     head_l  = bolt_dict['head_l'],
+                     thread_l = thread_l,
+                     head_type = 1, # cylindrical. 1: hexagonal
+                     socket_l = bolt_dict['head_l']/2., # not sure
+                     socket_2ap = bolt_dict['ap2'],
+                     shank_out = shank_out,
+                     head_out = head_out,
+                     axis_h = axis_h, axis_d = axis_d, axis_w = axis_w,
+                     pos_h = pos_h, pos_d = pos_d, pos_w = pos_w,
+                     pos = pos,
+                     model_type = model_type)
 
 
+doc = FreeCAD.newDocument()
+bolt = Din912Bolt ( metric = 3, shank_l = 24,
+                    shank_out = 0, head_out = 0,
+                    axis_h = VY,
+                    axis_d = VX,
+                    axis_w = None,
+                    pos_h = 5,
+                    pos_d = 0,
+                    pos_w = 0,
+                    pos = V0)
