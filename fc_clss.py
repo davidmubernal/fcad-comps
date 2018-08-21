@@ -384,16 +384,16 @@ class PartsSet (shp_clss.Obj3D):
         
     def get_abs_place (self):
         """ gets the placement of the object, with any adjustment
-        So the shape has been created at pos, and this is any movement done after this
-        Movement of the freecadobject
+        So the shape has been created at pos, and this is any movement done
+        after this movement of the freecadobject
         """
         
         return self.abs_place
 
     def get_rel_place (self):
         """ gets the placement of the object, with any adjustment
-        So the shape has been created at pos, and this is any movement done after this
-        Movement of the freecadobject
+        So the shape has been created at pos, and this is any movement done
+        after this movement of the freecadobject
         """
         
         return self.rel_place
@@ -413,7 +413,7 @@ class PartsSet (shp_clss.Obj3D):
         #child_part.abs_place = self.get_abs_place() + child_part.rel_place
         #try:
         #    child_part.fco.Placement.Base = child_part.abs_place
-        #except AttributeError: # only SimpleParts objects have fco, not PartsSet
+        #except AttributeError: # only SimpleParts objects have fco,not PartsSet
         #    pass
         # add this displacement to all the children
         #part_list = child_part.get_parts()
@@ -551,10 +551,6 @@ class PartsSet (shp_clss.Obj3D):
                 self.name = default_name
             else:
                 self.name = name
-
-
-
-
 
 
 class Washer (SinglePart, shp_clss.ShpCylHole):
@@ -863,5 +859,205 @@ class BearingOutl (SinglePart, shp_clss.ShpCylHole):
 #                    axis_h = VZN, pos_h = 1, tol = 0,
 #                    pos = washer.pos + DraftVecUtils.scale(VZN,washer.h),
 #                    name = '')
+
+
+class Bolt (SinglePart, shp_clss.ShpBolt):
+    """ Creates a FreeCAD object of a bolt, from ShpBolt.
+        different from fcfun.shp_bolt_dir (which is a function)
+
+    Makes a bolt with various locations and head types
+    It is an approximate model. The thread is not made, it is just a little
+    smaller just to see where it is
+
+    Parameters:
+    -----------
+    shank_r : float
+        radius of the shank
+    shank_l : float
+        length of the bolt, not including the head (different from shp_bolt_dir)
+    head_r : float
+        radius of the head, it it hexagonal, radius of the cirumradius
+    head_l : float
+        length of the head
+    thread_l : float
+        length of the shank that is threaded
+        if 0: all the shank is threaded
+    head_type : int
+        0: round (cylinder). Default
+        1: hexagonal
+    socket_l : float
+        depth of the hex socket, if 0, no hex socket
+    socket_2ap : float
+        socket: 2 x apotheme (usually S in the dimensinal drawings)
+        Iit is the wrench size, the diameter would be 2*apotheme / cos30
+        It is not the circumdiameter
+        if 0: no hex socket
+    shank_out : float
+        0: default
+        distance to the end of the shank, just for positioning, it doesnt
+        change shank_l
+        I dont think it is necessary, but just in case
+    head_out : float
+        0: default
+        distance to the end of the head, just for positioning, it doesnt
+        change head_l
+        I dont think it is necessary, but just in case
+    axis_h : FreeCAD.Vector
+        vector along the axis of the bolt, pointing from the head to the shank
+    axis_d : FreeCAD.Vector
+        vector along the radius, a direction perpendicular to axis_h
+        If the head is hexagonal, the direction of one vertex
+    axis_w : FreeCAD.Vector
+        vector along the cylinder radius,
+        a direction perpendicular to axis_h and axis_d
+        it is not necessary if pos_w == 0
+        It can be None
+    pos_h : int
+        location of pos along axis_h
+        0: top of the head, considering head_out,
+        1: position of the head not considering head_out
+           if head_out = 0, it will be the same as pos_h = 0
+        2: end of the socket, if no socket, will be the same as pos_h = 0
+        3: union of the head and the shank
+        4: where the screw starts, if all the shank is screwed, it will be
+           the same as pos_h = 2
+        5: end of the shank, not considering shank_out
+        6: end of the shank, if shank_out = 0, will be the same as pos_h = 5
+        6: top of the head, considering xtr_head_l, if xtr_head_l = 0
+           will be the same as pos_h = 0
+    pos_d : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+    pos_w : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+    pos : FreeCAD.Vector
+        Position of the bolt, taking into account where the pos_h, pos_d, pos_w
+        are
+    model_type : 0 
+        not to print, just an outline
+    name : str
+        name of the bolt
+
+    Attributes:
+    -----------
+    pos_o : FreeCAD.Vector
+        Position of the origin of the shape
+
+    self.tot_l : float
+        Total length of the bolt: head_l + shank_l
+    shp : OCC Topological Shape
+        The shape of this part
+
+
+
+                                   axis_h
+                                     :
+                                     : shank_r
+                                     :+
+                                     : :
+                                     : :
+                     ....6......... _:_:...................
+           shank_out+....5.........| : |    :             :
+                                   | : |    + thread_l    :
+                                   | : |    :             :
+                                   | : |    :             :
+                                   | : |    :             + shank_l
+                         4         |.:.|....:             :
+                                   | : |                  :
+                         3       __| : |__................:
+                                |    :    |               :
+                         2      |  ..:..  |...            + head_l
+                      ...1......|  : : :  |  :+socket_l   :
+             head_out+...0......|__:_:_:__|..:......:.....:.... axis_d
+                                     0 1  2 
+                                     :    :
+                                     :....:
+                                        + head_r
+
+
+    """
+ 
+    def __init__(self,
+                 shank_r,
+                 shank_l,
+                 head_r,
+                 head_l,
+                 thread_l = 0,
+                 head_type = 0, # cylindrical. 1: hexagonal
+                 socket_l = 0,
+                 socket_2ap = 0,
+                 shank_out = 0,
+                 head_out = 0,
+                 axis_h = VZ, axis_d = None, axis_w = None,
+                 pos_h = 0, pos_d = 0, pos_w = 0,
+                 pos = V0,
+                 model_type = 0,
+                 name = ''):
+    
+        if not hasattr(self, 'metric'):
+            metric = 2 * shank_r
+            if metric >= 3:
+                self.metric = int(metric)
+            else:
+                self.metric = metric
+        default_name = 'bolt_m' + str(self.metric) + 'l' + str(int(shank_l))
+        self.set_name (name, default_name, change = 0)
+
+        # First the shape is created
+        shp_clss.ShpBolt.__init__(self,
+                                  shank_r = shank_r,
+                                  shank_l = shank_l,
+                                  head_r  = head_r,
+                                  head_l  = head_l,
+                                  thread_l = thread_l,
+                                  head_type = head_type,
+                                  socket_l = socket_l,
+                                  socket_2ap = socket_2ap,
+                                  shank_out = shank_out,
+                                  head_out = head_out,
+                                  axis_h = axis_h,
+                                  axis_d = axis_d,
+                                  axis_w = axis_w,
+                                  pos_h = pos_h, pos_d = pos_d, pos_w = pos_w,
+                                  pos = pos)
+
+        # Then the Part
+        SinglePart.__init__(self)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): # so we keep the attributes by CylHole
+                setattr(self, i, values[i])
+                                  
+
+
+
+metric = 3
+bolt_dict = kcomp.D912[metric]
+thread_l = 18
+shank_l = 30
+bolt = Bolt (
+                 shank_r = bolt_dict['d']/2.,
+                 shank_l = shank_l,
+                 head_r  = bolt_dict['head_r'],
+                 head_l  = bolt_dict['head_l'],
+                 #thread_l = 0,
+                 thread_l = thread_l,
+                 head_type = 1, # cylindrical. 1: hexagonal
+                 #socket_l = bolt_dict['head_l']/2., # not sure
+                 socket_l = 0,
+                 socket_2ap = bolt_dict['ap2'],
+                 shank_out = 0,
+                 head_out = 1,
+                 axis_h = VX, axis_d = VY, axis_w = VZ,
+                 pos_h = 2, pos_d = 2, pos_w = 0,
+                 pos = FreeCAD.Vector(0,0,0))
 
 
