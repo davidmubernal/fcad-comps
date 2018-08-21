@@ -775,6 +775,296 @@ class ShpCylHole (Obj3D):
 
 
 
+
+class ShpBolt (Obj3D):
+    """
+    Creates a shape of a Bolt
+    Similar to fcfun.shp_bolt_dir, but creates the object with the useful
+    attributes and methods
+    Makes a bolt with various locations and head types
+    It is an approximate model. The thread is not made, it is just a little
+    smaller just to see where it is
+
+    Parameters:
+    -----------
+    shank_r : float
+        radius of the shank
+    shank_l : float
+        length of the bolt, not including the head (different from shp_bolt_dir)
+    head_r : float
+        radius of the head, it it hexagonal, radius of the cirumradius
+    head_l : float
+        length of the head
+    thread_l : float
+        length of the shank that is threaded
+        if 0: all the shank is threaded
+    head_type : int
+        0: round (cylinder). Default
+        1: hexagonal
+    socket_l : float
+        depth of the hex socket, if 0, no hex socket
+    socket_2ap : float
+        socket: 2 x apotheme (usually S in the dimensinal drawings)
+        Iit is the wrench size, the diameter would be 2*apotheme / cos30
+        It is not the circumdiameter
+        if 0: no hex socket
+    shank_out : float
+        0: default
+        distance to the end of the shank, just for positioning, it doesnt
+        change shank_l
+        I dont think it is necessary, but just in case
+    head_out : float
+        0: default
+        distance to the end of the head, just for positioning, it doesnt
+        change head_l
+        I dont think it is necessary, but just in case
+    axis_h : FreeCAD.Vector
+        vector along the axis of the bolt, pointing from the head to the shank
+    axis_d : FreeCAD.Vector
+        vector along the radius, a direction perpendicular to axis_h
+        If the head is hexagonal, the direction of one vertex
+    axis_w : FreeCAD.Vector
+        vector along the cylinder radius,
+        a direction perpendicular to axis_h and axis_d
+        it is not necessary if pos_w == 0
+        It can be None
+    pos_h : int
+        location of pos along axis_h
+        0: top of the head, considering head_out,
+        1: position of the head not considering head_out
+           if head_out = 0, it will be the same as pos_h = 0
+        2: end of the socket, if no socket, will be the same as pos_h = 0
+        3: union of the head and the shank
+        4: where the screw starts, if all the shank is screwed, it will be
+           the same as pos_h = 2
+        5: end of the shank, not considering shank_out
+        6: end of the shank, if shank_out = 0, will be the same as pos_h = 5
+        6: top of the head, considering xtr_head_l, if xtr_head_l = 0
+           will be the same as pos_h = 0
+    pos_d : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+    pos_w : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+    pos : FreeCAD.Vector
+        Position of the bolt, taking into account where the pos_h, pos_d, pos_w
+        are
+
+    Attributes:
+    -----------
+    pos_o : FreeCAD.Vector
+        Position of the origin of the shape
+
+    self.tot_l : float
+        Total length of the bolt: head_l + shank_l
+    shp : OCC Topological Shape
+        The shape of this part
+
+
+
+                                   axis_h
+                                     :
+                                     : shank_r
+                                     :+
+                                     : :
+                                     : :
+                     ....6......... _:_:...................
+           shank_out+....5.........| : |    :             :
+                                   | : |    + thread_l    :
+                                   | : |    :             :
+                                   | : |    :             :
+                                   | : |    :             + shank_l
+                         4         |.:.|....:             :
+                                   | : |                  :
+                         3       __| : |__................:
+                                |    :    |               :
+                         2      |  ..:..  |...            + head_l
+                      ...1......|  : : :  |  :+socket_l   :
+             head_out+...0......|__:_:_:__|..:......:.....:.... axis_d
+                                     0 1  2 
+                                     :    :
+                                     :....:
+                                        + head_r
+
+
+    """
+    def __init__(self,
+                 shank_r,
+                 shank_l,
+                 head_r,
+                 head_l,
+                 thread_l = 0,
+                 head_type = 0, # cylindrical. 1: hexagonal
+                 socket_l = 0,
+                 socket_2ap = 0,
+                 shank_out = 0,
+                 head_out = 0,
+                 axis_h = VZ, axis_d = None, axis_w = None,
+                 pos_h = 0, pos_d = 0, pos_w = 0,
+                 pos = V0):
+
+
+        Obj3D.__init__(self, axis_d, axis_w, axis_h)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        self.h0_cen = 0
+        self.d0_cen = 1 # symmetrical
+        self.w0_cen = 1 # symmetrical
+
+        self.tot_l = head_l + shank_l
+
+        # vectors from o (orig) along axis_h, to the pos_h points
+        # h_o is a dictionary created in Obj3D.__init__
+        self.h_o[0] =  V0 #origin
+        self.h_o[1] =  self.vec_h(head_out)
+        self.h_o[2] =  self.vec_h(socket_l)
+        self.h_o[3] =  self.vec_h(head_l)
+        self.h_o[4] =  self.vec_h(self.tot_l - thread_l)
+        self.h_o[5] =  self.vec_h(self.tot_l - shank_out)
+        self.h_o[6] =  self.vec_h(self.tot_l)
+
+        self.d_o[0] = V0
+        if not (self.axis_d is None or self.axis_d == V0):
+            # negative because is symmetric
+            self.d_o[1] = self.vec_d(-shank_r)
+            self.d_o[2] = self.vec_d(-head_r)
+        elif pos_d != 0:
+            logger.error('axis_d not defined while pos_d != 0')
+        # pos_d = 0 is at the center
+
+        self.w_o[0] = V0
+        if not (self.axis_w is None or self.axis_w == V0):
+            # negative because is symmetric
+            self.w_o[1] = self.vec_w(-shank_r)
+            self.w_o[2] = self.vec_w(-head_r)
+        elif pos_w != 0:
+            logger.error('axis_w not defined while pos_w != 0')
+        # pos_w = 0 is at the center
+
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        if head_type == 0: # cylindrical
+            shp_head = fcfun.shp_cylcenxtr (r = head_r, h = head_l,
+                                  normal = self.axis_h,
+                                  ch=0, # not centered
+                                  # no extra on top, the shank will be there
+                                  xtr_top = 0,
+                                  xtr_bot = 0,
+                                  pos = self.pos_o)
+
+        else: # hexagonal
+            if (self.axis_d is None) or (self.axis_d == V0):
+                logger.error('axis_d need to be defined')
+            else:
+                shp_head = fcfun.shp_regprism_dirxtr (
+                                  n_sides = 6, radius = head_r,
+                                  length = head_l,
+                                  fc_normal = self.axis_h,
+                                  fc_verx1 = self.axis_d,
+                                  centered=0,
+                                  # no extra on top, the shank will be there
+                                  xtr_top = 0, xtr_bot = 0,
+                                  pos = self.pos_o)
+
+        if socket_l > 0 and socket_2ap > 0 : # there is socket
+            # diameter of the socket (circumdiameter)
+            self.cos30 = 0.86603
+            self.socket_dm = socket_2ap / self.cos30
+            self.socket_r = self.socket_dm / 2.
+            if (self.axis_d is None) or (self.axis_d == V0):
+                # just make an axis_d
+                self.axis_d = fcfun.get_fc_perpend1(self.axis_h)
+
+            shp_socket = fcfun.shp_regprism_dirxtr (
+                                  n_sides = 6, radius = self.socket_r,
+                                  length = socket_l,
+                                  fc_normal = self.axis_h,
+                                  fc_verx1 = self.axis_d,
+                                  centered=0,
+                                  xtr_top = 0, xtr_bot = 1, #to cut
+                                  pos = self.pos_o)
+            shp_head = shp_head.cut(shp_socket)
+            
+
+        if thread_l == 0 or thread_l >= shank_l: #all the shank is threaded
+            shp_shank = fcfun.shp_cylcenxtr (r = shank_r, h = shank_l,
+                                             normal = self.axis_h,
+                                             ch=0, # not centered
+                                             xtr_top = 0,
+                                             xtr_bot = head_l/2., #to make union
+                                             pos = self.get_pos_h(3))
+        else : # not threaded shank plus threaded, but just a little smaller
+            # to see the line
+            shp_shank = fcfun.shp_cylcenxtr (r = shank_r, h = shank_l-thread_l,
+                                             normal = self.axis_h,
+                                             ch=0, # not centered
+                                             xtr_top = 0,
+                                             xtr_bot = head_l/2., #to make union
+                                             pos = self.get_pos_h(3))
+            shp_thread = fcfun.shp_cylcenxtr (r = shank_r-0.1,
+                                              h = thread_l,
+                                              normal = self.axis_h,
+                                              ch=0, # not centered
+                                              xtr_top = 0,
+                                              xtr_bot = 1, #to make union
+                                              pos = self.get_pos_h(4))
+
+            shp_shank = shp_shank.fuse(shp_thread)
+
+
+
+
+
+        shp_bolt = shp_head.fuse(shp_shank)
+
+        self.shp = shp_bolt
+        # no axis would be good to print, and it is not a piece to print
+        # however, this would be the best
+        self.prnt_ax = self.axis_h 
+                                  
+
+metric = 3
+
+bolt_dict = kcomp.D912[metric]
+thread_l = 18
+shank_l = 30
+
+shp_bolt = ShpBolt (
+                 shank_r = bolt_dict['d']/2.,
+                 shank_l = shank_l,
+                 head_r  = bolt_dict['head_r'],
+                 head_l  = bolt_dict['head_l'],
+                 #thread_l = 0,
+                 thread_l = thread_l,
+                 head_type = 1, # cylindrical. 1: hexagonal
+                 #socket_l = bolt_dict['head_l']/2., # not sure
+                 socket_l = 0,
+                 socket_2ap = bolt_dict['ap2'],
+                 shank_out = 0,
+                 head_out = 1,
+                 axis_h = VX, axis_d = VY, axis_w = VZ,
+                 pos_h = 2, pos_d = 2, pos_w = 0,
+                 pos = FreeCAD.Vector(0,0,0))
+
+
+
+
+
+
+
+
 # ------------------- def wire_beltclamp
 # Not sure if a wire should be an Obj3D class
 
