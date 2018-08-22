@@ -1136,7 +1136,7 @@ class Din912Bolt (Bolt):
             str_metric = str(int(metric))
         else:
             str_metric = str(metric)
-        default_name = 'd912bolt_m' + str_metric + 'l' + str(int(shank_l))
+        default_name = 'd912bolt_m' + str_metric + '_l' + str(int(shank_l))
         self.set_name (name, default_name, change = 0)
 
         try:
@@ -1156,7 +1156,7 @@ class Din912Bolt (Bolt):
                      head_r  = bolt_dict['head_r'],
                      head_l  = bolt_dict['head_l'],
                      thread_l = thread_l,
-                     head_type = 1, # cylindrical. 1: hexagonal
+                     head_type = 0, # cylindrical
                      socket_l = bolt_dict['head_l']/2., # not sure
                      socket_2ap = bolt_dict['ap2'],
                      shank_out = shank_out,
@@ -1167,13 +1167,13 @@ class Din912Bolt (Bolt):
                      model_type = model_type)
 
 
-doc = FreeCAD.newDocument()
-bolt = Din912Bolt ( metric = 3, shank_l = 24,
-                    shank_out = 0, head_out = 0,
-                    axis_h = VY,
-                    axis_d = VX,
-                    axis_w = None,
-                    pos_h = 5,
-                    pos_d = 0,
-                    pos_w = 0,
-                    pos = V0)
+#doc = FreeCAD.newDocument()
+#bolt = Din912Bolt ( metric = 3, shank_l = 24,
+#                    shank_out = 0, head_out = 0,
+#                    axis_h = VY,
+#                    axis_d = VX,
+#                    axis_w = None,
+#                    pos_h = 5,
+#                    pos_d = 0,
+#                    pos_w = 0,
+#                    pos = V0)

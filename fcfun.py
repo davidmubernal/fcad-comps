@@ -4938,8 +4938,6 @@ def shp_bolt (r_shank, l_bolt, r_head, l_head,
     return shp_bolt
 
 
-
-
 def shp_bolt_dir (r_shank, l_bolt, r_head, l_head,
               hex_head = 0,
               xtr_head=1,
@@ -7192,3 +7190,4 @@ def fuseshplist (shp_list):
 
     return (shpfuse)
         
+

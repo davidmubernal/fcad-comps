@@ -1035,28 +1035,26 @@ class ShpBolt (Obj3D):
         self.prnt_ax = self.axis_h 
                                   
 
-metric = 3
-
-bolt_dict = kcomp.D912[metric]
-thread_l = 18
-shank_l = 30
-
-shp_bolt = ShpBolt (
-                 shank_r = bolt_dict['d']/2.,
-                 shank_l = shank_l,
-                 head_r  = bolt_dict['head_r'],
-                 head_l  = bolt_dict['head_l'],
-                 #thread_l = 0,
-                 thread_l = thread_l,
-                 head_type = 1, # cylindrical. 1: hexagonal
-                 #socket_l = bolt_dict['head_l']/2., # not sure
-                 socket_l = 0,
-                 socket_2ap = bolt_dict['ap2'],
-                 shank_out = 0,
-                 head_out = 1,
-                 axis_h = VX, axis_d = VY, axis_w = VZ,
-                 pos_h = 2, pos_d = 2, pos_w = 0,
-                 pos = FreeCAD.Vector(0,0,0))
+#metric = 3
+#bolt_dict = kcomp.D912[metric]
+#thread_l = 18
+#shank_l = 30
+#shp_bolt = ShpBolt (
+#                 shank_r = bolt_dict['d']/2.,
+#                 shank_l = shank_l,
+#                 head_r  = bolt_dict['head_r'],
+#                 head_l  = bolt_dict['head_l'],
+#                 #thread_l = 0,
+#                 thread_l = thread_l,
+#                 head_type = 1, # cylindrical. 1: hexagonal
+#                 #socket_l = bolt_dict['head_l']/2., # not sure
+#                 socket_l = 0,
+#                 socket_2ap = bolt_dict['ap2'],
+#                 shank_out = 0,
+#                 head_out = 1,
+#                 axis_h = VX, axis_d = VY, axis_w = VZ,
+#                 pos_h = 2, pos_d = 2, pos_w = 0,
+#                 pos = FreeCAD.Vector(0,0,0))
 
 
 

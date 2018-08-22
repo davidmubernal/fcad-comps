@@ -290,6 +290,248 @@ class BearWashSet (fc_clss.PartsSet):
 #                 name = '')
 
 
+class Din912BoltWashSet (fc_clss.PartsSet):
+    """ A din 912 bolt and a wahser set 
+
+    Parameters:
+    -----------
+    metric : int (could be 2.5)
+        Metric (diameter) of the bolt
+    shank_l : float
+        length of the bolt, not including the head
+        the real length depends on shank_l_exact
+    wide_washer : int
+        0: normal washer (default) din 125
+        1: wide washer din 9021
+   shank_l_exact : int
+        if 0: shank_l will be the minimum length, it will check the lengths
+        that are available for this type of bolt
+        if 1: shank_l will be the length of the shank
+    shank_out : float
+        0: default
+        distance to the end of the shank, just for positioning, it doesnt
+        change shank_l
+        I dont think it is necessary, but just in case
+    head_out : float
+        0: default
+        distance to the end of the head, just for positioning, it doesnt
+        change head_l
+        I dont think it is necessary, but just in case
+
+    axis_h : FreeCAD.Vector
+        vector along the bolt axis
+    axis_d : FreeCAD.Vector
+        vector along the radius, a direction perpendicular to axis_h
+        if head is hexagonal or the socket, it will point the direction of a
+        vertex
+    axis_w : FreeCAD.Vector
+        vector along the other radius, a direction perpendicular to axis_h
+        and axis_d
+        it is not necessary if pos_w == 0
+        It can be None
+   pos_h : int
+        location of pos along axis_h
+        0: top of the head, considering head_out,
+        1: position of the head not considering head_out
+           if head_out = 0, it will be the same as pos_h = 0
+        2: union of the head and the shank, beginning of the washer
+        3: end of the washer
+        4: where the screw starts, if all the shank is screwed, it will be
+           the same as pos_h = 2
+        5: end of the shank, not considering shank_out
+        6: end of the shank, if shank_out = 0, will be the same as pos_h = 5
+        6: top of the head, considering xtr_head_l, if xtr_head_l = 0
+           will be the same as pos_h = 0
+    pos_d : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+        3: outer radius of the washer
+    pos_w : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the shank
+        2: radius of the head
+        3: outer radius of the washer
+
+    axis_w : FreeCAD.Vector
+        vector perpendicular to the axis_h and axis_d, along the radius
+    pos_w : int
+        location of pos along axis_w (0,1,2,3)
+        0: pos is centered at the cylinder axis
+        1: pos is at the bearing internal radius (defined by netric)
+        2: pos is at the bearing external radius
+        3: pos is at the large washer external radius
+        
+    group : int
+        1: make a group
+        0: leave as individual componentes
+        
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+
+                                   axis_h
+                                     :
+                                     : shank_r
+                                     :+
+                                     : :
+                                     : :
+                     ....6......... _:_:...................
+           shank_out+....5.........| : |    :             :
+                                   | : |    + thread_l    :
+                                   | : |    :             :
+                                   | : |    :             :
+                                   | : |    :             + shank_l
+                         4         |.:.|....:             :
+                                   | : |                  :
+                                   | : |                  :
+                    .... 3  _______|_:_|_______           :
+      washer_thick  :      |      :: : ::      |          :
+                    :... 2 |______::_:_::______|..........:
+                                |    :    |               :
+                                |  ..:..  |               + head_l
+                      ...1......|  : : :  |               :
+             head_out+...0......|__:_:_:__|...............:.... axis_d
+                                     0 1  2    3
+                                     :    :    :
+                                     :....:    :
+                                     :  +      :
+                                     : head_r  :
+                                     :         :
+                                     :.........:
+                                        + washer_ro
+    """
+
+    def __init__(self, metric,
+                 shank_l,
+                 wide_washer = 0,
+                 shank_l_exact = 0, # 0: take the next larger size
+                 shank_out = 0,
+                 head_out = 0,
+                 axis_h = VZ,
+                 axis_d = None, axis_w = None,
+                 pos_h  = 0, pos_d = 0, pos_w = 0,
+                 pos    = V0,
+                 group  = 1, # 1: make a group
+                 name = ''):
+
+
+        default_name = 'd912bolt_washer_m' + str(int(metric))
+        self.set_name (name, default_name, change=0)
+
+        fc_clss.PartsSet.__init__(self,
+                          axis_d = axis_d, axis_w = axis_w, axis_h = axis_h)
+
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): # so we keep the attributes by CylHole
+                setattr(self, i, values[i])
+
+        self.bolt_dict = kcomp.D912[metric]
+
+        if shank_l_exact == 1:
+            self.shank_l = shank_l
+        else:
+            self.shank_l = next(i_len for i_len
+                                in self.bolt_dict['shank_l_list']
+                                if i_len >= shank_l)
+
+        if self.bolt_dict['thread'] > self.shank_l:
+            self.thread_l = self.shank_l
+        else:
+            self.thread_l = self.bolt_dict['thread']
+
+        self.shank_r = self.metric/2.
+        self.head_l = self.bolt_dict['head_l']
+        self.head_r = self.bolt_dict['head_r']
+        if wide_washer == 0:
+            self.washer_dict = kcomp.D125[metric]
+        else:
+            self.washer_dict = kcomp.D9021[metric]
+
+        self.washer_thick = self.washer_dict['t']
+        self.washer_do = self.washer_dict['do']
+        self.washer_ro = self.washer_do/2.
+
+        self.h0_cen = 0
+        self.d0_cen = 1 # symmetrical
+        self.w0_cen = 1 # symmetrical
+
+        self.tot_l = self.head_l + self.shank_l
+
+        # vectors from o (orig) along axis_h, to the pos_h points
+        # h_o is a dictionary created in Obj3D.__init__
+        self.h_o[0] =  V0 #origin
+        self.h_o[1] =  self.vec_h(head_out)
+        self.h_o[2] =  self.vec_h(self.head_l)
+        self.h_o[3] =  self.vec_h(self.head_l + self.washer_thick)
+        self.h_o[4] =  self.vec_h(self.tot_l - self.thread_l)
+        self.h_o[5] =  self.vec_h(self.tot_l - shank_out)
+        self.h_o[6] =  self.vec_h(self.tot_l)
+
+        self.d_o[0] = V0
+        if not (self.axis_d is None or self.axis_d == V0):
+            # negative because is symmetric
+            self.d_o[1] = self.vec_d(-self.shank_r)
+            self.d_o[2] = self.vec_d(-self.head_r)
+            self.d_o[3] = self.vec_d(-self.washer_ro)
+        elif pos_d != 0:
+            logger.error('axis_d not defined while pos_d != 0')
+
+        self.w_o[0] = V0
+        if not (self.axis_w is None or self.axis_w == V0):
+            # negative because is symmetric
+            self.w_o[1] = self.vec_w(-self.shank_r)
+            self.w_o[2] = self.vec_w(-self.head_r)
+            self.w_o[3] = self.vec_w(-self.washer_ro)
+        elif pos_w != 0:
+            logger.error('axis_w not defined while pos_w != 0')
+
+        self.set_pos_o()
+
+        # creation of the bolt, at the origin self.pos_o:
+        bolt = fc_clss.Din912Bolt(metric = metric,
+                                  shank_l = self.shank_l,
+                                  shank_out = shank_out,
+                                  head_out = head_out,
+                                  axis_h = self.axis_h,
+                                  axis_d = self.axis_d,
+                                  axis_w = self.axis_w,
+                                  pos_h = 0, pos_d = 0, pos_w = 0,
+                                  pos = self.pos_o)
+        self.append_part(bolt)
+        # creation of the washer, at the origin at pos_h = 2, and at the end
+        # of the washer, could use an if
+        if wide_washer == 0:
+            washer = fc_clss.Din125Washer(metric = metric,
+                                          axis_h = self.axis_h,
+                                          pos_h = -1, # base of cylinder
+                                          pos = self.get_pos_h(2))
+        else:
+            washer = fc_clss.Din9021Washer(metric = metric,
+                                           axis_h = self.axis_h,
+                                           pos_h = -1, # base of cylinder
+                                           pos = self.get_pos_h(2))
+        self.append_part(washer)
+
+        if group == 1:
+            self.make_group()
+            
+        
+boltwash = Din912BoltWashSet(metric = 3, shank_l = 20,
+                 wide_washer = 0,
+                 shank_l_exact = 0, # 0: take the next larger size
+                 shank_out = 0,
+                 head_out = 0,
+                 axis_h = VZ,
+                 axis_d = None, axis_w = None,
+                 pos_h  = 0, pos_d = 0, pos_w = 0,
+                 pos    = V0)
+     
+
 
 class NemaMotorPulleySet (fc_clss.PartsSet):
     """ Set composed of a Nema Motor and a pulley
@@ -606,16 +848,16 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
 
  
 
-motor_pulley = NemaMotorPulleySet(pulley_pos_h = 10,
-                                  rear_shaft_l = 10,
-                                  axis_d = VZ,
-                                  axis_w = VY,
-                                  axis_h = VX,
-                                  pos_d = 2,
-                                  pos_w = 0,
-                                  pos_h = 4,
-                                  pos = V0,
-                                  )
+#motor_pulley = NemaMotorPulleySet(pulley_pos_h = 10,
+#                                  rear_shaft_l = 10,
+#                                  axis_d = VZ,
+#                                  axis_w = VY,
+#                                  axis_h = VX,
+#                                  pos_d = 2,
+#                                  pos_w = 0,
+#                                  pos_h = 4,
+#                                  pos = V0,
+#                                  )
 
 
 
