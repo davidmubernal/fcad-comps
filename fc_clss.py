@@ -878,7 +878,7 @@ class Nut (SinglePart, shp_clss.ShpPrismHole):
         1: axis_d points to the center of a side
     h_offset : float
         0: default
-        Distance from the top, just to place the prism, see pos_h
+        Distance from the top, just to place the nut, see pos_h
         if negative, from the bottom
     axis_h : FreeCAD.Vector
         vector along the cylinder height
@@ -958,16 +958,114 @@ class Nut (SinglePart, shp_clss.ShpPrismHole):
                 setattr(self, i, values[i])
 
 
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
+#nut = Nut ( r_out   = 10,
+#            h       = 4,
+#            r_in   = 5,
+#            h_offset = 1,
+#            axis_d_apo = 0,
+#            axis_h = VZ, axis_d = VX, axis_w = VY,
+#            pos_h = 2, pos_d = 0, pos_w = 0,
+#            pos = V0)
 
-nut = Nut ( r_out   = 10,
-            h       = 4,
-            r_in   = 5,
-            h_offset = 1,
-            axis_d_apo = 0,
-            axis_h = VZ, axis_d = VX, axis_w = VY,
-            pos_h = 2, pos_d = 0, pos_w = 0,
-            pos = V0)
+
+
+class Din934Nut (Nut):
+    """ Din 934 Nut
+
+    Parameters:
+    -----------
+    metric : int (maybe float: 2.5)
+
+    axis_h : 
+    axis_d_apo : int
+        0: default: axis_d points to the vertex
+        1: axis_d points to the center of a side
+    h_offset : float
+        0: default
+        Distance from the top, just to place the Nut, see pos_h
+        if negative, from the bottom
+    axis_h : FreeCAD.Vector
+        vector along the axis, height
+    axis_d : FreeCAD.Vector
+        vector along the first vertex, a direction perpendicular to axis_h
+        it is not necessary if pos_d == 0
+        It can be None, but if None, axis_w has to be None
+    axis_w : FreeCAD.Vector
+        vector along the cylinder radius,
+        a direction perpendicular to axis_h and axis_d
+        it is not necessary if pos_w == 0
+        It can be None
+    pos_h : int
+        location of pos along axis_h
+         0: at the center
+        -1: at the base
+         1: at the top
+        -2: at the base + h_offset
+         2: at the top + h_offset
+    pos_d : int
+        location of pos along axis_d (-2, -1, 0, 1, 2)
+        0: pos is at the circunference center (axis)
+        1: pos is at the inner circunsference, on axis_d, at r_in from the
+           circle center
+        2: pos is at the apothem, on axis_d
+        3: pos is at the outer circunsference, on axis_d, at r_out from the
+           circle center
+    pos_w : int
+        location of pos along axis_w (-2, -1, 0, 1, 2)
+        0: pos is at the circunference center
+        1: pos is at the inner circunsference, on axis_w, at r_in from the
+           circle center
+        2: pos is at the apothem, on axis_w
+        3: pos is at the outer circunsference, on axis_w, at r_out from the
+           center
+    pos : FreeCAD.Vector
+        Position of the prism, taking into account where the center is
+    model_type : 0 
+        not to print, just an outline
+    name : str
+        name of the bolt
+
+    """
+
+    def __init__(self, metric,
+                axis_d_apo = 0, h_offset = 0,
+                axis_h = VZ, axis_d = None, axis_w = None,
+                pos_h = 0, pos_d = 0, pos_w = 0, pos = V0,
+                model_type = 0, name = ''):
+
+        if metric >= 3:
+            str_metric = str(int(metric))
+        else:
+            str_metric = str(metric)
+        default_name = 'd934nut_m' + str_metric
+        self.set_name (name, default_name, change = 0)
+
+        try:
+            nut_dict = kcomp.D934[metric]
+            self.nut_dict = nut_dict
+        except KeyError:
+            logger.error('nut key not found: ' + str(metric))
+        else: #no exception
+            Nut.__init__(self, 
+                         r_out   = nut_dict['circ_r'],
+                         h       = nut_dict['l'],
+                         r_in    = metric/2.,
+                         h_offset = h_offset,
+                         axis_d_apo = axis_d_apo,
+                         axis_h = axis_h, axis_d = axis_d, axis_w = axis_w,
+                         pos_h = pos_h, pos_d = pos_d, pos_w = pos_w,
+                         pos = pos,
+                         model_type = model_type,
+                         name = name)
+
+doc = FreeCAD.newDocument()
+nut = Din934Nut ( metric   = 3,
+                  h_offset = 0,
+                  axis_d_apo = 0,
+                  axis_h = VZ, axis_d = VX, axis_w = VY,
+                  pos_h = 2, pos_d = 0, pos_w = 0,
+                  pos = V0)
 
 
 
