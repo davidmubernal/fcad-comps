@@ -793,7 +793,7 @@ class ShpPrismHole (Obj3D):
     r_in : float
         radius of the inner hole
         if 0, no inner hole
-    offset : float
+    h_offset : float
         0: default
         Distance from the top, just to place the prism, see pos_h
         if negative, from the bottom
@@ -824,8 +824,8 @@ class ShpPrismHole (Obj3D):
          0: at the center
         -1: at the base
          1: at the top
-        -2: at the base + offset
-         2: at the top + offset
+        -2: at the base + h_offset
+         2: at the top + h_offset
     pos_d : int
         location of pos along axis_d (-2, -1, 0, 1, 2)
         0: pos is at the circunference center (axis)
@@ -878,7 +878,7 @@ class ShpPrismHole (Obj3D):
               :
               :
           ____:____ ....            1
-         : :     : :    : offset
+         : :     : :    : h_offset
          : :     : :....:           2
          | :     : |
          | :     : |
@@ -901,7 +901,7 @@ class ShpPrismHole (Obj3D):
     """
     def __init__(self, n_sides,
                  r_out, h, r_in,
-                 offset = 0,
+                 h_offset = 0,
                  xtr_r_in = 0,
                  xtr_r_out = 0,
                  axis_d_apo = 0,
@@ -924,7 +924,7 @@ class ShpPrismHole (Obj3D):
         # h_o is a dictionary created in Obj3D.__init__
         self.h_o[0] =  V0
         self.h_o[1] =  self.vec_h(-h/2.)
-        self.h_o[2] =  self.vec_h(-h/2. + offset)
+        self.h_o[2] =  self.vec_h(-h/2. + h_offset)
 
         # apotheme
         self.apo = r_out * math.cos(math.pi/n_sides)
@@ -981,19 +981,19 @@ class ShpPrismHole (Obj3D):
         self.prnt_ax = self.axis_h
 
 
-prism = ShpPrismHole (n_sides = 4,
-                      r_out   = 20,
-                      h       = 4,
-                      r_in   = 1,
-                      offset = 1,
-                      xtr_r_in = 2,
-                      xtr_r_out = 4,
-                      axis_d_apo = 0,
-                      axis_h = VZ, axis_d = VX, axis_w = VY,
-                      pos_h = -2, pos_d = 0, pos_w = 0,
-                      pos = V0)
+#prism = ShpPrismHole (n_sides = 4,
+#                      r_out   = 20,
+#                      h       = 4,
+#                      r_in   = 1,
+#                      h_offset = 1,
+#                      xtr_r_in = 2,
+#                      xtr_r_out = 4,
+#                      axis_d_apo = 0,
+#                      axis_h = VZ, axis_d = VX, axis_w = VY,
+#                      pos_h = -2, pos_d = 0, pos_w = 0,
+#                      pos = V0)
 
-Part.show(prism.shp)
+#Part.show(prism.shp)
 
 
 
