@@ -516,20 +516,19 @@ class Din912BoltWashSet (fc_clss.PartsSet):
                                            pos_h = -1, # base of cylinder
                                            pos = self.get_pos_h(2))
         self.append_part(washer)
-
         if group == 1:
             self.make_group()
             
         
-boltwash = Din912BoltWashSet(metric = 3, shank_l = 20,
-                 wide_washer = 0,
-                 shank_l_exact = 0, # 0: take the next larger size
-                 shank_out = 0,
-                 head_out = 0,
-                 axis_h = VZ,
-                 axis_d = None, axis_w = None,
-                 pos_h  = 0, pos_d = 0, pos_w = 0,
-                 pos    = V0)
+#boltwash = Din912BoltWashSet(metric = 3, shank_l = 20,
+#                 wide_washer = 0,
+#                 shank_l_exact = 0, # 0: take the next larger size
+#                 shank_out = 0,
+#                 head_out = 0,
+#                 axis_h = VZ,
+#                 axis_d = None, axis_w = None,
+#                 pos_h  = 0, pos_d = 0, pos_w = 0,
+#                 pos    = V0)
      
 
 

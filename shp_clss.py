@@ -773,6 +773,243 @@ class ShpCylHole (Obj3D):
 
 
 
+class ShpPrismHole (Obj3D):
+    """
+    Creates a shape of a hollow prism
+    Similar to fcfun shp_regprism_dirxtr, but creates the object with the useful
+    attributes and methods
+    Makes a hollow prism in any position and direction, with optional extra
+    heights, and inner and outer radius, and various locations in the cylinder
+
+    Parameters:
+    -----------
+    n_sides : int
+        number of sides of the polygon
+    r_out : float
+        circumradius of the polygon
+    h : float
+        height of the cylinder
+    r_in : float
+        radius of the inner hole
+        if 0, no inner hole
+    xtr_top : float
+        Extra height on top, it is not taken under consideration when
+        calculating the prism center along the height. 
+        the total length would be h + xtr_top + xtr_bot
+    xtr_bot : float
+        Extra height at the bottom, it is not taken under consideration when
+        calculating the prism center along the height or the position of
+        the base
+        the total length would be h + xtr_top + xtr_bot
+    xtr_r_in : float
+        Extra length of the inner radius (hollow cylinder),
+        it is not taken under consideration when calculating pos_d or pos_w.
+        It can be negative, so this inner radius would be smaller
+    xtr_r_out : float
+        Extra length of the circumradius
+        it is not taken under consideration when calculating pos_d or pos_w.
+        It can be negative, so this outer radius would be smaller
+    axis_d_apo : int
+        0: default: axis_d points to the vertex
+        1: axis_d points to the center of a side
+    axis_h : FreeCAD.Vector
+        vector along the cylinder height
+    axis_d : FreeCAD.Vector
+        vector along the first vertex, a direction perpendicular to axis_h
+        it is not necessary if pos_d == 0
+        It can be None, but if None, axis_w has to be None
+    axis_w : FreeCAD.Vector
+        vector along the cylinder radius,
+        a direction perpendicular to axis_h and axis_d
+        it is not necessary if pos_w == 0
+        It can be None
+    pos_h : int
+        location of pos along axis_h
+        0: at the base, considering xtr_bot
+        1: at the base + xtr_bot
+        2: at the center not considering xtr_bot and xtr_top
+        3: at the center considering xtr_bot and xtr_top
+        4: at the top - xtr_top
+        5: at the top, considering xtr_top
+    pos_d : int
+        location of pos along axis_d (-2, -1, 0, 1)
+        0: pos is at the circunference center (axis)
+        1: pos is at the inner circunsference, on axis_d, at r_in from the
+           circle center (not at r_in + xtr_r_in)
+        2: pos is at the apothem, on axis_d
+        3: pos is at the outer circunsference, on axis_d, at r_out from the
+           circle center (not at r_out + xtr_r_out)
+    pos_w : int
+        location of pos along axis_w (0, 1)
+        0: pos is at the circunference center
+        1: pos is at the inner circunsference, on axis_w, at r_in from the
+           circle center (not at r_in + xtr_r_in)
+        2: pos is at the apothem, on axis_w
+        3: pos is at the outer circunsference, on axis_w, at r_out from the
+           circle center (not at r_out + xtr_r_out)
+    pos : FreeCAD.Vector
+        Position of the prism, taking into account where the center is
+
+    Attributes:
+    -----------
+    pos_o : FreeCAD.Vector
+        Position of the origin of the shape
+    h_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_h
+    d_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_d
+    w_o : dictionary of FreeCAD.Vector
+        vectors from the origin to the different points along axis_w
+    h0_cen : int
+    d0_cen : int
+    w0_cen : int
+        indicates if pos_h = 0 (pos_d, pos_w) is at the center along
+        axis_h, axis_d, axis_w, or if it is at the end.
+        1 : at the center (symmetrical, or almost symmetrical)
+        0 : at the end
+    shp : OCC Topological Shape
+        The shape of this part
+
+
+            __:__ 
+           /     \
+          /  / \  \........axis_d     
+          \  \ /  / 
+           \____ / 
+
+              01 23  pos_d
+
+           axis_h
+              :
+              :
+          ____:____ ....            5
+         :    :    :    : xtr_top
+         :____:____:....:           4
+         | :     : |
+         | :     : |
+         | :     : |                3
+         | :     : |                2
+         | :     : |
+         | :     : |
+         |_:_____:_|.....           1
+         :_:__o__:_:....: xtr_bot   0 .....> axis_d
+         : :  :    This o will be pos_o (orig)
+         : :..:
+         :  + :
+         :r_in:
+         :    :
+         :....:
+           +
+          r_out
+         
+
+
+    """
+    def __init__(self, n_sides,
+                 r_out, h, r_in,
+                 xtr_top = 0,
+                 xtr_bot = 0,
+                 xtr_r_in = 0,
+                 xtr_r_out = 0,
+                 axis_d_apo = 0,
+                 axis_h = VZ, axis_d = None, axis_w = None,
+                 pos_h = 0, pos_d = 0, pos_w = 0,
+                 pos = V0):
+
+
+        Obj3D.__init__(self, axis_d, axis_w, axis_h)
+
+        # save the arguments as attributes:
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i):
+                setattr(self, i, values[i])
+
+        self.tot_h = h +  xtr_bot + xtr_top
+
+        self.h0_cen = 0 # not symmetric
+        # vectors from o (orig) along axis_h, to the pos_h points
+        # h_o is a dictionary created in Obj3D.__init__
+        self.h_o[0] =  V0
+        self.h_o[1] =  self.vec_h(xtr_bot)
+        self.h_o[2] =  self.vec_h(xtr_bot + h/2.)
+        self.h_o[3] =  self.vec_h(self.tot_h/2.)
+        self.h_o[4] =  self.vec_h(xtr_bot + h)
+        self.h_o[5] =  self.vec_h(self.tot_h)
+
+        # apotheme
+        self.apo = r_out * math.cos(math.pi/n_sides)
+        self.d_o[0] = V0
+        if self.axis_d != V0:
+            # not considering the extra radius (usually tolerances)
+            self.d_o[1] = self.vec_d(-r_in)
+            self.d_o[2] = self.vec_d(-self.apo)
+            self.d_o[3] = self.vec_d(-r_out)
+        else:
+            if pos_d != 0:
+                logger.error('axis_d not defined while pos_d != 0')
+            self.axis_d = fcfun.get_fc_perpend1(self.axis_h)
+        # pos_d = 0 is at the center
+        self.d0_cen = 1
+
+        self.w_o[0] = V0
+        if self.axis_w != V0:
+            self.w_o[1] = self.vec_w(-r_in)
+            self.w_o[2] = self.vec_w(-self.apo)
+            self.w_o[3] = self.vec_w(-r_out)
+        elif pos_w != 0:
+            logger.error('axis_w not defined while pos_w != 0')
+        # pos_w = 0 is at the center
+        self.w0_cen = 1
+
+        # calculates the position of the origin, and keeps it in attribute pos_o
+        self.set_pos_o()
+
+        if axis_d_apo == 0:
+            self.axis_apo = self.axis_d
+        else: # rotate 360/(2*nsides)
+            self.axis_apo = DraftVecUtils.rotate(self.axis_d, math.pi/n_sides,
+                                                 self.axis_h)
+
+        shp_prism = fcfun.shp_regprism_dirxtr(n_sides = n_sides,
+                                              radius = r_out + xtr_r_out,
+                                              length = self.tot_h,
+                                              fc_normal = self.axis_h,
+                                              fc_verx1 = self.axis_apo,
+                                              centered = 0,
+                                              pos=self.pos_o)
+
+        shp_cyl = fcfun.shp_cylcenxtr (r       = r_in + xtr_r_in,
+                                       h       = self.tot_h,
+                                       normal  = self.axis_h,
+                                       ch      = 0,
+                                       xtr_top = 1, # to cut
+                                       xtr_bot = 1, # to cut
+                                       pos     = self.pos_o)
+
+        self.shp = shp_prism.cut(shp_cyl)
+        self.prnt_ax = self.axis_h
+
+
+prism = ShpPrismHole (n_sides = 9,
+                      r_out   = 10,
+                      h       = 4,
+                      r_in   = 5,
+                      xtr_top = 1,
+                      xtr_bot = 5,
+                      xtr_r_in = 0,
+                      xtr_r_out = 0,
+                      axis_d_apo = 1,
+                      axis_h = VZ, axis_d = VX, axis_w = VY,
+                      pos_h = 0, pos_d = 2, pos_w = 0,
+                      pos = V0)
+
+Part.show(prism.shp)
+
+
+
+
 
 
 
