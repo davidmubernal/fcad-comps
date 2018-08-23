@@ -720,6 +720,7 @@ class ShpCylHole (Obj3D):
             if not hasattr(self,i):
                 setattr(self, i, values[i])
 
+        # THIS IS WORKING, but it seems that the signs are not right
         # vectors from o (orig) along axis_h, to the pos_h points
         # h_o is a dictionary created in Obj3D.__init__
         self.h_o[0] =  self.vec_h(h/2. + xtr_bot)
@@ -758,17 +759,17 @@ class ShpCylHole (Obj3D):
         self.prnt_ax = self.axis_h
 
 
-#cyl = ShpCylHole (r_in=2, r_out=5, h=4,
-#                       #axis_h = FreeCAD.Vector(1,1,0), 
-#                       axis_h = VZ,
-#                       #axis_d = VX, axis_w = VYN,
-#                       axis_d = VX,
-#                       pos_h = 1,  pos_d = 1, pos_w = 0,
-#                       xtr_top=0, xtr_bot=0,
-#                       xtr_r_in=0, xtr_r_out=0,
-#                       pos = V0)
-#                       #pos = FreeCAD.Vector(1,2,3))
-#Part.show(cyl.shp)
+cyl = ShpCylHole (r_in=2, r_out=6, h=4,
+                       #axis_h = FreeCAD.Vector(1,1,0), 
+                       axis_h = VZ,
+                       #axis_d = VX, axis_w = VYN,
+                       axis_d = VX,
+                       pos_h = 1,  pos_d = 1, pos_w = 0,
+                       xtr_top=1, xtr_bot=1,
+                       xtr_r_in=0, xtr_r_out=0,
+                       pos = V0)
+                       #pos = FreeCAD.Vector(1,2,3))
+Part.show(cyl.shp)
 
 
 
@@ -778,7 +779,7 @@ class ShpPrismHole (Obj3D):
     Creates a shape of a hollow prism
     Similar to fcfun shp_regprism_dirxtr, but creates the object with the useful
     attributes and methods
-    Makes a hollow prism in any position and direction, with optional extra
+    Makes a hollow prism in any position and direction, with different positions
     heights, and inner and outer radius, and various locations in the cylinder
 
     Parameters:
@@ -788,19 +789,14 @@ class ShpPrismHole (Obj3D):
     r_out : float
         circumradius of the polygon
     h : float
-        height of the cylinder
+        total height of the cylinder
     r_in : float
         radius of the inner hole
         if 0, no inner hole
-    xtr_top : float
-        Extra height on top, it is not taken under consideration when
-        calculating the prism center along the height. 
-        the total length would be h + xtr_top + xtr_bot
-    xtr_bot : float
-        Extra height at the bottom, it is not taken under consideration when
-        calculating the prism center along the height or the position of
-        the base
-        the total length would be h + xtr_top + xtr_bot
+    offset : float
+        0: default
+        Distance from the top, just to place the prism, see pos_h
+        if negative, from the bottom
     xtr_r_in : float
         Extra length of the inner radius (hollow cylinder),
         it is not taken under consideration when calculating pos_d or pos_w.
@@ -825,14 +821,13 @@ class ShpPrismHole (Obj3D):
         It can be None
     pos_h : int
         location of pos along axis_h
-        0: at the base, considering xtr_bot
-        1: at the base + xtr_bot
-        2: at the center not considering xtr_bot and xtr_top
-        3: at the center considering xtr_bot and xtr_top
-        4: at the top - xtr_top
-        5: at the top, considering xtr_top
+         0: at the center
+        -1: at the base
+         1: at the top
+        -2: at the base + offset
+         2: at the top + offset
     pos_d : int
-        location of pos along axis_d (-2, -1, 0, 1)
+        location of pos along axis_d (-2, -1, 0, 1, 2)
         0: pos is at the circunference center (axis)
         1: pos is at the inner circunsference, on axis_d, at r_in from the
            circle center (not at r_in + xtr_r_in)
@@ -840,7 +835,7 @@ class ShpPrismHole (Obj3D):
         3: pos is at the outer circunsference, on axis_d, at r_out from the
            circle center (not at r_out + xtr_r_out)
     pos_w : int
-        location of pos along axis_w (0, 1)
+        location of pos along axis_w (-2, -1, 0, 1, 2)
         0: pos is at the circunference center
         1: pos is at the inner circunsference, on axis_w, at r_in from the
            circle center (not at r_in + xtr_r_in)
@@ -882,18 +877,17 @@ class ShpPrismHole (Obj3D):
            axis_h
               :
               :
-          ____:____ ....            5
-         :    :    :    : xtr_top
-         :____:____:....:           4
+          ____:____ ....            1
+         : :     : :    : offset
+         : :     : :....:           2
          | :     : |
          | :     : |
-         | :     : |                3
-         | :     : |                2
+         | :  o  : |                0 This o will be pos_o (orig)
          | :     : |
-         | :     : |
-         |_:_____:_|.....           1
-         :_:__o__:_:....: xtr_bot   0 .....> axis_d
-         : :  :    This o will be pos_o (orig)
+         | :     : |.....          -2
+         | :     : |    : off_set
+         :_:_____:_:....: bot_out  -1  .....> axis_d
+         : :  :    
          : :..:
          :  + :
          :r_in:
@@ -907,8 +901,7 @@ class ShpPrismHole (Obj3D):
     """
     def __init__(self, n_sides,
                  r_out, h, r_in,
-                 xtr_top = 0,
-                 xtr_bot = 0,
+                 offset = 0,
                  xtr_r_in = 0,
                  xtr_r_out = 0,
                  axis_d_apo = 0,
@@ -926,17 +919,12 @@ class ShpPrismHole (Obj3D):
             if not hasattr(self,i):
                 setattr(self, i, values[i])
 
-        self.tot_h = h +  xtr_bot + xtr_top
-
-        self.h0_cen = 0 # not symmetric
+        self.h0_cen = 1 # symmetric
         # vectors from o (orig) along axis_h, to the pos_h points
         # h_o is a dictionary created in Obj3D.__init__
         self.h_o[0] =  V0
-        self.h_o[1] =  self.vec_h(xtr_bot)
-        self.h_o[2] =  self.vec_h(xtr_bot + h/2.)
-        self.h_o[3] =  self.vec_h(self.tot_h/2.)
-        self.h_o[4] =  self.vec_h(xtr_bot + h)
-        self.h_o[5] =  self.vec_h(self.tot_h)
+        self.h_o[1] =  self.vec_h(-h/2.)
+        self.h_o[2] =  self.vec_h(-h/2. + offset)
 
         # apotheme
         self.apo = r_out * math.cos(math.pi/n_sides)
@@ -974,35 +962,35 @@ class ShpPrismHole (Obj3D):
 
         shp_prism = fcfun.shp_regprism_dirxtr(n_sides = n_sides,
                                               radius = r_out + xtr_r_out,
-                                              length = self.tot_h,
+                                              length = h,
                                               fc_normal = self.axis_h,
                                               fc_verx1 = self.axis_apo,
                                               centered = 0,
-                                              pos=self.pos_o)
-
-        shp_cyl = fcfun.shp_cylcenxtr (r       = r_in + xtr_r_in,
-                                       h       = self.tot_h,
-                                       normal  = self.axis_h,
-                                       ch      = 0,
-                                       xtr_top = 1, # to cut
-                                       xtr_bot = 1, # to cut
-                                       pos     = self.pos_o)
-
-        self.shp = shp_prism.cut(shp_cyl)
+                                              pos=self.get_pos_h(-1))
+        if r_in > 0:
+            shp_cyl = fcfun.shp_cylcenxtr (r       = r_in + xtr_r_in,
+                                           h       = h,
+                                           normal  = self.axis_h,
+                                           ch      = 0,
+                                           xtr_top = 1, # to cut
+                                           xtr_bot = 1, # to cut
+                                           pos     = self.get_pos_h(-1))
+            self.shp = shp_prism.cut(shp_cyl)
+        else :
+            self.shp = shp_prism
         self.prnt_ax = self.axis_h
 
 
-prism = ShpPrismHole (n_sides = 9,
-                      r_out   = 10,
+prism = ShpPrismHole (n_sides = 4,
+                      r_out   = 20,
                       h       = 4,
-                      r_in   = 5,
-                      xtr_top = 1,
-                      xtr_bot = 5,
-                      xtr_r_in = 0,
-                      xtr_r_out = 0,
-                      axis_d_apo = 1,
+                      r_in   = 1,
+                      offset = 1,
+                      xtr_r_in = 2,
+                      xtr_r_out = 4,
+                      axis_d_apo = 0,
                       axis_h = VZ, axis_d = VX, axis_w = VY,
-                      pos_h = 0, pos_d = 2, pos_w = 0,
+                      pos_h = -2, pos_d = 0, pos_w = 0,
                       pos = V0)
 
 Part.show(prism.shp)
