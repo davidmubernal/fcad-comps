@@ -1059,13 +1059,13 @@ class Din934Nut (Nut):
                          model_type = model_type,
                          name = name)
 
-doc = FreeCAD.newDocument()
-nut = Din934Nut ( metric   = 3,
-                  h_offset = 0,
-                  axis_d_apo = 0,
-                  axis_h = VZ, axis_d = VX, axis_w = VY,
-                  pos_h = 2, pos_d = 0, pos_w = 0,
-                  pos = V0)
+#doc = FreeCAD.newDocument()
+#nut = Din934Nut ( metric   = 3,
+#                  h_offset = 0,
+#                  axis_d_apo = 0,
+#                  axis_h = VZ, axis_d = VX, axis_w = VY,
+#                  pos_h = 2, pos_d = 0, pos_w = 0,
+#                  pos = V0)
 
 
 

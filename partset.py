@@ -532,6 +532,221 @@ class Din912BoltWashSet (fc_clss.PartsSet):
      
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class Din934NutWashSet (fc_clss.PartsSet):
+    """ A din 934 nut and a wahser set 
+
+    Parameters:
+    -----------
+    metric : int (could be 2.5)
+        Metric (diameter) of the bolt
+    wide_washer : int
+        0: normal washer (default) din 125
+        1: wide washer din 9021
+    axis_d_apo : int
+        0: default: axis_d points to the vertex
+        1: axis_d points to the center of a side
+    axis_h : FreeCAD.Vector
+        vector along the bolt axis
+    axis_d : FreeCAD.Vector
+        vector along the first vertex, a direction perpendicular to axis_h
+        it is not necessary if pos_d == 0
+        It can be None, but if None, axis_w has to be None
+        vector along the radius, a direction perpendicular to axis_h
+    axis_w : FreeCAD.Vector
+        vector along the other radius, a direction perpendicular to axis_h
+        and axis_d
+        it is not necessary if pos_w == 0
+        It can be None
+    pos_h : int
+        location of pos along axis_h
+        0: at the base of the washer
+        1: end of the washer, beginning of the nut
+        2: end of the nut
+    pos_d : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the hole
+        2: apotheme
+        3: circumradius
+        4: radius of the washer
+    pos_w : int
+        location of pos along axis_d (symmetric)
+        0: pos is at the central axis
+        1: radius of the hole
+        2: apotheme
+        3: circumradius
+        4: radius of the washer
+
+    group : int
+        1: make a group
+        0: leave as individual componentes
+        
+    pos : FreeCAD.Vector
+        Position of the cylinder, taking into account where the center is
+
+
+                                   axis_h
+                                     :
+                                     : metric/2
+                                     :+
+                                     : :
+                                     : :
+                         2       ____:____                :
+                                |  : | :  |               + head_l
+                                |  : | :  |               :
+                    .... 1  ____|__:_:_:__|____           :
+      washer_thick  :      |       : : :       |          :
+                    :... 0 |_______:_:_:_______|...........axis_d
+                                     0 1 23    4
+                                     :    :    :
+                                     :....:    :
+                                     :  +      :
+                                     : head_r  :
+                                     :         :
+                                     :.........:
+                                        + washer_ro
+    """
+
+    def __init__(self, metric,
+                 wide_washer = 0,
+                 axis_d_apo = 0,
+                 axis_h = VZ,
+                 axis_d = None, axis_w = None,
+                 pos_h  = 0, pos_d = 0, pos_w = 0,
+                 pos    = V0,
+                 group  = 1, # 1: make a group
+                 name = ''):
+
+
+        default_name = 'd934' + str(int(metric))
+        self.set_name (name, default_name, change=0)
+
+        fc_clss.PartsSet.__init__(self,
+                          axis_d = axis_d, axis_w = axis_w, axis_h = axis_h)
+
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        for i in args:
+            if not hasattr(self,i): # so we keep the attributes by CylHole
+                setattr(self, i, values[i])
+
+        self.nut_dict = kcomp.D934[metric]
+
+        self.nut_h = self.nut_dict['l']
+        self.nut_ro = self.nut_dict['circ_r']
+        # either or the next, not exact
+        #self.nut_apo = self.nut_dict['a2']/2.
+        self.nut_apo = self.nut_ro * 0.866 # cos 30
+
+        if wide_washer == 0:
+            self.washer_dict = kcomp.D125[metric]
+        else:
+            self.washer_dict = kcomp.D9021[metric]
+
+        self.washer_thick = self.washer_dict['t']
+        self.washer_do = self.washer_dict['do']
+        self.washer_ro = self.washer_do/2.
+
+        self.h0_cen = 0
+        self.d0_cen = 1 # symmetrical
+        self.w0_cen = 1 # symmetrical
+
+        self.tot_h = self.nut_h + self.washer_thick
+
+        # vectors from o (orig) along axis_h, to the pos_h points
+        # h_o is a dictionary created in Obj3D.__init__
+        self.h_o[0] =  V0 #origin
+        self.h_o[1] =  self.vec_h(self.washer_thick)
+        self.h_o[2] =  self.vec_h(self.washer_thick + self.nut_h)
+
+        self.d_o[0] = V0
+        if not (self.axis_d is None or self.axis_d == V0):
+            # negative because is symmetric
+            self.d_o[1] = self.vec_d(-metric/2.)
+            self.d_o[2] = self.vec_d(-self.nut_apo)
+            self.d_o[3] = self.vec_d(-self.nut_ro)
+            self.d_o[4] = self.vec_d(-self.washer_ro)
+        elif pos_d != 0:
+            logger.error('axis_d not defined while pos_d != 0')
+
+        self.w_o[0] = V0
+        if not (self.axis_w is None or self.axis_w == V0):
+            # negative because is symmetric
+            self.w_o[1] = self.vec_w(-metric/2.)
+            self.w_o[2] = self.vec_w(-self.nut_apo)
+            self.w_o[3] = self.vec_w(-self.nut_ro)
+            self.w_o[4] = self.vec_w(-self.washer_ro)
+        elif pos_w != 0:
+            logger.error('axis_w not defined while pos_w != 0')
+
+        self.set_pos_o()
+
+        # creation of the nut, at pos h = 1
+        nut = fc_clss.Din934Nut(metric = metric,
+                                axis_d_apo = axis_d_apo,
+                                axis_h = self.axis_h,
+                                axis_d = self.axis_d,
+                                axis_w = self.axis_w,
+                                pos_h = -1, pos_d = 0, pos_w = 0,
+                                pos = self.get_pos_h(1))
+        self.append_part(nut)
+        # creation of the washer, at the origin , and at the end
+        # of the washer, could use an if
+        if wide_washer == 0:
+            washer = fc_clss.Din125Washer(metric = metric,
+                                          axis_h = self.axis_h,
+                                          pos_h = -1, # base of cylinder
+                                          pos = self.pos_o)
+        else:
+            washer = fc_clss.Din9021Washer(metric = metric,
+                                           axis_h = self.axis_h,
+                                           pos_h = -1, # base of cylinder
+                                           pos = self.pos_o)
+        self.append_part(washer)
+        if group == 1:
+            self.make_group()
+  
+nut_wash = Din934NutWashSet(metric =4,
+                 wide_washer = 0,
+                 axis_d_apo = 1,
+                 axis_h = VZ,
+                 axis_d = VX, axis_w = None,
+                 pos_h  = 2, pos_d = 2, pos_w = 0,
+                 pos    = V0,
+                 group  = 1, # 1: make a group
+                 name = '')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NemaMotorPulleySet (fc_clss.PartsSet):
     """ Set composed of a Nema Motor and a pulley
 
