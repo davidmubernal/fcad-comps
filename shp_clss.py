@@ -759,17 +759,17 @@ class ShpCylHole (Obj3D):
         self.prnt_ax = self.axis_h
 
 
-cyl = ShpCylHole (r_in=2, r_out=6, h=4,
-                       #axis_h = FreeCAD.Vector(1,1,0), 
-                       axis_h = VZ,
-                       #axis_d = VX, axis_w = VYN,
-                       axis_d = VX,
-                       pos_h = 1,  pos_d = 1, pos_w = 0,
-                       xtr_top=1, xtr_bot=1,
-                       xtr_r_in=0, xtr_r_out=0,
-                       pos = V0)
-                       #pos = FreeCAD.Vector(1,2,3))
-Part.show(cyl.shp)
+#cyl = ShpCylHole (r_in=2, r_out=6, h=4,
+#                       #axis_h = FreeCAD.Vector(1,1,0), 
+#                       axis_h = VZ,
+#                       #axis_d = VX, axis_w = VYN,
+#                       axis_d = VX,
+#                       pos_h = 1,  pos_d = 1, pos_w = 0,
+#                       xtr_top=1, xtr_bot=1,
+#                       xtr_r_in=0, xtr_r_out=0,
+#                       pos = V0)
+#                       #pos = FreeCAD.Vector(1,2,3))
+#Part.show(cyl.shp)
 
 
 

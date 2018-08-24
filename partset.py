@@ -299,14 +299,21 @@ class Din912BoltWashSet (fc_clss.PartsSet):
         Metric (diameter) of the bolt
     shank_l : float
         length of the bolt, not including the head
-        the real length depends on shank_l_exact
+        the real length depends on shank_l_adjust
     wide_washer : int
         0: normal washer (default) din 125
         1: wide washer din 9021
-   shank_l_exact : int
-        if 0: shank_l will be the minimum length, it will check the lengths
-        that are available for this type of bolt
-        if 1: shank_l will be the length of the shank
+   shank_l_adjust : int
+         0: shank length will be the size of the parameter shank_l
+        -1: shank length will be the size of the closest shorter or equal
+            to shank_l available lengths for this type of bolts
+         1: shank length will be the size of the closest larger or equal
+            to shank_l available lengths for this type of bolts
+        -2: shank length will be the size of the closest shorter or equal
+            to shank_l + washer thick available lengths for this type of bolts
+            available lengths for this type of bolts
+         2: shank length will be the size of the closest larger or equal
+            to shank_l + washer thick available lengths for this type of bolts
     shank_out : float
         0: default
         distance to the end of the shank, just for positioning, it doesnt
@@ -407,7 +414,7 @@ class Din912BoltWashSet (fc_clss.PartsSet):
     def __init__(self, metric,
                  shank_l,
                  wide_washer = 0,
-                 shank_l_exact = 0, # 0: take the next larger size
+                 shank_l_adjust = 0,
                  shank_out = 0,
                  head_out = 0,
                  axis_h = VZ,
@@ -432,12 +439,31 @@ class Din912BoltWashSet (fc_clss.PartsSet):
 
         self.bolt_dict = kcomp.D912[metric]
 
-        if shank_l_exact == 1:
+        if wide_washer == 0:
+            self.washer_dict = kcomp.D125[metric]
+        else:
+            self.washer_dict = kcomp.D9021[metric]
+        self.washer_thick = self.washer_dict['t']
+        self.washer_do = self.washer_dict['do']
+        self.washer_ro = self.washer_do/2.
+
+        if shank_l_adjust == 0:
             self.shank_l = shank_l
         else:
-            self.shank_l = next(i_len for i_len
-                                in self.bolt_dict['shank_l_list']
-                                if i_len >= shank_l)
+            sh_l_list = self.bolt_dict['shank_l_list']
+            if shank_l_adjust == -1: # smaller closest to shank_l
+                self.shank_l = [sh_l for sh_l in sh_l_list if sh_l<=shank_l][-1]
+            elif shank_l_adjust == 1: # larger closest to shank_l
+                self.shank_l = [sh_l for sh_l in sh_l_list if sh_l>=shank_l][0]
+            elif shank_l_adjust == -2: # smaller closest to shank_l, washer
+                self.shank_l = [sh_l for sh_l in sh_l_list
+                                if sh_l<=shank_l+self.washer_thick][-1]
+            elif shank_l_adjust == 2: # larger closest to shank_l + washer_thick
+                self.shank_l = [sh_l for sh_l in sh_l_list
+                                if sh_l>=shank_l+self.washer_thick][0]
+            else:
+                logger.error('wrong value for parameter shank_l_adjust')
+                self.shank_l = shank_l
 
         if self.bolt_dict['thread'] > self.shank_l:
             self.thread_l = self.shank_l
@@ -447,14 +473,7 @@ class Din912BoltWashSet (fc_clss.PartsSet):
         self.shank_r = self.metric/2.
         self.head_l = self.bolt_dict['head_l']
         self.head_r = self.bolt_dict['head_r']
-        if wide_washer == 0:
-            self.washer_dict = kcomp.D125[metric]
-        else:
-            self.washer_dict = kcomp.D9021[metric]
 
-        self.washer_thick = self.washer_dict['t']
-        self.washer_do = self.washer_dict['do']
-        self.washer_ro = self.washer_do/2.
 
         self.h0_cen = 0
         self.d0_cen = 1 # symmetrical
@@ -522,7 +541,7 @@ class Din912BoltWashSet (fc_clss.PartsSet):
         
 #boltwash = Din912BoltWashSet(metric = 3, shank_l = 20,
 #                 wide_washer = 0,
-#                 shank_l_exact = 0, # 0: take the next larger size
+#                 shank_l_adjust = 1, # 1: take the next larger size
 #                 shank_out = 0,
 #                 head_out = 0,
 #                 axis_h = VZ,
@@ -530,20 +549,6 @@ class Din912BoltWashSet (fc_clss.PartsSet):
 #                 pos_h  = 0, pos_d = 0, pos_w = 0,
 #                 pos    = V0)
      
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class Din934NutWashSet (fc_clss.PartsSet):
@@ -720,29 +725,15 @@ class Din934NutWashSet (fc_clss.PartsSet):
         if group == 1:
             self.make_group()
   
-nut_wash = Din934NutWashSet(metric =4,
-                 wide_washer = 0,
-                 axis_d_apo = 1,
-                 axis_h = VZ,
-                 axis_d = VX, axis_w = None,
-                 pos_h  = 2, pos_d = 2, pos_w = 0,
-                 pos    = V0,
-                 group  = 1, # 1: make a group
-                 name = '')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#nut_wash = Din934NutWashSet(metric =4,
+#                 wide_washer = 0,
+#                 axis_d_apo = 1,
+#                 axis_h = VZ,
+#                 axis_d = VX, axis_w = None,
+#                 pos_h  = 2, pos_d = 2, pos_w = 0,
+#                 pos    = V0,
+#                 group  = 1, # 1: make a group
+#                 name = '')
 
 
 
