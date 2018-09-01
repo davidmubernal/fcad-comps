@@ -303,7 +303,7 @@ class Din912BoltWashSet (fc_clss.PartsSet):
     wide_washer : int
         0: normal washer (default) din 125
         1: wide washer din 9021
-   shank_l_adjust : int
+    shank_l_adjust : int
          0: shank length will be the size of the parameter shank_l
         -1: shank length will be the size of the closest shorter or equal
             to shank_l available lengths for this type of bolts

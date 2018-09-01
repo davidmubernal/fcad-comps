@@ -1280,7 +1280,12 @@ class Din912Bolt (Bolt):
 
     shank_l : float
         length of the bolt, not including the head
-
+    shank_l_adjust : int
+         0: shank length will be the size of the parameter shank_l
+        -1: shank length will be the size of the closest shorter or equal
+            to shank_l available lengths for this type of bolts
+         1: shank length will be the size of the closest larger or equal
+            to shank_l available lengths for this type of bolts
     shank_out : float
         0: default
         distance to the end of the shank, just for positioning, it doesnt
@@ -1334,6 +1339,7 @@ class Din912Bolt (Bolt):
     """
 
     def __init__(self, metric, shank_l,
+                 shank_l_adjust = 0,
                  shank_out = 0,
                  head_out = 0,
                  axis_h = VZ, axis_d = None, axis_w = None,
@@ -1346,8 +1352,7 @@ class Din912Bolt (Bolt):
             str_metric = str(int(metric))
         else:
             str_metric = str(metric)
-        default_name = 'd912bolt_m' + str_metric + '_l' + str(int(shank_l))
-        self.set_name (name, default_name, change = 0)
+
 
         try:
             bolt_dict = kcomp.D912[metric]
@@ -1355,14 +1360,34 @@ class Din912Bolt (Bolt):
         except KeyError:
             logger.error('bolt key not found: ' + str(metric))
         else: # no exception
-            if bolt_dict['thread'] > shank_l:
+
+            if shank_l_adjust == 0:
+                self.shank_l = shank_l
+            else:
+                sh_l_list = self.bolt_dict['shank_l_list']
+                if shank_l_adjust == -1: # smaller closest to shank_l
+                    self.shank_l = [sh_l for sh_l in sh_l_list
+                                    if sh_l<=shank_l][-1]
+                elif shank_l_adjust == 1: # larger closest to shank_l
+                    self.shank_l = [sh_l for sh_l in sh_l_list
+                                    if sh_l>=shank_l][0]
+                else:
+                    logger.error('wrong value for parameter shank_l_adjust')
+                    self.shank_l = shank_l
+
+            default_name = (  'd912bolt_m' + str_metric + '_l'
+                            + str(int(self.shank_l)))
+            self.set_name (name, default_name, change = 0)
+
+
+            if bolt_dict['thread'] > self.shank_l:
                 thread_l = 0 # all threaded
             else:
                 thread_l = bolt_dict['thread']
 
             Bolt.__init__(self,
                      shank_r = bolt_dict['d']/2.,
-                     shank_l = shank_l,
+                     shank_l = self.shank_l,
                      head_r  = bolt_dict['head_r'],
                      head_l  = bolt_dict['head_l'],
                      thread_l = thread_l,
