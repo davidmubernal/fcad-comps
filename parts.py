@@ -3821,9 +3821,9 @@ class NemaMotorHolder (object):
         ||________________|| .....
         ||_______2________|| ..... wall_thick
 
-                                      motor_xtr_space
-                                       ::
-         ________3_________        3___::____________ ....
+                                      motor_xtr_space_d
+                                     :  :
+         ________3_________        3_:__:____________ ....
         |  ::  :    :  ::  |       |      :     :    |    + motor_thick
         |__::__:_1__:__::__|       2......:..1..:....|....:..........> fc_axis_n
         ||                ||       | :              /
@@ -3854,6 +3854,8 @@ class NemaMotorHolder (object):
         :                  :
         :                  :
         :.....tot_w........:
+                         ::
+                          motor_xtr_space
 
         
        1: ref_axis = 1 & ref_bolt = 0 
@@ -3883,7 +3885,14 @@ class NemaMotorHolder (object):
         0: just 2 pairs of holes. One pair at defined by motor_min_h and the
            other defined by motor_max_h
     motor_xtr_space: float
-        extra separation between the motor and the wall side
+        extra separation between the motor and the sides
+    motor_xtr_space_d: float
+        extra separation between the motor and the wall side (where the bolts)
+        it didn't exist before, so for compatibility
+        -1: same has motor_xtr_space (compatibility), considering bolt head
+            length
+        0: no separation
+        >0: exact separation
     bolt_wall_d: int/float
         metric of the bolts to attach the holder
     bolt_wall_sep: float
@@ -3916,6 +3925,7 @@ class NemaMotorHolder (object):
                   motor_max_h =20.,
                   rail = 1, # if there is a rail or not at the profile side
                   motor_xtr_space = 2., # counting on one side
+                  motor_xtr_space_d = -1, # same as motor_xtr_space
                   bolt_wall_d = 4., # Metric of the wall bolts
                   bolt_wall_sep = 30., # optional
                   chmf_r = 1.,
@@ -3979,14 +3989,15 @@ class NemaMotorHolder (object):
         else:
             tot_h = motor_thick + motor_max_h + 2 * bolt_wall_d
         tot_w = 2* reinf_thick + motor_box_w + 2 * motor_xtr_space
-        tot_d = (   wall_thick + motor_box_w + motor_xtr_space
-                  + boltwallhead_l + washer_thick)
+
+        if motor_xtr_space_d == -1: # same as motor_xtr_space
+            motor_xtr_space_d = motor_xtr_space + boltwallhead_l + washer_thick
+        tot_d = wall_thick + motor_w + motor_xtr_space_d
 
 
         # getting the offset of the reference
         # distance of the motor axis to de wall
-        motax2wall_dist = (wall_thick + motor_w/2. + motor_xtr_space
-                               + boltwallhead_l + washer_thick)
+        motax2wall_dist = wall_thick + motor_w/2. + motor_xtr_space_d
         self.motax2wall_dist = motax2wall_dist
         if ref_axis == 1:
             ref2motax = V0  #point 1
@@ -4047,13 +4058,14 @@ class NemaMotorHolder (object):
         motaxinwall_pos = (motaxwall_pos
                            + DraftVecUtils.scale(axis_n, wall_thick))
         # the space for the motor
-        shp_motor = fcfun.shp_box_dir (box_w = motor_box_w +  2 * motor_xtr_space,
-                                       box_d = tot_d + chmf_r,
-                                       box_h = tot_h,
-                                       fc_axis_h = axis_h_n,
-                                       fc_axis_d = axis_n,
-                                       cw=1, cd=0, ch=0,
-                                       pos = motaxinwall_pos)
+        shp_motor = fcfun.shp_box_dir (
+                                   box_w = motor_box_w +  2 * motor_xtr_space,
+                                   box_d = tot_d + chmf_r,
+                                   box_h = tot_h,
+                                   fc_axis_h = axis_h_n,
+                                   fc_axis_d = axis_n,
+                                   cw=1, cd=0, ch=0,
+                                   pos = motaxinwall_pos)
 
         shp_motor = fcfun.shp_filletchamfer_dir(shp_motor, fc_axis=axis_h,
                                                 fillet=0, radius=chmf_r)
@@ -4174,15 +4186,16 @@ class NemaMotorHolder (object):
 
 
 
-doc = FreeCAD.newDocument()
+#doc = FreeCAD.newDocument()
 h_nema = NemaMotorHolder ( 
                   nema_size = 17,
                   wall_thick = 3.,
                   motor_thick = 3.,
                   reinf_thick = 3.,
-                  motor_min_h =5.,
-                  motor_max_h = 42.,
+                  motor_min_h =18.,  # 5 +15
+                  motor_max_h = 52., #42 + 10
                   motor_xtr_space = 2., # counting on one side
+                  motor_xtr_space_d = 0, 
                   bolt_wall_d = 4.,
                   chmf_r = 0.2,
                   bolt_wall_sep = 40., # optional
