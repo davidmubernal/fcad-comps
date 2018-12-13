@@ -1639,11 +1639,12 @@ class PartAluProf (fc_clss.SinglePart, ShpAluProf):
         self.set_line_color((.2, .2, .2))
 
 
-#AluProf = PartAluProf(depth = 100,
-#                      aluprof_dict = kcomp.ALU_MOTEDIS_30B8,
-#                      xtr_d=10, xtr_nd=20,
+#AluProf = PartAluProf(depth = 200,
+#                      #aluprof_dict = kcomp.ALU_MOTEDIS_30B8,
+#                      aluprof_dict = kcomp.ALU_MAKERBEAM_15,
+#                      #xtr_d=10, xtr_nd=20,
 #                      axis_d = VX, axis_w = VY, axis_h = V0,
-#                      pos_d = 3, pos_w = 1, pos_h = -2,
+#                      #pos_d = 3, pos_w = 1, pos_h = -2,
 #                      pos = V0)
 
 

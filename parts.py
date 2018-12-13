@@ -3877,6 +3877,7 @@ class NemaMotorHolder (object):
         distance of from the inner top side to the bottom hole of the bolts to 
         attach the holder
     rail: int
+        2: the rail goes all the way to the end, not closed
         1: the holes for the bolts are not holes, there are 2 rails, from
            motor_min_h to motor_max_h
         0: just 2 pairs of holes. One pair at defined by motor_min_h and the
@@ -3955,24 +3956,30 @@ class NemaMotorHolder (object):
         washer_thick = kcomp.WASH_D125_T[bolt_wall_d]
 
         # calculation of the bolt wall separation
+        # if larger is not needed
         max_bolt_wall_sep = motor_w - 2 * boltwallhead_r
       
+        motor_box_w = motor_w
         if bolt_wall_sep == 0:
             bolt_wall_sep = max_bolt_wall_sep
         elif bolt_wall_sep > max_bolt_wall_sep:
-            logger.debug('bolt wall separtion too large: ' + str(bolt_wall_sep))
-            bolt_wall_sep = max_bolt_wall_sep
-            logger.debug('taking larges value: ' + str(bolt_wall_sep))
+            logger.debug('bolt wall separtion larger: ' + str(bolt_wall_sep))
+            logger.debug('making the box width larger')
+            motor_box_w = bolt_wall_sep + 2 * boltwallhead_r
+            logger.debug('taking large value: ' + str(bolt_wall_sep))
         elif bolt_wall_sep <  4 * boltwallhead_r:
             logger.debug('bolt wall separtion too short: ' + str(bolt_wall_sep))
             bolt_wall_sep = max_bolt_wall_sep
-            logger.debug('taking larges value: ' + str(bolt_wall_sep))
+            logger.debug('taking large value: ' + str(bolt_wall_sep))
         # else: the given separation is good
 
         # making the big box that will contain everything and will be cut
-        tot_h = motor_thick + motor_max_h + 2 * bolt_wall_d
-        tot_w = 2* reinf_thick + motor_w + 2 * motor_xtr_space
-        tot_d = (   wall_thick + motor_w + motor_xtr_space
+        if rail == 2:
+            tot_h = motor_thick + motor_max_h
+        else:
+            tot_h = motor_thick + motor_max_h + 2 * bolt_wall_d
+        tot_w = 2* reinf_thick + motor_box_w + 2 * motor_xtr_space
+        tot_d = (   wall_thick + motor_box_w + motor_xtr_space
                   + boltwallhead_l + washer_thick)
 
 
@@ -4040,7 +4047,7 @@ class NemaMotorHolder (object):
         motaxinwall_pos = (motaxwall_pos
                            + DraftVecUtils.scale(axis_n, wall_thick))
         # the space for the motor
-        shp_motor = fcfun.shp_box_dir (box_w = motor_w +  2 * motor_xtr_space,
+        shp_motor = fcfun.shp_box_dir (box_w = motor_box_w +  2 * motor_xtr_space,
                                        box_d = tot_d + chmf_r,
                                        box_h = tot_h,
                                        fc_axis_h = axis_h_n,
@@ -4084,7 +4091,7 @@ class NemaMotorHolder (object):
             # hole for the rails
             hole_pos = (motaxwall_pos + add_p
                         + DraftVecUtils.scale(axis_h_n, motor_min_h))
-            if rail == 1:
+            if rail > 0:
                 shp_hole = fcfun.shp_box_dir_xtr(
                                        box_w = boltwallshank_r_tol * 2.,
                                        box_d = wall_thick,
@@ -4167,25 +4174,27 @@ class NemaMotorHolder (object):
 
 
 
-#doc = FreeCAD.newDocument()
-#h_nema = NemaMotorHolder ( 
-#                  nema_size = 17,
-#                  wall_thick = 5.,
-#                  motor_thick = 4.,
-#                  reinf_thick = 4.,
-#                  motor_min_h =8.,
-#                  motor_max_h = 12.,
-#                  motor_xtr_space = 2., # counting on one side
-#                  bolt_wall_d = 4.,
-#                  chmf_r = 1.,
-#                  fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
-#                  fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
-#                  #fc_axis_p = VY,
-#                  ref_axis = 1, 
-#                  #ref_bolt = 0,
-#                  pos = V0, # FreeCAD.Vector(3,2,5),
-#                  wfco = 1,
-#                  name = 'nema_holder')
+doc = FreeCAD.newDocument()
+h_nema = NemaMotorHolder ( 
+                  nema_size = 17,
+                  wall_thick = 3.,
+                  motor_thick = 3.,
+                  reinf_thick = 3.,
+                  motor_min_h =5.,
+                  motor_max_h = 42.,
+                  motor_xtr_space = 2., # counting on one side
+                  bolt_wall_d = 4.,
+                  chmf_r = 0.2,
+                  bolt_wall_sep = 40., # optional
+                  rail = 2,
+                  fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
+                  fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
+                  #fc_axis_p = VY,
+                  ref_axis = 1, 
+                  #ref_bolt = 0,
+                  pos = V0, # FreeCAD.Vector(3,2,5),
+                  wfco = 1,
+                  name = 'nema_holder')
 
 #doc = FreeCAD.newDocument()
 #h_nema = NemaMotorHolder ( 
