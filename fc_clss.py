@@ -110,7 +110,7 @@ class SinglePart (object):
         self.doc = FreeCAD.ActiveDocument
 
         # placement of the piece at V0, altough pos can set it anywhere
-        #self.place = V0
+        self.place = V0   #check this and rel_place
         #self.displacement = V0
         self.rel_place = V0
         self.extra_mov = V0
@@ -248,7 +248,7 @@ class SinglePart (object):
             self.place = place
 
     # ----- Export to STL method
-    def export_stl(self, prefix = "", name = ""):
+    def export_stl(self, prefix = "", name = "", stl_path = ""):
         """ exports to stl the piece to print 
 
         Parameters:
@@ -259,13 +259,21 @@ class SinglePart (object):
             an underscore will be added between prefix and name
         name : str
             Name of the piece, if not given, it will take self.name
+        stl_path : the path to save the stl files
         """
         if not name:
             filename = self.name
         if prefix:
             filename = prefix + '_' + filename
+
+        if not stl_path:
+            stl_filename = filename + '.stl'
+        else:
+            stl_filename = stl_path + filename + '.stl'
         
-        pos0 = self.pos0
+        # I think this is a bug, before it may be called pos0, but
+        # now should be pos_o
+        pos_o = self.pos_o
         rotation = FreeCAD.Rotation(self.prnt_ax, VZ)
         shp = self.shp
         # ----------- moving the shape doesnt work:
@@ -278,12 +286,14 @@ class SinglePart (object):
         # ----------- option 1. making a copy of the shape
         # and then deleting it (nullify)
         #shp_cpy = shp.copy()
-        #shp_cpy.translate (pos0.negative() + self.place.negative())
+        #shp_cpy.translate (pos_o.negative() + self.place.negative())
         #shp_cpy.rotate (V0, rotation.Axis, math.degrees(rotation.Angle))
         #shp_cpy.exportStl(stl_path + filename + 'stl')
         #shp_cpy.nullify()
         # ----------- option 2. moving the freecad object
-        self.fco.Placement.Base = pos0.negative() + self.place.negative()
+        
+        # place is no longer used, it should be rel_place or abs_place
+        self.fco.Placement.Base = pos_o.negative() + self.place.negative()
         self.fco.Placement.Rotation = rotation
         self.doc.recompute()
 
@@ -292,7 +302,7 @@ class SinglePart (object):
         mesh_shp = MeshPart.meshFromShape(self.fco.Shape,
                                           LinearDeflection=kparts.LIN_DEFL, 
                                           AngularDeflection=kparts.ANG_DEFL)
-        mesh_shp.write(stlFileName)
+        mesh_shp.write(stl_filename)
         del mesh_shp
 
         self.fco.Placement.Base = self.place
@@ -353,6 +363,8 @@ class PartsSet (shp_clss.Obj3D):
         shp_clss.Obj3D.__init__(self, axis_d, axis_w, axis_h)
 
         self.parts_lst = [] # list of all the parts (SinglePart, ...)
+
+        self.place = V0  # check these places, unify them
         self.abs_place = V0
         self.rel_place = V0
         self.extra_mov = V0
