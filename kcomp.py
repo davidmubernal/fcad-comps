@@ -222,11 +222,11 @@ D912 = { 3: D912_M3,
 """
 
 # the circumdiameter, min value
-NUT_D934_D =  {2.5: 5.45, 3: 6.01, 4: 7.66, 5: 8.79}
+NUT_D934_D =  {2.5: 5.45, 3: 6.01, 4: 7.66, 5: 8.79, 6:11.05}
 # double the apotheme, max value
-NUT_D934_2A = {2.5: 5.,   3: 5.5,  4: 7.0,  5: 8.0}
+NUT_D934_2A = {2.5: 5.,   3: 5.5,  4: 7.0,  5: 8.0, 6:10.0}
 # the heigth, max value
-NUT_D934_L  = {2.5: 2.,   3: 2.4,  4: 3.2,  5: 4.0}
+NUT_D934_L  = {2.5: 2.,   3: 2.4,  4: 3.2,  5: 4.0, 6:5.0}
 
 M3_NUT_R = NUT_D934_D[3] / 2.0
 M3_NUT_L = NUT_D934_L[3] + TOL
@@ -269,8 +269,31 @@ D934_M4 = {
             'l_tol' :  NUT_D934_L[4] + TOL #height with tolerance
            }
 
+D934_M5 = {
+            'in_d': 5.,  # inner diameter of the shank
+            'circ_d' : NUT_D934_D[5], #circumdiameter, min value
+            'circ_r' : NUT_D934_D[5]/2, #circumradius, min value
+            'circ_r_tol' : NUT_D934_D[5]/2 +  1.5*TOL , #circumradius + tol
+            'a2' :  NUT_D934_2A[5], #double of apotheme, max value
+            'l' :  NUT_D934_L[5], # height, max value
+            'l_tol' :  NUT_D934_L[5] + TOL #height with tolerance
+           }
+
+D934_M6 = {
+            'in_d': 6.,  # inner diameter of the shank
+            'circ_d' : NUT_D934_D[6], #circumdiameter, min value
+            'circ_r' : NUT_D934_D[6]/2, #circumradius, min value
+            'circ_r_tol' : NUT_D934_D[6]/2 +  1.5*TOL , #circumradius + tol
+            'a2' :  NUT_D934_2A[6], #double of apotheme, max value
+            'l' :  NUT_D934_L[6], # height, max value
+            'l_tol' :  NUT_D934_L[6] + TOL #height with tolerance
+           }
+           
+           
 D934 = { 3: D934_M3,
-         4: D934_M4}
+         4: D934_M4,
+         5: D934_M5,
+         6: D934_M6 }
 
 
 # tightening bolt with added tolerances:
