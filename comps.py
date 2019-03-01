@@ -1212,10 +1212,8 @@ class AluProf_dir (object):
         if wfco == 1:
             fco_aluprof = doc.addObject("Part::Feature", name)
             fco_aluprof.Shape = shp_aluprof
-        
-        self.fco = fco_aluprof
-
-        self.defaluline()
+            self.fco = fco_aluprof
+            self.defaluline()
 
     def color (self, color = (1,1,1)):
         self.fco.ViewObject.ShapeColor = color
