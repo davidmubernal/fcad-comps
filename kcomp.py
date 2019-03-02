@@ -1026,6 +1026,12 @@ FLEXSC_RB_L = {
 # insquare: insq: the width of the inner square
 # indiam:   ind :the diameter of the inner hole
 
+ALU_MOTEDIS_40I8 = {'w'    : 40.,
+                    't'    : 4.5, # aprox, depending
+                    'slot' : 8., 
+                    'insq' : 15.5,
+                    'indiam' : 6.8 } # aprox?
+
 ALU_MOTEDIS_30B8 = {'w'    : 30.,
                     't'    : 2.5, # aprox
                     'slot' : 8., 
@@ -1069,7 +1075,9 @@ ALU_PROF = {
              10: ALU_MAKERBEAM_10,
              15: ALU_MAKERBEAM_15,
              20: ALU_MOTEDIS_20I5,
-             30: ALU_MOTEDIS_30B8 }
+             30: ALU_MOTEDIS_30B8,
+             40: ALU_MOTEDIS_40I8
+          }
 
 # ------------------------ Linear Guides 
 
