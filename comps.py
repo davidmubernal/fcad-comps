@@ -365,11 +365,13 @@ class Sk_dir (object):
                  ref_dc = 1,
                  pos = V0,
                  wfco = 1,
+                 tol = 0.3,
                  name= "shaft_holder"):
         self.size = size
         self.wfco = wfco
         self.name = name
         self.pos = pos
+        self.tol = tol
         self.ref_hr = ref_hr
         self.ref_wc = ref_wc
         self.ref_dc = ref_dc
@@ -470,7 +472,7 @@ class Sk_dir (object):
 
         # Shaft hole, 
         rodcen_pos = pos + ref2rod_h + ref2cen_w + ref2cen_d
-        rod_hole = fcfun.shp_cylcenxtr(r= size/2.,
+        rod_hole = fcfun.shp_cylcenxtr(r= size/2. +self.tol,
                                          h = sk_d,
                                          normal = axis_d,
                                          ch = 1,
@@ -556,17 +558,18 @@ class Sk_dir (object):
         else:
             logger.debug("Object with no fco")
 
-doc =FreeCAD.newDocument()
-h_sk = Sk_dir (size = 8,
-                 fc_axis_h = VX,
-                 fc_axis_d = VZ,
-                 fc_axis_w = V0,
-                 ref_hr = 0,
-                 ref_wc = 0,
-                 ref_dc = 0,
-                 pos = V0,
-                 wfco = 1,
-                 name= "shaft_holder")
+#doc =FreeCAD.newDocument()
+#h_sk = Sk_dir (size = 8,
+#                 fc_axis_h = VX,
+#                 fc_axis_d = VZ,
+#                 fc_axis_w = V0,
+#                 ref_hr = 0,
+#                 ref_wc = 0,
+#                 ref_dc = 0,
+#                 pos = V0,
+#                 tol = 0.3,
+#                 wfco = 1,
+#                 name= "shaft_holder")
 
 
 # --------------------------------------------------------------------
