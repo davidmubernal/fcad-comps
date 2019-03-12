@@ -2334,7 +2334,7 @@ class ThinLinBearHouse1rail (object):
                  axis_center = 1,
                  mid_center  = 1,
                  pos = V0,
-                 name = 'thinlinbearhouse'
+                 name = 'thinlinbearhouse1rail'
                 ):
 
         # normalize, just in case
@@ -2344,7 +2344,7 @@ class ThinLinBearHouse1rail (object):
         # vector perpendicular to the others
         n1_perp = n1_slide_axis.cross(n1_bot_axis)
 
-
+        rod_d =  d_lbear['Di']
         self.rod_r = d_lbear['Di']/2.
         rod_r = self.rod_r
         self.bear_r = d_lbear['Di']
@@ -2557,7 +2557,8 @@ class ThinLinBearHouse1rail (object):
                                      pos = axiscenter_pos)
         shp_lbear_housing_top = shp_lbear_housing.common(shp_box_top)
         shp_lbear_housing_top = shp_lbear_housing_top.removeSplitter() 
-        fco_lbear_top = doc.addObject("Part::Feature", name + '_top') 
+        fco_lbear_top = doc.addObject("Part::Feature", name + '_'
+                                      + str(rod_d) + '_top') 
         fco_lbear_top.Shape = shp_lbear_housing_top
 
 
@@ -2572,7 +2573,8 @@ class ThinLinBearHouse1rail (object):
                                      pos = axiscenter_pos)
         shp_lbear_housing_bot = shp_lbear_housing.common(shp_box_bot)
         shp_lbear_housing_bot = shp_lbear_housing_bot.removeSplitter()
-        fco_lbear_bot = doc.addObject("Part::Feature", name + '_bot') 
+        fco_lbear_bot = doc.addObject("Part::Feature", name + '_'
+                                      + str(rod_d) + '_bot') 
         fco_lbear_bot.Shape = shp_lbear_housing_bot
 
         self.fco_top = fco_lbear_top
@@ -2584,8 +2586,8 @@ class ThinLinBearHouse1rail (object):
 
 
 
-#doc = FreeCAD.newDocument()
-#ThinLinBearHouse (kcomp.LMEUU[10])
+doc = FreeCAD.newDocument()
+ThinLinBearHouse1rail (kcomp.LMEUU[8])
 #ThinLinBearHouse (kcomp.LMEUU[10], mid_center=0)
 
 # ----------- thin linear bearing housing with one rail to be attached
