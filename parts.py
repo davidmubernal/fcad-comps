@@ -2323,7 +2323,8 @@ class ThinLinBearHouse1rail (object):
     MIN2_SEP_WALL = 2. # min separation of a wall
     OUT_SEP_H = kparts.OUT_SEP_H
     MTOL = kparts.MTOL
-    MLTOL = kparts.MLTOL
+    #MLTOL = kparts.MLTOL # to large for ultimaker: 
+    MLTOL = kparts.MLTOL -0.1
     TOL_BEARING_L = kparts.TOL_BEARING_L
     # Radius to fillet the sides
     FILLT_R = kparts.FILLT_R

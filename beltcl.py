@@ -492,7 +492,7 @@ class BeltClamp (object):
         Creates a shape of a belt clamp. Just the rail and the cylinder
         and may have a rectangular base
         just one way: 2 clamp blocks
-        It is references on the base of the clamp, but it may have 5 different
+        It is referenced on the base of the clamp, but it may have 5 different
         positions
 
     Arguments:
