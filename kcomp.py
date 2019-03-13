@@ -784,6 +784,16 @@ NEMA_BOLT_D  = {
 # mbolt: is the metric of the mounting bolt
 # tbolt: is the metric of the tightening bolt
 
+SK6 =  { 'd':6.0,  'H':32.8, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
+         'h':20.0,
+         #'A':21.0,
+         #'b': 5.0,
+         'g':6.0,
+         'I':18.0,
+         'mbolt': 5,
+         'tbolt': 4} 
+
+
 SK8 =  { 'd':8.0,  'H':32.8, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
          'h':20.0,
          #'A':21.0,
@@ -812,7 +822,9 @@ SK12 = { 'd':12.0, 'H':37.5, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
          'tbolt': 4} 
 
 
-SK = {    8: SK8,
+SK = {
+          6: SK6,
+          8: SK8,
          10: SK10,
          12: SK12 }
 

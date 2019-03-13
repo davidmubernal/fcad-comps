@@ -558,18 +558,18 @@ class Sk_dir (object):
         else:
             logger.debug("Object with no fco")
 
-#doc =FreeCAD.newDocument()
-#h_sk = Sk_dir (size = 8,
-#                 fc_axis_h = VX,
-#                 fc_axis_d = VZ,
-#                 fc_axis_w = V0,
-#                 ref_hr = 0,
-#                 ref_wc = 0,
-#                 ref_dc = 0,
-#                 pos = V0,
-#                 tol = 0.3,
-#                 wfco = 1,
-#                 name= "shaft_holder")
+doc =FreeCAD.newDocument()
+h_sk = Sk_dir (size = 8,
+                 fc_axis_h = VX,
+                 fc_axis_d = VZ,
+                 fc_axis_w = V0,
+                 ref_hr = 0,
+                 ref_wc = 0,
+                 ref_dc = 0,
+                 pos = V0,
+                 tol = 0.3,
+                 wfco = 1,
+                 name= "sk6")
 
 
 # --------------------------------------------------------------------
