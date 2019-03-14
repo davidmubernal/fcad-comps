@@ -19,11 +19,41 @@ STOL = TOL / 2.0       # smaller tolerance
 LAYER3D_H = 0.3  
 
 # ---------------------- linear Bearings
-LMEUU_L = { 8: 25., 10: 29.0, 12: 32.0 }; #the length of the bearing
-LMEUU_D = { 8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
+LMUU_D = { 6: 12., 8: 15., 10: 19.0, 12: 21.0 }; #diamenter of the bearing 
+LMUU_L = { 6: 19., 8: 24., 10: 29.0, 12: 30.0 }; #the length of the bearing
+
+LMEUU_D = {        8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
+LMEUU_L = {        8: 25., 10: 29.0, 12: 32.0 }; #the length of the bearing
 # Large:
 LMELUU_L = {                   12: 57.0 }; #the length of the bearing
 LMELUU_D = { 8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
+
+
+LM6UU = {
+         'Di' : 6,  # interior diameter
+         'De' : LMUU_D[6], # exterior diameter
+         'L' : LMUU_L[6] # length
+           }
+
+LM8UU = {
+         'Di' : 8,  # interior diameter
+         'De' : LMUU_D[8], # exterior diameter
+         'L' : LMUU_L[8] # length
+           }
+
+LM10UU = {
+         'Di' : 10,  # interior diameter
+         'De' : LMUU_D[10], # exterior diameter
+         'L' : LMUU_L[10] # length
+           }
+
+
+LM12UU = {
+         'Di' : 12,  # interior diameter
+         'De' : LMUU_D[12], # exterior diameter
+         'L' : LMUU_L[12] # length
+           }
+
 
 LME8UU = {
          'Di' : 8,  # interior diameter
@@ -49,6 +79,14 @@ LME12LUU = {
          'De' : LMELUU_D[12], # exterior diameter
          'L' : LMELUU_L[12] # length
            }
+
+
+LMUU = {
+          6 : LM6UU,
+          8 : LM8UU,
+         10 : LM10UU,  # same as LMEUU
+         12 : LM12UU
+        }
 
 
 LMEUU = {

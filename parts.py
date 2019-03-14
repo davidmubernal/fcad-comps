@@ -2323,8 +2323,7 @@ class ThinLinBearHouse1rail (object):
     MIN2_SEP_WALL = 2. # min separation of a wall
     OUT_SEP_H = kparts.OUT_SEP_H
     MTOL = kparts.MTOL
-    #MLTOL = kparts.MLTOL # to large for ultimaker: 
-    MLTOL = kparts.MLTOL -0.1
+    MLTOL = kparts.MLTOL # to large for ultimaker: 
     TOL_BEARING_L = kparts.TOL_BEARING_L
     # Radius to fillet the sides
     FILLT_R = kparts.FILLT_R
@@ -2388,8 +2387,12 @@ class ThinLinBearHouse1rail (object):
         housing_l = bearing_l_tol + 2 * (2* bolt2wall)
         print "housing_l: %", housing_l
         # width of the housing (very tight)
-        housing_w = max ((bearing_d_tol + 2* MIN_SEP_WALL), 
-                         (d_lbear['Di'] + 4* MIN2_SEP_WALL + 2*BOLT_D))
+        if rod_d > 8 :
+          housing_w = max ((bearing_d_tol + 2* MIN_SEP_WALL), 
+                           (d_lbear['Di'] + 4* MIN2_SEP_WALL + 2*BOLT_D))
+        else: # 8 is very thight
+          housing_w = max ((bearing_d_tol + 2* MIN_SEP_WALL), 
+                           (d_lbear['Di'] + 4* MIN_SEP_WALL + 2*BOLT_D))
         print "housing_w: %", housing_w
 
         # dimensions of the base:
@@ -4595,28 +4598,28 @@ class ShpNemaMotorHolder (shp_clss.Obj3D):
         self.shp = shp_motorholder
 
 
-#doc = FreeCAD.newDocument()
-#shpob_nema = ShpNemaMotorHolder ( 
-#                  nema_size = 17,
-#                  wall_thick = 4.,
-#                  motorside_thick = 4.,
-#                  reinf_thick = 4.,
-#                  motor_min_h =10.,
-#                  motor_max_h =20.,
-#                  rail = 1, # if there is a rail or not at the profile side
-#                  motor_xtr_space = 2., # counting on one side
-#                  bolt_wall_d = 4., # Metric of the wall bolts
-#                  #bolt_wall_sep = 30., # optional
-#                  chmf_r = 1.,
-#                  axis_h = VZ,
-#                  axis_d = VX,
-#                  axis_w = None,
-#                  pos_h = 1,  # 1: inner wall of the motor side
-#                  pos_d = 3,  # 3: motor axis
-#                  pos_w = 0,  # 0: center of symmetry
-#                  pos = V0)
+doc = FreeCAD.newDocument()
+shpob_nema = ShpNemaMotorHolder ( 
+                  nema_size = 17,
+                  wall_thick = 6.,
+                  motorside_thick = 6.,
+                  reinf_thick = 1.,
+                  motor_min_h =10.,
+                  motor_max_h =50.,
+                  rail = 1, # if there is a rail or not at the profile side
+                  motor_xtr_space = 3., # counting on one side
+                  bolt_wall_d = 4., # Metric of the wall bolts
+                  #bolt_wall_sep = 30., # optional
+                  chmf_r = 1.,
+                  axis_h = VZ,
+                  axis_d = VX,
+                  axis_w = None,
+                  pos_h = 1,  # 1: inner wall of the motor side
+                  pos_d = 3,  # 3: motor axis
+                  pos_w = 0,  # 0: center of symmetry
+                  pos = V0)
 
-#Part.show(shpob_nema.shp)
+Part.show(shpob_nema.shp)
 
 class PartNemaMotorHolder(fc_clss.SinglePart, ShpNemaMotorHolder):
     """ Integration of a ShpNemaMotorHolder object into PartNemaMotorHolder
@@ -4698,6 +4701,122 @@ class PartNemaMotorHolder(fc_clss.SinglePart, ShpNemaMotorHolder):
 #                  pos_d = 3,  # 3: motor axis
 #                  pos_w = 0,  # 0: center of symmetry
 #                  pos = V0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ----------- ShpNemaMotorHolderVer
+# TODO
+#class ShpNemaMotorHolderVer (shp_clss.Obj3D):
+    """
+    Creates a VERTICAL holder for a Nema motor.
+
+              axis_h
+                 :
+                 :                     0 1
+         ________:_________             _........> axis_d
+        |                  |           | |
+        |  O     __     O  |           | |
+        |     /      \     |
+        |    |        |    |
+        |     \      /     |
+        |  O     __     O  |
+        |                  | .....
+        |  ||    ||    ||  |
+        |  ||    ||    ||  |
+        |  ||    ||    ||  |
+        |  ||    ||    ||  |
+        |  ||    ||    ||  |
+        |  ||    ||    ||  |
+        | ________________ | ..... > axis_w
+
+        0: just 2 pairs of holes. One pair at defined by motor_min_h and the
+           other defined by motor_max_h
+    motor_xtr_space: float
+        extra separation between the motor and the wall side
+        and also between the motor and each of the sides
+    bolt_wall_d: int/float
+        metric of the bolts to attach the holder
+    bolt_wall_sep: float
+        separation between the 2 bolt holes (or rails). Optional.
+    chmf_r: float
+        radius of the chamfer, whenever chamfer is done
+    axis_h: FreeCAD Vector
+        axis along the axis of the motor
+    axis_d: FreeCAD Vector
+        axis normal to surface where the holder will be attached to
+    axis_w: FreeCAD Vector
+        axis perpendicular to axis_h and axis_d, symmetrical (not necessary)
+    pos_d : int
+        location of pos along axis_d (0,1,2,3,4,5)
+        0: at the beginning, touching the wall where it is attached
+        1: at the inner side of the side where it will be screwed
+        2: bolts holes closed to the wall to attach the motor
+        3: at the motor axis
+        4: bolts holes away from to the wall to attach the motor
+        5: at the end of the piece
+    pos_w : int
+        location of pos along axis_w (0,1,2,3). Symmetrical
+        0: at the center of symmetry
+        1: at the center of the rails (or holes) to attach the holder
+        2: at the center of the holes to attach the motor
+        3: at the end of the piece
+    pos_h : int
+        location of pos along axis_h (0,1,2,3)
+        0: at the top (on the side of the motor axis)
+        1: inside the motor wall
+        2: Top end of the rail
+        3: Bottom end of the rail
+        4: Bottom end of the piece
+    pos : FreeCAD.Vector
+        position of the piece
+
+
+    def __init__ (self,
+                  nema_size = 17,
+                  wall_thick = 4.,
+                  motor_min_h =10.,
+                  motor_max_h =20.,
+                  rail = 1, # if there is a rail or not at the profile side
+                  axis_h = VZ,
+                  axis_d = VX,
+                  axis_w = None,
+                  pos_h = 0,  # 1: inner wall of the motor side
+                  pos_d = 0,  # 3: motor axis
+                  pos_w = 0,  # 0: center of symmetry
+                  pos = V0):
+
+    """
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class Plate3CageCubes (object):
