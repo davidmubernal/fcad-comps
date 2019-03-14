@@ -363,6 +363,7 @@ class Sk_dir (object):
                  ref_hr = 1,
                  ref_wc = 1,
                  ref_dc = 1,
+                 pillow = 0, #make it the same height of a pillow block
                  pos = V0,
                  wfco = 1,
                  tol = 0.3,
@@ -377,7 +378,10 @@ class Sk_dir (object):
         self.ref_dc = ref_dc
 
         doc = FreeCAD.ActiveDocument
-        skdict = kcomp.SK.get(size)
+        if pillow == '0':
+            skdict = kcomp.SK.get(size)
+        else:
+            skdict = kcomp.PILLOW_SK.get(size)
         if skdict == None:
             logger.error("Sk size %d not supported", size)
 
@@ -566,10 +570,11 @@ h_sk = Sk_dir (size = 8,
                  ref_hr = 0,
                  ref_wc = 0,
                  ref_dc = 0,
+                 pillow = 1,
                  pos = V0,
-                 tol = 0.3,
+                 tol = 0.7, # for the pillow block
                  wfco = 1,
-                 name= "sk6")
+                 name= "sk8_pillow")
 
 
 # --------------------------------------------------------------------
