@@ -439,22 +439,22 @@ class AluProfBracketPerp (object):
 #                 name = 'bracket_lin3_1bolt_noreinfore')
 
 
-#AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 20,
-#                 br_perp_thick = 4.,
-#                 br_lin_thick = 4.,
-#                 bolt_lin_d = 6,
-#                 bolt_perp_d = 4,
-#                 nbolts_lin = 2,
-#                 bolts_lin_dist = 50,
-#                 bolts_lin_rail = 1,
-#                 xtr_bolt_head = 3,
-#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
-#                 reinforce = 1,
-#                 fc_perp_ax = VZ,
-#                 fc_lin_ax = VX,
-#                 pos = V0,
-#                 wfco=1,
-#                 name = 'bracket_lin3_1bolt_noreinfore')
+AluProfBracketPerp ( alusize_lin = 10, alusize_perp = 10,
+                 br_perp_thick = 3.,
+                 br_lin_thick = 3.,
+                 bolt_lin_d = 4,
+                 bolt_perp_d = 3,
+                 nbolts_lin = 2,
+                 bolts_lin_dist = 25,
+                 bolts_lin_rail = 1,
+                 xtr_bolt_head = 3,
+                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+                 reinforce = 0,
+                 fc_perp_ax = VZ,
+                 fc_lin_ax = VX,
+                 pos = V0,
+                 wfco=1,
+                 name = 'bracket_lin3_1bolt_noreinfore')
 #
 #AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 10,
 #                 br_perp_thick = 3.,
@@ -2323,7 +2323,7 @@ class ThinLinBearHouse1rail (object):
     MIN2_SEP_WALL = 2. # min separation of a wall
     OUT_SEP_H = kparts.OUT_SEP_H
     MTOL = kparts.MTOL
-    MLTOL = kparts.MLTOL # to large for ultimaker: 
+    MLTOL = kparts.MLTOL 
     TOL_BEARING_L = kparts.TOL_BEARING_L
     # Radius to fillet the sides
     FILLT_R = kparts.FILLT_R
@@ -2348,7 +2348,7 @@ class ThinLinBearHouse1rail (object):
         self.rod_r = d_lbear['Di']/2.
         rod_r = self.rod_r
         self.bear_r = d_lbear['Di']
-        if rod_r >= 6:
+        if rod_d >= 12:
             BOLT_D = 4
         else:
             BOLT_D = 3  # M3 bolts
@@ -2488,6 +2488,7 @@ class ThinLinBearHouse1rail (object):
         bolt2_atch_pos = (  botcenter_pos
                          + DraftVecUtils.scale(n1_slide_axis,-boltrailcen_dist))
 
+        print str(BOLT_SHANK_R_TOL)
         shp_bolt1_atch = fcfun.shp_cylcenxtr(r=BOLT_SHANK_R_TOL,
                                              h = base_h,
                                              normal = n1_bot_axis_neg,
@@ -4195,17 +4196,17 @@ class NemaMotorHolder (object):
 #doc = FreeCAD.newDocument()
 h_nema = NemaMotorHolder ( 
                   nema_size = 17,
-                  wall_thick = 3.,
-                  motor_thick = 3.,
-                  reinf_thick = 5.,
-                  motor_min_h =18.,  # 5 +15
-                  motor_max_h = 52., #42 + 10
+                  wall_thick = 4.,
+                  motor_thick = 4.,
+                  reinf_thick = 3.,
+                  motor_min_h =8., 
+                  motor_max_h = 25.,
                   motor_xtr_space = 2., # counting on one side
                   motor_xtr_space_d = 0, 
                   bolt_wall_d = 4.,
                   chmf_r = 0.2,
                   bolt_wall_sep = 40., # optional
-                  rail = 2,
+                  rail = 1,
                   fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
                   fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
                   #fc_axis_p = VY,
@@ -4598,28 +4599,28 @@ class ShpNemaMotorHolder (shp_clss.Obj3D):
         self.shp = shp_motorholder
 
 
-doc = FreeCAD.newDocument()
-shpob_nema = ShpNemaMotorHolder ( 
-                  nema_size = 17,
-                  wall_thick = 6.,
-                  motorside_thick = 6.,
-                  reinf_thick = 1.,
-                  motor_min_h =10.,
-                  motor_max_h =50.,
-                  rail = 1, # if there is a rail or not at the profile side
-                  motor_xtr_space = 3., # counting on one side
-                  bolt_wall_d = 4., # Metric of the wall bolts
-                  #bolt_wall_sep = 30., # optional
-                  chmf_r = 1.,
-                  axis_h = VZ,
-                  axis_d = VX,
-                  axis_w = None,
-                  pos_h = 1,  # 1: inner wall of the motor side
-                  pos_d = 3,  # 3: motor axis
-                  pos_w = 0,  # 0: center of symmetry
-                  pos = V0)
+#doc = FreeCAD.newDocument()
+#shpob_nema = ShpNemaMotorHolder ( 
+#                  nema_size = 17,
+#                  wall_thick = 6.,
+#                  motorside_thick = 6.,
+#                  reinf_thick = 1.,
+#                  motor_min_h =10.,
+#                  motor_max_h =50.,
+#                  rail = 1, # if there is a rail or not at the profile side
+#                  motor_xtr_space = 3., # counting on one side
+#                  bolt_wall_d = 4., # Metric of the wall bolts
+#                  #bolt_wall_sep = 30., # optional
+#                  chmf_r = 1.,
+#                  axis_h = VZ,
+#                  axis_d = VX,
+#                  axis_w = None,
+#                  pos_h = 1,  # 1: inner wall of the motor side
+#                  pos_d = 3,  # 3: motor axis
+#                  pos_w = 0,  # 0: center of symmetry
+#                  pos = V0)
 
-Part.show(shpob_nema.shp)
+#Part.show(shpob_nema.shp)
 
 class PartNemaMotorHolder(fc_clss.SinglePart, ShpNemaMotorHolder):
     """ Integration of a ShpNemaMotorHolder object into PartNemaMotorHolder

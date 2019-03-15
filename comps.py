@@ -378,7 +378,7 @@ class Sk_dir (object):
         self.ref_dc = ref_dc
 
         doc = FreeCAD.ActiveDocument
-        if pillow == '0':
+        if pillow == 0:
             skdict = kcomp.SK.get(size)
         else:
             skdict = kcomp.PILLOW_SK.get(size)
