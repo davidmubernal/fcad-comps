@@ -439,22 +439,22 @@ class AluProfBracketPerp (object):
 #                 name = 'bracket_lin3_1bolt_noreinfore')
 
 
-AluProfBracketPerp ( alusize_lin = 10, alusize_perp = 10,
-                 br_perp_thick = 3.,
-                 br_lin_thick = 3.,
-                 bolt_lin_d = 4,
-                 bolt_perp_d = 3,
-                 nbolts_lin = 2,
-                 bolts_lin_dist = 25,
-                 bolts_lin_rail = 1,
-                 xtr_bolt_head = 3,
-                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
-                 reinforce = 0,
-                 fc_perp_ax = VZ,
-                 fc_lin_ax = VX,
-                 pos = V0,
-                 wfco=1,
-                 name = 'bracket_lin3_1bolt_noreinfore')
+#AluProfBracketPerp ( alusize_lin = 10, alusize_perp = 10,
+#                 br_perp_thick = 3.,
+#                 br_lin_thick = 3.,
+#                 bolt_lin_d = 4,
+#                 bolt_perp_d = 3,
+#                 nbolts_lin = 2,
+#                 bolts_lin_dist = 25,
+#                 bolts_lin_rail = 1,
+#                 xtr_bolt_head = 3,
+#                 xtr_bolt_head_d = 2*kcomp.TOL, # space for the nut
+#                 reinforce = 0,
+#                 fc_perp_ax = VZ,
+#                 fc_lin_ax = VX,
+#                 pos = V0,
+#                 wfco=1,
+#                 name = 'bracket_lin3_1bolt_noreinfore')
 #
 #AluProfBracketPerp ( alusize_lin = 25, alusize_perp = 10,
 #                 br_perp_thick = 3.,
@@ -2591,8 +2591,8 @@ class ThinLinBearHouse1rail (object):
 
 
 
-doc = FreeCAD.newDocument()
-ThinLinBearHouse1rail (kcomp.LMEUU[8])
+#doc = FreeCAD.newDocument()
+#ThinLinBearHouse1rail (kcomp.LMEUU[8])
 #ThinLinBearHouse (kcomp.LMEUU[10], mid_center=0)
 
 # ----------- thin linear bearing housing with one rail to be attached
@@ -4194,27 +4194,27 @@ class NemaMotorHolder (object):
 
 
 #doc = FreeCAD.newDocument()
-h_nema = NemaMotorHolder ( 
-                  nema_size = 17,
-                  wall_thick = 4.,
-                  motor_thick = 4.,
-                  reinf_thick = 3.,
-                  motor_min_h =8., 
-                  motor_max_h = 25.,
-                  motor_xtr_space = 2., # counting on one side
-                  motor_xtr_space_d = 0, 
-                  bolt_wall_d = 4.,
-                  chmf_r = 0.2,
-                  bolt_wall_sep = 40., # optional
-                  rail = 1,
-                  fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
-                  fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
-                  #fc_axis_p = VY,
-                  ref_axis = 1, 
-                  #ref_bolt = 0,
-                  pos = V0, # FreeCAD.Vector(3,2,5),
-                  wfco = 1,
-                  name = 'nema_holder')
+#h_nema = NemaMotorHolder ( 
+#                  nema_size = 17,
+#                  wall_thick = 4.,
+#                  motor_thick = 4.,
+#                  reinf_thick = 3.,
+#                  motor_min_h =8., 
+#                  motor_max_h = 25.,
+#                  motor_xtr_space = 2., # counting on one side
+#                  motor_xtr_space_d = 0, 
+#                  bolt_wall_d = 4.,
+#                  chmf_r = 0.2,
+#                  bolt_wall_sep = 40., # optional
+#                  rail = 1,
+#                  fc_axis_h = VZN,#FreeCAD.Vector(1,1,0),
+#                  fc_axis_n = VX, #FreeCAD.Vector(1,-1,0),
+#                  #fc_axis_p = VY,
+#                  ref_axis = 1, 
+#                  #ref_bolt = 0,
+#                  pos = V0, # FreeCAD.Vector(3,2,5),
+#                  wfco = 1,
+#                  name = 'nema_holder')
 
 #doc = FreeCAD.newDocument()
 #h_nema = NemaMotorHolder ( 
