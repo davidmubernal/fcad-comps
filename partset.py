@@ -1416,16 +1416,14 @@ class NemaMotorPulleyHolderSet (fc_clss.PartsSet):
 
 
 
-doc = FreeCAD.newDocument()
-nemamotorpullhold = NemaMotorPulleyHolderSet(
-                                      hold_bolt_wall_sep = 40.,
-                                      axis_d = VX,
-                                      axis_w = VY,
-                                      axis_h = VZ,
-                                      pos_d = 1,
-                                      pos_w = 3,
-                                      pos_h = 1,
-                                      pos = V0
-                                        )
-        
-
+#doc = FreeCAD.newDocument()
+#nemamotorpullhold = NemaMotorPulleyHolderSet(
+#                                      hold_bolt_wall_sep = 40.,
+#                                      axis_d = VX,
+#                                      axis_w = VY,
+#                                      axis_h = VZ,
+#                                      pos_d = 1,
+#                                      pos_w = 3,
+#                                      pos_h = 1,
+#                                      pos = V0
+#                                        )
