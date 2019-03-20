@@ -2363,8 +2363,8 @@ class ThinLinBearHouse1rail (object):
         MLTOL = self.MLTOL
         BOLT_HEAD_R = kcomp.D912_HEAD_D[BOLT_D] / 2.0
         BOLT_HEAD_L = kcomp.D912_HEAD_L[BOLT_D] + MTOL
-        BOLT_HEAD_R_TOL = BOLT_HEAD_R + MTOL/2.0 
-        BOLT_SHANK_R_TOL = BOLT_D / 2.0 + MTOL/2.0
+        BOLT_HEAD_R_TOL = BOLT_HEAD_R + MTOL # More toler/2.0 
+        BOLT_SHANK_R_TOL = BOLT_D / 2.0 + MTOL # more tolerance: MTOL/2.
         BOLT_NUT_R = kcomp.NUT_D934_D[BOLT_D] / 2.0
         BOLT_NUT_L = kcomp.NUT_D934_L[BOLT_D] + MTOL
         #  1.5 TOL because diameter values are minimum, so they may be larger
@@ -2488,7 +2488,7 @@ class ThinLinBearHouse1rail (object):
         bolt2_atch_pos = (  botcenter_pos
                          + DraftVecUtils.scale(n1_slide_axis,-boltrailcen_dist))
 
-        print str(BOLT_SHANK_R_TOL)
+        print 'shank tol' + str(BOLT_SHANK_R_TOL)
         shp_bolt1_atch = fcfun.shp_cylcenxtr(r=BOLT_SHANK_R_TOL,
                                              h = base_h,
                                              normal = n1_bot_axis_neg,
@@ -2592,7 +2592,7 @@ class ThinLinBearHouse1rail (object):
 
 
 #doc = FreeCAD.newDocument()
-#ThinLinBearHouse1rail (kcomp.LMEUU[8])
+#ThinLinBearHouse1rail (kcomp.LMUU[8])
 #ThinLinBearHouse (kcomp.LMEUU[10], mid_center=0)
 
 # ----------- thin linear bearing housing with one rail to be attached
