@@ -2131,30 +2131,32 @@ class SimpleEndstopHolder (object):
             pos_estpbolt = d1_w1_h1_pos + fc_1_4_d + fc_1_2_wi
             # hole with the nut hole
             shp_estpbolt = fcfun.shp_bolt_dir (
-                                r_shank= (estp_bolt_d+TOL)/2.,
-                                l_bolt = tot_h,
-                                r_head = (kcomp.NUT_D934_D[estp_bolt_d]+TOL)/2.,
-                                l_head = endstop_nut_l,
-                                hex_head = 1,
-                                xtr_head = 1, xtr_shank = 1,
-                                fc_normal = axis_h,
-                                fc_verx1 = hex_verx,
-                                pos = pos_estpbolt)
+                             r_shank= (estp_bolt_d+TOL)/2.,
+                             l_bolt = tot_h,
+                           # 1 TOL didnt fit
+                           r_head = (kcomp.NUT_D934_D[estp_bolt_d]+2*TOL)/2.,
+                             l_head = endstop_nut_l,
+                             hex_head = 1,
+                             xtr_head = 1, xtr_shank = 1,
+                             fc_normal = axis_h,
+                             fc_verx1 = hex_verx,
+                             pos = pos_estpbolt)
             holes.append(shp_estpbolt)
             # it can have a second hole
             if estop_2ndbolt_topdist >0:
                 pos_estp_top_bolt =  d1_w1_h1_pos + fc_1_6_d + fc_1_2_wi
                 # hole with the nut hole
                 shp_estpbolt = fcfun.shp_bolt_dir (
-                                r_shank= (estp_bolt_d+TOL)/2.,
-                                l_bolt = tot_h,
-                                r_head = (kcomp.NUT_D934_D[estp_bolt_d]+TOL)/2.,
-                                l_head = endstop_nut_l,
-                                hex_head = 1,
-                                xtr_head = 1, xtr_shank = 1,
-                                fc_normal = axis_h,
-                                fc_verx1 = hex_verx,
-                                pos = pos_estp_top_bolt)
+                             r_shank= (estp_bolt_d+TOL)/2.,
+                             l_bolt = tot_h,
+                           # 1 TOL didnt fit
+                           r_head = (kcomp.NUT_D934_D[estp_bolt_d]+2*TOL)/2.,
+                             l_head = endstop_nut_l,
+                             hex_head = 1,
+                             xtr_head = 1, xtr_shank = 1,
+                             fc_normal = axis_h,
+                             fc_verx1 = hex_verx,
+                             pos = pos_estp_top_bolt)
                 holes.append(shp_estpbolt)
 
 
@@ -2231,7 +2233,7 @@ class SimpleEndstopHolder (object):
 #                 rail_l = 25,
 #                 base_h = 3.,
 #                 h = 0,
-#                 holder_out = 0.1, 
+#                 holder_out = 0, 
 #                 #csunk = 1,
 #                 mbolt_d = 4.,
 #                 endstop_nut_dist = 2.,
