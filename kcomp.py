@@ -233,7 +233,7 @@ D912_M5 = {
 
 D912_M6 = {
             'd': 6.,  # diameter of the shank
-            'shank_r_tol'  :  6 / 2. + TOL/2.,
+            'shank_r_tol'  :  6 / 2. + 1.5*TOL/2., # mult 1.5 to have more tol
             'head_r'       :  M6_HEAD_R,
             'head_r_tol'   :  M6_HEAD_R_TOL,
             'head_l'       :  M6_HEAD_L,
