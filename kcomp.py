@@ -19,12 +19,18 @@ STOL = TOL / 2.0       # smaller tolerance
 LAYER3D_H = 0.3  
 
 # ---------------------- linear Bearings
-LMUU_D = { 6: 12., 8: 15., 10: 19.0, 12: 21.0 }; #diamenter of the bearing 
-LMUU_L = { 6: 19., 8: 24., 10: 29.0, 12: 30.0 }; #the length of the bearing
 
-LMEUU_D = {        8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
-LMEUU_L = {        8: 25., 10: 29.0, 12: 32.0 }; #the length of the bearing
-# Large:
+#external diameter of the bearing 
+LMUU_D = { 6: 12., 8: 15., 10: 19.0, 12: 21.0, 20: 42. };
+#Length of the bearing
+LMUU_L = { 6: 19., 8: 24., 10: 29.0, 12: 30.0, 20: 32. }; 
+
+#diamenter of the bearing 
+LMEUU_D = {        8: 16., 10: 19.0, 12: 22.0, 20: 32. };
+#Length of the bearing
+LMEUU_L = {        8: 25., 10: 29.0, 12: 32.0, 20: 45. };
+
+# Large version:
 LMELUU_L = {                   12: 57.0 }; #the length of the bearing
 LMELUU_D = { 8: 16., 10: 19.0, 12: 22.0 }; #diamenter of the bearing 
 
@@ -54,6 +60,11 @@ LM12UU = {
          'L' : LMUU_L[12] # length
            }
 
+LM20UU = {
+         'Di' : 20,  # interior diameter
+         'De' : LMUU_D[20], # exterior diameter
+         'L' : LMUU_L[20] # length
+           }
 
 LME8UU = {
          'Di' : 8,  # interior diameter
@@ -74,6 +85,13 @@ LME12UU = {
          'L' : LMEUU_L[12] # length
            }
 
+LME20UU = {
+         'Di' : 20,  # interior diameter
+         'De' : LMEUU_D[20], # exterior diameter
+         'L' : LMEUU_L[20] # length
+           }
+
+
 LME12LUU = {
          'Di' : 12,  # interior diameter
          'De' : LMELUU_D[12], # exterior diameter
@@ -85,14 +103,16 @@ LMUU = {
           6 : LM6UU,
           8 : LM8UU,
          10 : LM10UU,  # same as LMEUU
-         12 : LM12UU
+         12 : LM12UU,
+         20 : LM12UU
         }
 
 
 LMEUU = {
           8 : LME8UU,
          10 : LME10UU,
-         12 : LME12UU
+         12 : LME12UU,
+         20 : LME20UU
         }
 
 LMELUU = {
@@ -871,12 +891,23 @@ SK12 = { 'd':12.0, 'H':37.5, 'W':42.0, 'L':14.0, 'B':32.0, 'S':5.5,
          'mbolt': 5,  
          'tbolt': 4} 
 
+#SH20
+SK20 = { 'd':20.0, 'H':51., 'W':60.0, 'L':20.0, 'B':45.0, 'S':6.6,
+         'h':31.0,
+         #'A':
+         #'b':
+         'g': 10.,
+         'I': 30.0,
+         'mbolt': 6,  
+         'tbolt': 5} 
+
 
 SK = {
           6: SK6,
           8: SK8,
          10: SK10,
-         12: SK12 }
+         12: SK12,
+         20: SK20 }
 
 PILLOW_SK = {
           8: PILLOW_SK8
