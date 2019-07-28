@@ -207,6 +207,7 @@ class Obj3D (object):
           0  1  2  3  4
 
 
+        (it will be along axis_d)
         """
         abs_pos_d = abs(pos_d)
         if self.d0_cen == 1:
@@ -239,7 +240,7 @@ class Obj3D (object):
         If it is symmetrical along axis_w, pos_w == 0 will be at the middle
         Then, pos_w > 0 will be the points on the positive side of axis_w
         and   pos_w < 0 will be the points on the negative side of axis_w
-        See get_o_to_d drawings
+        See get_o_to_d drawings (it will be along axis_w)
         """
         abs_pos_w = abs(pos_w)
         if self.w0_cen == 1:
@@ -271,7 +272,7 @@ class Obj3D (object):
         If it is symmetrical along axis_h, pos_h == 0 will be at the middle
         Then, pos_h > 0 will be the points on the positive side of axis_h
         and   pos_h < 0 will be the points on the negative side of axis_h
-        See get_o_to_d drawings
+        See get_o_to_d drawings (it will be along axis_h)
         """
         abs_pos_h = abs(pos_h)
         if self.h0_cen == 1:
@@ -305,7 +306,7 @@ class Obj3D (object):
         return vec
 
     def get_w_ab(self, pta, ptb):
-        """ returns the vector along axis_h from pos_w = pta to pos_w = ptb
+        """ returns the vector along axis_w from pos_w = pta to pos_w = ptb
         """
         vec = self.get_o_to_w(ptb).sub(self.get_o_to_w(pta))
         return vec
@@ -339,6 +340,46 @@ class Obj3D (object):
                           + self.get_o_to_w(pos_w)
                           + self.get_o_to_h(pos_h))
         return pos
+
+    # -- absolute position projections of pos_o along coordinate axis
+    def get_d_pos_o(self):
+        """ returns the projection along axis_d of the absolute position of
+        pos_o
+        """
+        return self.vec_d(self.pos_o.dot(self.axis_d))
+
+    def get_w_pos_o(self):
+        """ returns the projection along axis_w of the absolute position of
+        pos_o
+        """
+        return self.vec_w(self.pos_o.dot(self.axis_w))
+
+    def get_h_pos_o(self):
+        """ returns the projection along axis_h of the absolute position of
+        pos_o
+        """
+        return self.vec_h(self.pos_o.dot(self.axis_h))
+
+
+    # -- absolute projections of a point (d,w or h) along coordinate axis
+    def get_d_pos_d(self, pos_d):
+        """ returns the projection along axis d of the absolute position of
+            the pos_d point
+        """
+        return self.get_d_pos_o() + self.get_o_to_d(pos_d)
+       
+    def get_w_pos_w(self, pos_w):
+        """ returns the projection along axis w of the absolute position of
+            the pos_w point
+        """
+        return self.get_w_pos_o() + self.get_o_to_w(pos_w)
+
+    def get_h_pos_h(self, pos_h):
+        """ returns the projection along axis h of the absolute position of
+            the pos_h point
+        """
+        return self.get_h_pos_o() + self.get_o_to_h(pos_h)
+
 
 
 
