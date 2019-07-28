@@ -1040,7 +1040,7 @@ class NemaMotorPulleySet (fc_clss.PartsSet):
         """ gets the nema motor"""
         part_list = self.get_parts()
         for part_i in part_list:
-            if isinstance(part_i, PartNemaMotor):
+            if isinstance(part_i, comps.PartNemaMotor):
                 return part_i
 
     def get_gt_pulley(self):
