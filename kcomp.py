@@ -298,11 +298,29 @@ D912 = { 2.5: D912_M2_5,
 """
 
 # the circumdiameter, min value
-NUT_D934_D =  {2.5: 5.45, 3: 6.01, 4: 7.66, 5: 8.79, 6:11.05}
+NUT_D934_D =  {
+               2:   4.32,
+               2.5: 5.45,
+               3:   6.01,
+               4:   7.66,
+               5:   8.79,
+               6:  11.05}
 # double the apotheme, max value
-NUT_D934_2A = {2.5: 5.,   3: 5.5,  4: 7.0,  5: 8.0, 6:10.0}
+NUT_D934_2A = {
+               2:   4.,
+               2.5: 5.,
+               3:   5.5,
+               4:   7.0,
+               5:   8.0,
+               6:   10.0}
 # the heigth, max value
-NUT_D934_L  = {2.5: 2.,   3: 2.4,  4: 3.2,  5: 4.0, 6:5.0}
+NUT_D934_L  = {
+               2:    1.6,
+               2.5:  2.,
+               3:    2.4,
+               4:    3.2,
+               5:    4.0,
+               6:    5.0}
 
 M3_NUT_R = NUT_D934_D[3] / 2.0
 M3_NUT_L = NUT_D934_L[3] + TOL
@@ -323,6 +341,27 @@ M4_NUT_R = NUT_D934_D[4] / 2.0
 M4_NUT_L = NUT_D934_L[4] + TOL
 #  1.5 TOL because diameter values are minimum, so they may be larger
 M4_NUT_R_TOL = M4_NUT_R + 1.5*TOL
+
+D934_M2 = {
+            'in_d': 2.,  # inner diameter of the shank
+            'circ_d' : NUT_D934_D[2], #circumdiameter, min value
+            'circ_r' : NUT_D934_D[2]/2., #circumradius, min value
+            'circ_r_tol' : NUT_D934_D[2]/2. +  1.5*TOL , #circumradius + tol
+            'a2' :  NUT_D934_2A[2], #double of apotheme, max value
+            'l' :  NUT_D934_L[2], # height, max value
+            'l_tol' :  NUT_D934_L[2] + TOL #height with tolerance
+           }
+
+
+D934_M2_5 = {
+            'in_d': 2.5,  # inner diameter of the shank
+            'circ_d' : NUT_D934_D[2.5], #circumdiameter, min value
+            'circ_r' : NUT_D934_D[2.5]/2., #circumradius, min value
+            'circ_r_tol' : NUT_D934_D[2.5]/2. +  1.5*TOL , #circumradius + tol
+            'a2' :  NUT_D934_2A[2.5], #double of apotheme, max value
+            'l' :  NUT_D934_L[2.5], # height, max value
+            'l_tol' :  NUT_D934_L[2.5] + TOL #height with tolerance
+           }
 
 D934_M3 = {
             'in_d': 3.,  # inner diameter of the shank
@@ -366,7 +405,9 @@ D934_M6 = {
            }
            
            
-D934 = { 3: D934_M3,
+D934 = {
+         2.5: D934_M2_5,
+         3: D934_M3,
          4: D934_M4,
          5: D934_M5,
          6: D934_M6 }
@@ -385,28 +426,34 @@ D934 = { 3: D934_M3,
 # The Index reffers to the Metric (M3,...
 # Inner Diameter (of the hole). Minimum diameter.
 WASH_D125_DI = {
-                  3:  3.2,
-                  4:  4.3,
-                  5:  5.3,
-                  6:  6.4,
-                  7:  7.4,
-                  8:  8.4,
-                 10: 10.5 }
+                  2:    2.2,
+                  2.5:  2.7,
+                  3:    3.2,
+                  4:    4.3,
+                  5:    5.3,
+                  6:    6.4,
+                  7:    7.4,
+                  8:    8.4,
+                 10:   10.5 }
 
 # Outer diameter (maximum size)
 WASH_D125_DO = {
-                  3:   7.0,
-                  4:   9.0,
-                  5:  10.0,
-                  6:  12.0,
-                  7:  14.0,
-                  8:  16.0,
-                 10:  20.0 }
+                  2:    5.0,
+                  2.5:  6.0,
+                  3:    7.0,
+                  4:    9.0,
+                  5:   10.0,
+                  6:   12.0,
+                  7:   14.0,
+                  8:   16.0,
+                 10:   20.0 }
 
-# Thickness (Height) of the washer
+# Thickness (Height) of the washer. there is tolerance
 WASH_D125_T  = {
-                  3:   0.5,
-                  4:   0.8,
+                  2:   0.3,  #0.25 to 0.35
+                  2.5: 0.5,  #0.45 to 0.55
+                  3:   0.5,  #0.45 to 0.55
+                  4:   0.8,  #0.7 to 0.8
                   5:   1.0,
                   6:   1.6,
                   7:   1.6,
